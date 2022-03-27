@@ -24,6 +24,10 @@ impl Tuple {
     pub fn vector(x: f64, y: f64, z: f64) -> Self {
         Self::new(x, y, z, 0.0)
     }
+
+    pub fn magnitude(&self) -> f64 {
+        (self.x.powi(2) + self.y.powi(2) + self.z.powi(2) + self.w.powi(2)).sqrt()
+    }
 }
 
 impl ops::Add for Tuple {
@@ -52,6 +56,27 @@ impl ops::Sub for Tuple {
 
     fn sub(self, other: Self) -> Self {
         self + -other
+    }
+}
+
+impl ops::Mul<f64> for Tuple {
+    type Output = Self;
+
+    fn mul(self, other: f64) -> Self {
+        Self::new(
+            self.x * other,
+            self.y * other,
+            self.z * other,
+            self.w * other,
+        )
+    }
+}
+
+impl ops::Div<f64> for Tuple {
+    type Output = Self;
+
+    fn div(self, other: f64) -> Self {
+        self * (1.0 / other)
     }
 }
 
@@ -152,5 +177,67 @@ mod tests {
         let result = -a;
 
         assert_eq!(result, Tuple::new(-1.0, 2.0, -3.0, 4.0));
+    }
+
+    #[test]
+    fn test_tuple_mul_scalar() {
+        let a = Tuple::new(1.0, -2.0, 3.0, -4.0);
+
+        let result = a * 3.5;
+
+        assert_eq!(result, Tuple::new(3.5, -7.0, 10.5, -14.0));
+    }
+
+    #[test]
+    fn test_tuple_mul_fraction() {
+        let a = Tuple::new(1.0, -2.0, 3.0, -4.0);
+
+        let result = a * 0.5;
+
+        assert_eq!(result, Tuple::new(0.5, -1.0, 1.5, -2.0));
+    }
+
+    #[test]
+    fn test_tuple_div_scalar() {
+        let a = Tuple::new(1.0, -2.0, 3.0, -4.0);
+
+        let result = a / 2.0;
+
+        assert_eq!(result, Tuple::new(0.5, -1.0, 1.5, -2.0));
+    }
+
+    #[test]
+    fn test_magnitude_x() {
+        let v = Tuple::vector(1.0, 0.0, 0.0);
+
+        assert_eq!(v.magnitude(), 1.0);
+    }
+
+    #[test]
+    fn test_magnitude_y() {
+        let v = Tuple::vector(0.0, 1.0, 0.0);
+
+        assert_eq!(v.magnitude(), 1.0);
+    }
+
+    #[test]
+    fn test_magnitude_z() {
+        let v = Tuple::vector(0.0, 0.0, 1.0);
+
+        assert_eq!(v.magnitude(), 1.0);
+    }
+
+    #[test]
+    fn test_magnitude_all() {
+        let v = Tuple::vector(1.0, 2.0, 3.0);
+
+        assert_eq!(v.magnitude(), 14.0_f64.sqrt());
+    }
+
+    #[test]
+    fn test_magnitude_negative() {
+        let v = Tuple::vector(-1.0, -2.0, -3.0);
+
+        assert_eq!(v.magnitude(), 14.0_f64.sqrt());
     }
 }
