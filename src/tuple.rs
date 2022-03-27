@@ -3,11 +3,11 @@ use std::ops;
 /// A tuple using left-hand coordinates where:
 /// * `w = 0.0` is a vector
 /// * `w = 1.0` is a point
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Tuple {
-    x: f64,
-    y: f64,
-    z: f64,
+    pub x: f64,
+    pub y: f64,
+    pub z: f64,
     w: f64,
 }
 
