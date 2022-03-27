@@ -28,6 +28,24 @@ impl Tuple {
     pub fn magnitude(&self) -> f64 {
         (self.x.powi(2) + self.y.powi(2) + self.z.powi(2) + self.w.powi(2)).sqrt()
     }
+
+    pub fn normalize(&self) -> Self {
+        let m = self.magnitude();
+
+        Self::new(self.x / m, self.y / m, self.z / m, self.w / m)
+    }
+
+    pub fn dot(&self, other: &Self) -> f64 {
+        self.x * other.x + self.y * other.y + self.z * other.z + self.w * other.w
+    }
+
+    pub fn cross(&self, other: &Self) -> Self {
+        Self::vector(
+            self.y * other.z - self.z * other.y,
+            self.z * other.x - self.x * other.z,
+            self.x * other.y - self.y * other.x,
+        )
+    }
 }
 
 impl ops::Add for Tuple {
@@ -239,5 +257,50 @@ mod tests {
         let v = Tuple::vector(-1.0, -2.0, -3.0);
 
         assert_eq!(v.magnitude(), 14.0_f64.sqrt());
+    }
+
+    #[test]
+    fn test_normalize_x() {
+        let v = Tuple::vector(4.0, 0.0, 0.0);
+
+        assert_eq!(v.normalize(), Tuple::vector(1.0, 0.0, 0.0));
+    }
+
+    #[test]
+    fn test_normalize_all() {
+        let v = Tuple::vector(1.0, 2.0, 3.0);
+
+        assert_eq!(
+            v.normalize(),
+            Tuple::vector(
+                1.0 / 14.0_f64.sqrt(),
+                2.0 / 14.0_f64.sqrt(),
+                3.0 / 14.0_f64.sqrt()
+            )
+        );
+    }
+
+    #[test]
+    fn test_magnitude_of_normalized() {
+        let v = Tuple::vector(1.0, 2.0, 3.0);
+
+        assert_eq!(v.normalize().magnitude(), 1.0);
+    }
+
+    #[test]
+    fn test_dot_product() {
+        let v1 = Tuple::vector(1.0, 2.0, 3.0);
+        let v2 = Tuple::vector(2.0, 3.0, 4.0);
+
+        assert_eq!(v1.dot(&v2), 20.0);
+    }
+
+    #[test]
+    fn test_cross_product() {
+        let v1 = Tuple::vector(1.0, 2.0, 3.0);
+        let v2 = Tuple::vector(2.0, 3.0, 4.0);
+
+        assert_eq!(v1.cross(&v2), Tuple::vector(-1.0, 2.0, -1.0));
+        assert_eq!(v2.cross(&v1), Tuple::vector(1.0, -2.0, 1.0));
     }
 }
