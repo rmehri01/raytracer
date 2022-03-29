@@ -100,26 +100,28 @@ impl ops::Div<f64> for Tuple {
 
 #[cfg(test)]
 mod tests {
+    use approx::assert_relative_eq;
+
     use super::*;
 
     #[test]
     fn test_tuple_point() {
         let p = Tuple::new(4.3, -4.2, 3.1, 1.0);
 
-        assert_eq!(p.x, 4.3);
-        assert_eq!(p.y, -4.2);
-        assert_eq!(p.z, 3.1);
-        assert_eq!(p.w, 1.0);
+        assert_relative_eq!(p.x, 4.3);
+        assert_relative_eq!(p.y, -4.2);
+        assert_relative_eq!(p.z, 3.1);
+        assert_relative_eq!(p.w, 1.0);
     }
 
     #[test]
     fn test_tuple_vector() {
         let v = Tuple::new(4.3, -4.2, 3.1, 0.0);
 
-        assert_eq!(v.x, 4.3);
-        assert_eq!(v.y, -4.2);
-        assert_eq!(v.z, 3.1);
-        assert_eq!(v.w, 0.0);
+        assert_relative_eq!(v.x, 4.3);
+        assert_relative_eq!(v.y, -4.2);
+        assert_relative_eq!(v.z, 3.1);
+        assert_relative_eq!(v.w, 0.0);
     }
 
     #[test]
@@ -127,7 +129,10 @@ mod tests {
         let p1 = Tuple::point(4.3, -4.2, 3.1);
         let p2 = Tuple::new(4.3, -4.2, 3.1, 1.0);
 
-        assert_eq!(p1, p2);
+        assert_relative_eq!(p1.x, p2.x);
+        assert_relative_eq!(p1.y, p2.y);
+        assert_relative_eq!(p1.z, p2.z);
+        assert_relative_eq!(p1.w, p2.w);
     }
 
     #[test]
@@ -135,7 +140,10 @@ mod tests {
         let v1 = Tuple::vector(4.3, -4.2, 3.1);
         let v2 = Tuple::new(4.3, -4.2, 3.1, 0.0);
 
-        assert_eq!(v1, v2);
+        assert_relative_eq!(v1.x, v2.x);
+        assert_relative_eq!(v1.y, v2.y);
+        assert_relative_eq!(v1.z, v2.z);
+        assert_relative_eq!(v1.w, v2.w);
     }
 
     #[test]
@@ -145,7 +153,10 @@ mod tests {
 
         let result = a1 + a2;
 
-        assert_eq!(result, Tuple::new(1.0, 1.0, 6.0, 1.0));
+        assert_relative_eq!(result.x, 1.0);
+        assert_relative_eq!(result.y, 1.0);
+        assert_relative_eq!(result.z, 6.0);
+        assert_relative_eq!(result.w, 1.0);
     }
 
     #[test]
@@ -155,7 +166,10 @@ mod tests {
 
         let result = p1 - p2;
 
-        assert_eq!(result, Tuple::vector(-2.0, -4.0, -6.0));
+        assert_relative_eq!(result.x, -2.0);
+        assert_relative_eq!(result.y, -4.0);
+        assert_relative_eq!(result.z, -6.0);
+        assert_relative_eq!(result.w, 0.0);
     }
 
     #[test]
@@ -165,7 +179,10 @@ mod tests {
 
         let result = p - v;
 
-        assert_eq!(result, Tuple::point(-2.0, -4.0, -6.0));
+        assert_relative_eq!(result.x, -2.0);
+        assert_relative_eq!(result.y, -4.0);
+        assert_relative_eq!(result.z, -6.0);
+        assert_relative_eq!(result.w, 1.0);
     }
 
     #[test]
@@ -175,7 +192,10 @@ mod tests {
 
         let result = v1 - v2;
 
-        assert_eq!(result, Tuple::vector(-2.0, -4.0, -6.0));
+        assert_relative_eq!(result.x, -2.0);
+        assert_relative_eq!(result.y, -4.0);
+        assert_relative_eq!(result.z, -6.0);
+        assert_relative_eq!(result.w, 0.0);
     }
 
     #[test]
@@ -185,7 +205,10 @@ mod tests {
 
         let result = zero - v;
 
-        assert_eq!(result, Tuple::vector(-1.0, 2.0, -3.0));
+        assert_relative_eq!(result.x, -1.0);
+        assert_relative_eq!(result.y, 2.0);
+        assert_relative_eq!(result.z, -3.0);
+        assert_relative_eq!(result.w, 0.0);
     }
 
     #[test]
@@ -194,7 +217,10 @@ mod tests {
 
         let result = -a;
 
-        assert_eq!(result, Tuple::new(-1.0, 2.0, -3.0, 4.0));
+        assert_relative_eq!(result.x, -1.0);
+        assert_relative_eq!(result.y, 2.0);
+        assert_relative_eq!(result.z, -3.0);
+        assert_relative_eq!(result.w, 4.0);
     }
 
     #[test]
@@ -203,7 +229,10 @@ mod tests {
 
         let result = a * 3.5;
 
-        assert_eq!(result, Tuple::new(3.5, -7.0, 10.5, -14.0));
+        assert_relative_eq!(result.x, 3.5);
+        assert_relative_eq!(result.y, -7.0);
+        assert_relative_eq!(result.z, 10.5);
+        assert_relative_eq!(result.w, -14.0);
     }
 
     #[test]
@@ -212,7 +241,10 @@ mod tests {
 
         let result = a * 0.5;
 
-        assert_eq!(result, Tuple::new(0.5, -1.0, 1.5, -2.0));
+        assert_relative_eq!(result.x, 0.5);
+        assert_relative_eq!(result.y, -1.0);
+        assert_relative_eq!(result.z, 1.5);
+        assert_relative_eq!(result.w, -2.0);
     }
 
     #[test]
@@ -221,70 +253,76 @@ mod tests {
 
         let result = a / 2.0;
 
-        assert_eq!(result, Tuple::new(0.5, -1.0, 1.5, -2.0));
+        assert_relative_eq!(result.x, 0.5);
+        assert_relative_eq!(result.y, -1.0);
+        assert_relative_eq!(result.z, 1.5);
+        assert_relative_eq!(result.w, -2.0);
     }
 
     #[test]
     fn test_magnitude_x() {
         let v = Tuple::vector(1.0, 0.0, 0.0);
 
-        assert_eq!(v.magnitude(), 1.0);
+        assert_relative_eq!(v.magnitude(), 1.0);
     }
 
     #[test]
     fn test_magnitude_y() {
         let v = Tuple::vector(0.0, 1.0, 0.0);
 
-        assert_eq!(v.magnitude(), 1.0);
+        assert_relative_eq!(v.magnitude(), 1.0);
     }
 
     #[test]
     fn test_magnitude_z() {
         let v = Tuple::vector(0.0, 0.0, 1.0);
 
-        assert_eq!(v.magnitude(), 1.0);
+        assert_relative_eq!(v.magnitude(), 1.0);
     }
 
     #[test]
     fn test_magnitude_all() {
         let v = Tuple::vector(1.0, 2.0, 3.0);
 
-        assert_eq!(v.magnitude(), 14.0_f64.sqrt());
+        assert_relative_eq!(v.magnitude(), 14.0_f64.sqrt());
     }
 
     #[test]
     fn test_magnitude_negative() {
         let v = Tuple::vector(-1.0, -2.0, -3.0);
 
-        assert_eq!(v.magnitude(), 14.0_f64.sqrt());
+        assert_relative_eq!(v.magnitude(), 14.0_f64.sqrt());
     }
 
     #[test]
     fn test_normalize_x() {
         let v = Tuple::vector(4.0, 0.0, 0.0);
 
-        assert_eq!(v.normalize(), Tuple::vector(1.0, 0.0, 0.0));
+        let result = v.normalize();
+
+        assert_relative_eq!(result.x, 1.0);
+        assert_relative_eq!(result.y, 0.0);
+        assert_relative_eq!(result.z, 0.0);
+        assert_relative_eq!(result.w, 0.0);
     }
 
     #[test]
     fn test_normalize_all() {
         let v = Tuple::vector(1.0, 2.0, 3.0);
 
-        assert_eq!(
-            v.normalize(),
-            Tuple::vector(
-                1.0 / 14.0_f64.sqrt(),
-                2.0 / 14.0_f64.sqrt(),
-                3.0 / 14.0_f64.sqrt()
-            )
-        );
+        let result = v.normalize();
+
+        assert_relative_eq!(result.x, 1.0 / 14.0_f64.sqrt());
+        assert_relative_eq!(result.y, 2.0 / 14.0_f64.sqrt());
+        assert_relative_eq!(result.z, 3.0 / 14.0_f64.sqrt());
+        assert_relative_eq!(result.w, 0.0);
     }
 
     #[test]
     fn test_magnitude_of_normalized() {
         let v = Tuple::vector(1.0, 2.0, 3.0);
 
-        assert_eq!(v.normalize().magnitude(), 1.0);
+        assert_relative_eq!(v.normalize().magnitude(), 1.0);
     }
 
     #[test]
@@ -292,7 +330,7 @@ mod tests {
         let v1 = Tuple::vector(1.0, 2.0, 3.0);
         let v2 = Tuple::vector(2.0, 3.0, 4.0);
 
-        assert_eq!(v1.dot(&v2), 20.0);
+        assert_relative_eq!(v1.dot(&v2), 20.0);
     }
 
     #[test]
@@ -300,7 +338,18 @@ mod tests {
         let v1 = Tuple::vector(1.0, 2.0, 3.0);
         let v2 = Tuple::vector(2.0, 3.0, 4.0);
 
-        assert_eq!(v1.cross(&v2), Tuple::vector(-1.0, 2.0, -1.0));
-        assert_eq!(v2.cross(&v1), Tuple::vector(1.0, -2.0, 1.0));
+        let result = v1.cross(&v2);
+
+        assert_relative_eq!(result.x, -1.0);
+        assert_relative_eq!(result.y, 2.0);
+        assert_relative_eq!(result.z, -1.0);
+        assert_relative_eq!(result.w, 0.0);
+
+        let result = v2.cross(&v1);
+
+        assert_relative_eq!(result.x, 1.0);
+        assert_relative_eq!(result.y, -2.0);
+        assert_relative_eq!(result.z, 1.0);
+        assert_relative_eq!(result.w, 0.0);
     }
 }

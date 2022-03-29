@@ -1,5 +1,6 @@
 use tuple::Tuple;
 
+mod color;
 mod tuple;
 
 fn main() {
