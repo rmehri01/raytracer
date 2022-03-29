@@ -3,7 +3,7 @@ use std::ops;
 /// A tuple using left-hand coordinates where:
 /// * `w = 0.0` is a vector
 /// * `w = 1.0` is a point
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub struct Tuple {
     pub x: f64,
     pub y: f64,
