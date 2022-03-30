@@ -1,10 +1,12 @@
+use std::fs;
+
 use itertools::Itertools;
 
 use crate::core::color::Color;
 
 pub struct Canvas {
-    width: usize,
-    height: usize,
+    pub width: usize,
+    pub height: usize,
     pixels: Vec<Color>,
 }
 
@@ -21,7 +23,7 @@ impl Canvas {
         }
     }
 
-    fn write_pixel(&mut self, x: usize, y: usize, color: Color) {
+    pub fn write_pixel(&mut self, x: usize, y: usize, color: Color) {
         let index = y * self.width + x;
         self.pixels[index] = color;
     }
@@ -29,6 +31,12 @@ impl Canvas {
     fn pixel_at(&self, x: usize, y: usize) -> Color {
         let index = y * self.width + x;
         self.pixels[index]
+    }
+
+    pub fn write_ppm(&self, filename: &str) {
+        let ppm = self.to_ppm();
+
+        fs::write(filename, ppm).expect("file should be written successfully");
     }
 
     fn to_ppm(&self) -> String {
