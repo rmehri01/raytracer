@@ -1,6 +1,6 @@
 use itertools::Itertools;
 
-use crate::color::Color;
+use crate::core::color::Color;
 
 pub struct Canvas {
     width: usize,
