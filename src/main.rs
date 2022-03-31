@@ -1,7 +1,4 @@
-#![warn(
-    clippy::use_self,
-    clippy::semicolon_if_nothing_returned
-)]
+#![warn(clippy::use_self, clippy::semicolon_if_nothing_returned)]
 
 use exercises::projectile::{plot_trajectory, Environment, Projectile};
 
@@ -10,6 +7,7 @@ use crate::core::tuple::Tuple;
 mod core {
     pub mod canvas;
     pub mod color;
+    pub mod matrix;
     pub mod tuple;
 }
 
