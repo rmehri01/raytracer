@@ -68,7 +68,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_color_new() {
+    fn color_new() {
         let color = Color::new(-0.5, 0.4, 1.7);
         assert_relative_eq!(color.red, -0.5);
         assert_relative_eq!(color.green, 0.4);
@@ -76,7 +76,7 @@ mod tests {
     }
 
     #[test]
-    fn test_color_add() {
+    fn color_add() {
         let color1 = Color::new(0.9, 0.6, 0.75);
         let color2 = Color::new(0.7, 0.1, 0.25);
 
@@ -88,7 +88,7 @@ mod tests {
     }
 
     #[test]
-    fn test_color_sub() {
+    fn color_sub() {
         let color1 = Color::new(0.9, 0.6, 0.75);
         let color2 = Color::new(0.7, 0.1, 0.25);
 
@@ -100,7 +100,7 @@ mod tests {
     }
 
     #[test]
-    fn test_color_mul_scalar() {
+    fn color_mul_scalar() {
         let color1 = Color::new(0.2, 0.3, 0.4);
 
         let color2 = color1 * 2.0;
@@ -111,7 +111,7 @@ mod tests {
     }
 
     #[test]
-    fn test_color_mul_color() {
+    fn color_mul_color() {
         let color1 = Color::new(1.0, 0.2, 0.4);
         let color2 = Color::new(0.9, 1.0, 0.1);
 

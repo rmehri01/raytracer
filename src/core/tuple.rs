@@ -105,7 +105,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_tuple_point() {
+    fn tuple_point() {
         let p = Tuple::new(4.3, -4.2, 3.1, 1.0);
 
         assert_relative_eq!(p.x, 4.3);
@@ -115,7 +115,7 @@ mod tests {
     }
 
     #[test]
-    fn test_tuple_vector() {
+    fn tuple_vector() {
         let v = Tuple::new(4.3, -4.2, 3.1, 0.0);
 
         assert_relative_eq!(v.x, 4.3);
@@ -125,7 +125,7 @@ mod tests {
     }
 
     #[test]
-    fn test_tuple_point_equals_point() {
+    fn tuple_point_equals_point() {
         let p1 = Tuple::point(4.3, -4.2, 3.1);
         let p2 = Tuple::new(4.3, -4.2, 3.1, 1.0);
 
@@ -136,7 +136,7 @@ mod tests {
     }
 
     #[test]
-    fn test_tuple_vector_equals_vector() {
+    fn tuple_vector_equals_vector() {
         let v1 = Tuple::vector(4.3, -4.2, 3.1);
         let v2 = Tuple::new(4.3, -4.2, 3.1, 0.0);
 
@@ -147,7 +147,7 @@ mod tests {
     }
 
     #[test]
-    fn test_tuple_add() {
+    fn tuple_add() {
         let a1 = Tuple::new(3.0, -2.0, 5.0, 1.0);
         let a2 = Tuple::new(-2.0, 3.0, 1.0, 0.0);
 
@@ -160,7 +160,7 @@ mod tests {
     }
 
     #[test]
-    fn test_tuple_sub_two_points() {
+    fn tuple_sub_two_points() {
         let p1 = Tuple::point(3.0, 2.0, 1.0);
         let p2 = Tuple::point(5.0, 6.0, 7.0);
 
@@ -173,7 +173,7 @@ mod tests {
     }
 
     #[test]
-    fn test_tuple_sub_vector_from_point() {
+    fn tuple_sub_vector_from_point() {
         let p = Tuple::point(3.0, 2.0, 1.0);
         let v = Tuple::vector(5.0, 6.0, 7.0);
 
@@ -186,7 +186,7 @@ mod tests {
     }
 
     #[test]
-    fn test_tuple_sub_two_vectors() {
+    fn tuple_sub_two_vectors() {
         let v1 = Tuple::vector(3.0, 2.0, 1.0);
         let v2 = Tuple::vector(5.0, 6.0, 7.0);
 
@@ -199,7 +199,7 @@ mod tests {
     }
 
     #[test]
-    fn test_sub_vector_zero_vector() {
+    fn sub_vector_zero_vector() {
         let zero = Tuple::vector(0.0, 0.0, 0.0);
         let v = Tuple::vector(1.0, -2.0, 3.0);
 
@@ -212,7 +212,7 @@ mod tests {
     }
 
     #[test]
-    fn test_tuple_neg() {
+    fn tuple_neg() {
         let a = Tuple::new(1.0, -2.0, 3.0, -4.0);
 
         let result = -a;
@@ -224,7 +224,7 @@ mod tests {
     }
 
     #[test]
-    fn test_tuple_mul_scalar() {
+    fn tuple_mul_scalar() {
         let a = Tuple::new(1.0, -2.0, 3.0, -4.0);
 
         let result = a * 3.5;
@@ -236,7 +236,7 @@ mod tests {
     }
 
     #[test]
-    fn test_tuple_mul_fraction() {
+    fn tuple_mul_fraction() {
         let a = Tuple::new(1.0, -2.0, 3.0, -4.0);
 
         let result = a * 0.5;
@@ -248,7 +248,7 @@ mod tests {
     }
 
     #[test]
-    fn test_tuple_div_scalar() {
+    fn tuple_div_scalar() {
         let a = Tuple::new(1.0, -2.0, 3.0, -4.0);
 
         let result = a / 2.0;
@@ -260,42 +260,42 @@ mod tests {
     }
 
     #[test]
-    fn test_magnitude_x() {
+    fn magnitude_x() {
         let v = Tuple::vector(1.0, 0.0, 0.0);
 
         assert_relative_eq!(v.magnitude(), 1.0);
     }
 
     #[test]
-    fn test_magnitude_y() {
+    fn magnitude_y() {
         let v = Tuple::vector(0.0, 1.0, 0.0);
 
         assert_relative_eq!(v.magnitude(), 1.0);
     }
 
     #[test]
-    fn test_magnitude_z() {
+    fn magnitude_z() {
         let v = Tuple::vector(0.0, 0.0, 1.0);
 
         assert_relative_eq!(v.magnitude(), 1.0);
     }
 
     #[test]
-    fn test_magnitude_all() {
+    fn magnitude_all() {
         let v = Tuple::vector(1.0, 2.0, 3.0);
 
         assert_relative_eq!(v.magnitude(), 14.0_f64.sqrt());
     }
 
     #[test]
-    fn test_magnitude_negative() {
+    fn magnitude_negative() {
         let v = Tuple::vector(-1.0, -2.0, -3.0);
 
         assert_relative_eq!(v.magnitude(), 14.0_f64.sqrt());
     }
 
     #[test]
-    fn test_normalize_x() {
+    fn normalize_x() {
         let v = Tuple::vector(4.0, 0.0, 0.0);
 
         let result = v.normalize();
@@ -307,7 +307,7 @@ mod tests {
     }
 
     #[test]
-    fn test_normalize_all() {
+    fn normalize_all() {
         let v = Tuple::vector(1.0, 2.0, 3.0);
 
         let result = v.normalize();
@@ -319,14 +319,14 @@ mod tests {
     }
 
     #[test]
-    fn test_magnitude_of_normalized() {
+    fn magnitude_of_normalized() {
         let v = Tuple::vector(1.0, 2.0, 3.0);
 
         assert_relative_eq!(v.normalize().magnitude(), 1.0);
     }
 
     #[test]
-    fn test_dot_product() {
+    fn dot_product() {
         let v1 = Tuple::vector(1.0, 2.0, 3.0);
         let v2 = Tuple::vector(2.0, 3.0, 4.0);
 
@@ -334,7 +334,7 @@ mod tests {
     }
 
     #[test]
-    fn test_cross_product() {
+    fn cross_product() {
         let v1 = Tuple::vector(1.0, 2.0, 3.0);
         let v2 = Tuple::vector(2.0, 3.0, 4.0);
 

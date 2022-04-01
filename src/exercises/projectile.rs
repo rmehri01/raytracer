@@ -24,15 +24,13 @@ impl Environment {
 
 #[allow(dead_code)]
 pub fn plot_trajectory(mut p: Projectile, e: &Environment, path: &str) {
-    let width = 900;
-    let height = 550;
-    let mut canvas = Canvas::new(width, height);
+    let mut canvas = Canvas::new(900, 550);
     let pixel_color = Color::new(0.85, 0.35, 0.40);
 
     while p.position.y > 0.0 {
         canvas.write_pixel(
             p.position.x.round() as usize,
-            (height as f64 - p.position.y).round() as usize,
+            (550_f64 - p.position.y).round() as usize,
             pixel_color,
         );
         p = tick(p, e);

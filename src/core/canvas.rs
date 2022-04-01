@@ -95,7 +95,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_new() {
+    fn new() {
         let canvas = Canvas::new(10, 20);
 
         assert_eq!(canvas.width, 10);
@@ -108,7 +108,7 @@ mod tests {
     }
 
     #[test]
-    fn test_write_pixel() {
+    fn write_pixel() {
         let mut canvas = Canvas::new(10, 20);
         let red = Color::new(1.0, 0.0, 0.0);
 
@@ -121,7 +121,7 @@ mod tests {
     }
 
     #[test]
-    fn test_ppm_header() {
+    fn ppm_header() {
         let canvas = Canvas::new(5, 3);
 
         let ppm = canvas.to_ppm();
@@ -133,7 +133,7 @@ mod tests {
     }
 
     #[test]
-    fn test_ppm_pixel_data() {
+    fn ppm_pixel_data() {
         let mut canvas = Canvas::new(5, 3);
         let c1 = Color::new(1.5, 0.0, 0.0);
         let c2 = Color::new(0.0, 0.5, 0.0);
@@ -157,7 +157,7 @@ mod tests {
     }
 
     #[test]
-    fn test_ppm_split_long_lines() {
+    fn ppm_split_long_lines() {
         let mut canvas = Canvas::new(10, 2);
 
         for row in 0..canvas.height {
@@ -192,7 +192,7 @@ mod tests {
     }
 
     #[test]
-    fn test_ppm_terminate_with_newline() {
+    fn ppm_terminate_with_newline() {
         let canvas = Canvas::new(5, 3);
 
         let ppm = canvas.to_ppm();
