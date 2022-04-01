@@ -8,7 +8,7 @@ pub struct Tuple {
     pub x: f64,
     pub y: f64,
     pub z: f64,
-    w: f64,
+    pub w: f64,
 }
 
 impl Tuple {
@@ -95,6 +95,32 @@ impl ops::Div<f64> for Tuple {
 
     fn div(self, other: f64) -> Self {
         self * (1.0 / other)
+    }
+}
+
+impl ops::Index<usize> for Tuple {
+    type Output = f64;
+
+    fn index(&self, index: usize) -> &f64 {
+        match index {
+            0 => &self.x,
+            1 => &self.y,
+            2 => &self.z,
+            3 => &self.w,
+            _ => panic!("Index out of bounds"),
+        }
+    }
+}
+
+impl ops::IndexMut<usize> for Tuple {
+    fn index_mut(&mut self, index: usize) -> &mut f64 {
+        match index {
+            0 => &mut self.x,
+            1 => &mut self.y,
+            2 => &mut self.z,
+            3 => &mut self.w,
+            _ => panic!("Index out of bounds"),
+        }
     }
 }
 

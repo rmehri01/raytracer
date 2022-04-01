@@ -2,8 +2,38 @@ use std::ops;
 
 use approx::AbsDiffEq;
 
-#[derive(Debug, PartialEq)]
+use super::tuple::Tuple;
+
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Matrix<const N: usize>([[f64; N]; N]);
+
+impl<const N: usize> Matrix<N> {
+    pub fn identity() -> Self {
+        let mut m = Self::zero();
+
+        for i in 0..N {
+            m[i][i] = 1.0;
+        }
+
+        m
+    }
+
+    fn zero() -> Self {
+        Self([[0.0; N]; N])
+    }
+
+    pub fn transpose(&self) -> Self {
+        let mut m = Self::zero();
+
+        for i in 0..N {
+            for j in 0..N {
+                m[i][j] = self[j][i];
+            }
+        }
+
+        m
+    }
+}
 
 impl<const N: usize> ops::Index<usize> for Matrix<N> {
     type Output = [f64; N];
@@ -45,6 +75,22 @@ impl<const N: usize> ops::Mul for Matrix<N> {
                 for j in 0..N {
                     result[i][j] += self[i][k] * other[k][j];
                 }
+            }
+        }
+
+        result
+    }
+}
+
+impl ops::Mul<Tuple> for Matrix<4> {
+    type Output = Tuple;
+
+    fn mul(self, other: Tuple) -> Self::Output {
+        let mut result = Tuple::new(0.0, 0.0, 0.0, 0.0);
+
+        for i in 0..4 {
+            for j in 0..4 {
+                result[i] += self[i][j] * other[j];
             }
         }
 
@@ -154,6 +200,60 @@ mod tests {
                 [44.0, 54.0, 114.0, 108.0],
                 [40.0, 58.0, 110.0, 102.0],
                 [16.0, 26.0, 46.0, 42.0],
+            ])
+        );
+    }
+
+    #[test]
+    fn multiply_matrix_and_tuple() {
+        let a = Matrix([
+            [1.0, 2.0, 3.0, 4.0],
+            [2.0, 4.0, 4.0, 2.0],
+            [8.0, 6.0, 4.0, 1.0],
+            [0.0, 0.0, 0.0, 1.0],
+        ]);
+        let t = Tuple::new(1.0, 2.0, 3.0, 1.0);
+
+        let result_t = a * t;
+
+        assert_relative_eq!(result_t.x, 18.0);
+        assert_relative_eq!(result_t.y, 24.0);
+        assert_relative_eq!(result_t.z, 33.0);
+        assert_relative_eq!(result_t.w, 1.0);
+    }
+
+    #[test]
+    fn multiply_matrix_and_identity() {
+        let a = Matrix([
+            [0.0, 1.0, 2.0, 4.0],
+            [1.0, 2.0, 4.0, 8.0],
+            [2.0, 4.0, 8.0, 16.0],
+            [4.0, 8.0, 16.0, 32.0],
+        ]);
+
+        let result = a * Matrix::identity();
+
+        assert_abs_diff_eq!(result, a);
+    }
+
+    #[test]
+    fn transpose_matrix() {
+        let a = Matrix([
+            [0.0, 9.0, 3.0, 0.0],
+            [9.0, 8.0, 0.0, 8.0],
+            [1.0, 8.0, 5.0, 3.0],
+            [0.0, 0.0, 5.0, 8.0],
+        ]);
+
+        let result = a.transpose();
+
+        assert_abs_diff_eq!(
+            result,
+            Matrix([
+                [0.0, 9.0, 1.0, 0.0],
+                [9.0, 8.0, 8.0, 0.0],
+                [3.0, 0.0, 5.0, 5.0],
+                [0.0, 8.0, 3.0, 8.0],
             ])
         );
     }
