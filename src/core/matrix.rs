@@ -35,6 +35,124 @@ impl<const N: usize> Matrix<N> {
     }
 }
 
+impl Matrix<2> {
+    pub fn determinant(&self) -> f64 {
+        self[0][0] * self[1][1] - self[0][1] * self[1][0]
+    }
+}
+
+impl Matrix<3> {
+    pub fn submatrix(&self, row: usize, col: usize) -> Matrix<2> {
+        let mut m = Matrix::<2>::zero();
+
+        let mut i = 0;
+        for r in 0..3 {
+            if r == row {
+                continue;
+            }
+
+            let mut j = 0;
+            for c in 0..3 {
+                if c == col {
+                    continue;
+                }
+
+                m[i][j] = self[r][c];
+                j += 1;
+            }
+
+            i += 1;
+        }
+
+        m
+    }
+
+    pub fn minor(&self, row: usize, col: usize) -> f64 {
+        self.submatrix(row, col).determinant()
+    }
+
+    pub fn cofactor(&self, row: usize, col: usize) -> f64 {
+        let sign = if (row + col) % 2 == 0 { 1.0 } else { -1.0 };
+
+        sign * self.minor(row, col)
+    }
+
+    pub fn determinant(&self) -> f64 {
+        let mut det = 0.0;
+
+        for column in 0..3 {
+            det += self[0][column] * self.cofactor(0, column);
+        }
+
+        det
+    }
+}
+
+impl Matrix<4> {
+    pub fn submatrix(&self, row: usize, col: usize) -> Matrix<3> {
+        let mut m = Matrix::<3>::zero();
+
+        let mut i = 0;
+        for r in 0..4 {
+            if r == row {
+                continue;
+            }
+
+            let mut j = 0;
+            for c in 0..4 {
+                if c == col {
+                    continue;
+                }
+
+                m[i][j] = self[r][c];
+                j += 1;
+            }
+
+            i += 1;
+        }
+
+        m
+    }
+
+    pub fn minor(&self, row: usize, col: usize) -> f64 {
+        self.submatrix(row, col).determinant()
+    }
+
+    pub fn cofactor(&self, row: usize, col: usize) -> f64 {
+        let sign = if (row + col) % 2 == 0 { 1.0 } else { -1.0 };
+
+        sign * self.minor(row, col)
+    }
+
+    pub fn determinant(&self) -> f64 {
+        let mut det = 0.0;
+
+        for column in 0..4 {
+            det += self[0][column] * self.cofactor(0, column);
+        }
+
+        det
+    }
+
+    pub fn inverse(&self) -> Self {
+        let determinant = self.determinant();
+        if determinant == 0.0 {
+            panic!("matrix is not invertible");
+        }
+
+        let mut m = Self::zero();
+
+        for row in 0..4 {
+            for col in 0..4 {
+                let cofactor = self.cofactor(row, col);
+                m[col][row] = cofactor / determinant;
+            }
+        }
+
+        m
+    }
+}
+
 impl<const N: usize> ops::Index<usize> for Matrix<N> {
     type Output = [f64; N];
 
@@ -53,7 +171,7 @@ impl<const N: usize> AbsDiffEq for Matrix<N> {
     type Epsilon = f64;
 
     fn default_epsilon() -> Self::Epsilon {
-        1e-6
+        1e-5
     }
 
     fn abs_diff_eq(&self, other: &Self, epsilon: Self::Epsilon) -> bool {
@@ -256,5 +374,200 @@ mod tests {
                 [0.0, 8.0, 3.0, 8.0],
             ])
         );
+    }
+
+    #[test]
+    fn determinant_2x2() {
+        let a = Matrix([[1.0, 5.0], [-3.0, 2.0]]);
+
+        assert_relative_eq!(a.determinant(), 17.0);
+    }
+
+    #[test]
+    fn submatrix_3x3() {
+        let a = Matrix([[1.0, 5.0, 0.0], [-3.0, 2.0, 7.0], [0.0, 6.0, -3.0]]);
+
+        let result = a.submatrix(0, 2);
+
+        assert_abs_diff_eq!(result, Matrix([[-3.0, 2.0], [0.0, 6.0]]));
+    }
+
+    #[test]
+    fn submatrix_4x4() {
+        let a = Matrix([
+            [-6.0, 1.0, 1.0, 6.0],
+            [-8.0, 5.0, 8.0, 6.0],
+            [-1.0, 0.0, 8.0, 2.0],
+            [-7.0, 1.0, -1.0, 1.0],
+        ]);
+
+        let result = a.submatrix(2, 1);
+
+        assert_abs_diff_eq!(
+            result,
+            Matrix([[-6.0, 1.0, 6.0], [-8.0, 8.0, 6.0], [-7.0, -1.0, 1.0]])
+        );
+    }
+
+    #[test]
+    fn minor_3x3() {
+        let a = Matrix([[3.0, 5.0, 0.0], [2.0, -1.0, -7.0], [6.0, -1.0, 5.0]]);
+
+        let b = a.submatrix(1, 0);
+
+        assert_relative_eq!(b.determinant(), 25.0);
+        assert_relative_eq!(a.minor(1, 0), 25.0);
+    }
+
+    #[test]
+    fn cofactor_3x3() {
+        let a = Matrix([[3.0, 5.0, 0.0], [2.0, -1.0, -7.0], [6.0, -1.0, 5.0]]);
+
+        assert_relative_eq!(a.minor(0, 0), -12.0);
+        assert_relative_eq!(a.cofactor(0, 0), -12.0);
+        assert_relative_eq!(a.minor(1, 0), 25.0);
+        assert_relative_eq!(a.cofactor(1, 0), -25.0);
+    }
+
+    #[test]
+    fn determinant_3x3() {
+        let a = Matrix([[1.0, 2.0, 6.0], [-5.0, 8.0, -4.0], [2.0, 6.0, 4.0]]);
+
+        assert_relative_eq!(a.cofactor(0, 0), 56.0);
+        assert_relative_eq!(a.cofactor(0, 1), 12.0);
+        assert_relative_eq!(a.cofactor(0, 2), -46.0);
+        assert_relative_eq!(a.determinant(), -196.0);
+    }
+
+    #[test]
+    fn determinant_4x4() {
+        let a = Matrix([
+            [-2.0, -8.0, 3.0, 5.0],
+            [-3.0, 1.0, 7.0, 3.0],
+            [1.0, 2.0, -9.0, 6.0],
+            [-6.0, 7.0, 7.0, -9.0],
+        ]);
+
+        assert_relative_eq!(a.cofactor(0, 0), 690.0);
+        assert_relative_eq!(a.cofactor(0, 1), 447.0);
+        assert_relative_eq!(a.cofactor(0, 2), 210.0);
+        assert_relative_eq!(a.cofactor(0, 3), 51.0);
+        assert_relative_eq!(a.determinant(), -4071.0);
+    }
+
+    #[test]
+    fn check_invertible() {
+        let a = Matrix([
+            [6.0, 4.0, 4.0, 4.0],
+            [5.0, 5.0, 7.0, 6.0],
+            [4.0, -9.0, 3.0, -7.0],
+            [9.0, 1.0, 7.0, -6.0],
+        ]);
+
+        assert_relative_eq!(a.determinant(), -2120.0);
+    }
+
+    #[test]
+    fn check_noninvertible() {
+        let a = Matrix([
+            [-4.0, 2.0, -2.0, -3.0],
+            [9.0, 6.0, 2.0, 6.0],
+            [0.0, -5.0, 1.0, -5.0],
+            [0.0, 0.0, 0.0, 0.0],
+        ]);
+
+        assert_relative_eq!(a.determinant(), 0.0);
+    }
+
+    #[test]
+    fn inverse_4x4() {
+        let a = Matrix([
+            [-5.0, 2.0, 6.0, -8.0],
+            [1.0, -5.0, 1.0, 8.0],
+            [7.0, 7.0, -6.0, -7.0],
+            [1.0, -3.0, 7.0, 4.0],
+        ]);
+
+        let b = a.inverse();
+
+        assert_relative_eq!(a.determinant(), 532.0);
+        assert_relative_eq!(a.cofactor(2, 3), -160.0);
+        assert_relative_eq!(b[3][2], -160.0 / 532.0);
+        assert_relative_eq!(a.cofactor(3, 2), 105.0);
+        assert_relative_eq!(b[2][3], 105.0 / 532.0);
+        assert_abs_diff_eq!(
+            b,
+            Matrix([
+                [0.21805, 0.45113, 0.24060, -0.04511],
+                [-0.80827, -1.45677, -0.44361, 0.52068],
+                [-0.07895, -0.22368, -0.05263, 0.19737],
+                [-0.52256, -0.81391, -0.30075, 0.30639],
+            ])
+        );
+    }
+
+    #[test]
+    fn inverse_4x4_2() {
+        let a = Matrix([
+            [8.0, -5.0, 9.0, 2.0],
+            [7.0, 5.0, 6.0, 1.0],
+            [-6.0, 0.0, 9.0, 6.0],
+            [-3.0, 0.0, -9.0, -4.0],
+        ]);
+
+        let b = a.inverse();
+
+        assert_abs_diff_eq!(
+            b,
+            Matrix([
+                [-0.15385, -0.15385, -0.28205, -0.53846],
+                [-0.07692, 0.12308, 0.02564, 0.03077],
+                [0.35897, 0.35897, 0.43590, 0.92308],
+                [-0.69231, -0.69231, -0.76923, -1.92308],
+            ])
+        );
+    }
+
+    #[test]
+    fn inverse_4x4_3() {
+        let a = Matrix([
+            [9.0, 3.0, 0.0, 9.0],
+            [-5.0, -2.0, -6.0, -3.0],
+            [-4.0, 9.0, 6.0, 4.0],
+            [-7.0, 6.0, 6.0, 2.0],
+        ]);
+
+        let b = a.inverse();
+
+        assert_abs_diff_eq!(
+            b,
+            Matrix([
+                [-0.04074, -0.07778, 0.14444, -0.22222],
+                [-0.07778, 0.03333, 0.36667, -0.33333],
+                [-0.02901, -0.14630, -0.10926, 0.12963],
+                [0.17778, 0.06667, -0.26667, 0.33333],
+            ])
+        );
+    }
+
+    #[test]
+    fn multiply_product_inverse() {
+        let a = Matrix([
+            [3.0, -9.0, 7.0, 3.0],
+            [3.0, -8.0, 2.0, -9.0],
+            [-4.0, 4.0, 4.0, 1.0],
+            [-6.0, 5.0, -1.0, 1.0],
+        ]);
+
+        let b = Matrix([
+            [8.0, 2.0, 2.0, 2.0],
+            [3.0, -1.0, 7.0, 0.0],
+            [7.0, 0.0, 5.0, 4.0],
+            [6.0, -2.0, 0.0, 5.0],
+        ]);
+
+        let c = a * b;
+
+        assert_abs_diff_eq!(c * b.inverse(), a);
     }
 }
