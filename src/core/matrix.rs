@@ -570,4 +570,47 @@ mod tests {
 
         assert_abs_diff_eq!(c * b.inverse(), a);
     }
+
+    #[test]
+    fn invert_identity() {
+        let indentity: Matrix<4> = Matrix::identity();
+
+        assert_abs_diff_eq!(indentity.inverse(), Matrix::identity());
+    }
+
+    #[test]
+    fn multiply_inverse() {
+        let a = Matrix([
+            [3.0, -9.0, 7.0, 3.0],
+            [3.0, -8.0, 2.0, -9.0],
+            [-4.0, 4.0, 4.0, 1.0],
+            [-6.0, 5.0, -1.0, 1.0],
+        ]);
+
+        assert_abs_diff_eq!(a * a.inverse(), Matrix::identity());
+    }
+
+    #[test]
+    fn inverse_transpose_transpose_inverse() {
+        let a = Matrix([
+            [3.0, -9.0, 7.0, 3.0],
+            [3.0, -8.0, 2.0, -9.0],
+            [-4.0, 4.0, 4.0, 1.0],
+            [-6.0, 5.0, -1.0, 1.0],
+        ]);
+
+        assert_abs_diff_eq!(a.inverse().transpose(), a.transpose().inverse());
+    }
+
+    #[test]
+    fn multiply_almost_identity_by_tuple() {
+        let mut a: Matrix<4> = Matrix::identity();
+        a[0][0] = -2.0;
+
+        let b = a * Tuple::point(3.0, 2.0, 1.0);
+
+        assert_relative_eq!(b.x, -6.0);
+        assert_relative_eq!(b.y, 2.0);
+        assert_relative_eq!(b.z, 1.0);
+    }
 }
