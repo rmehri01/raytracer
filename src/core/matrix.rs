@@ -151,6 +151,26 @@ impl Matrix<4> {
 
         m
     }
+
+    pub fn translation(x: f64, y: f64, z: f64) -> Self {
+        let mut m = Self::identity();
+
+        m[0][3] = x;
+        m[1][3] = y;
+        m[2][3] = z;
+
+        m
+    }
+
+    pub fn scaling(x: f64, y: f64, z: f64) -> Self {
+        let mut m = Self::identity();
+
+        m[0][0] = x;
+        m[1][1] = y;
+        m[2][2] = z;
+
+        m
+    }
 }
 
 impl<const N: usize> ops::Index<usize> for Matrix<N> {
@@ -612,5 +632,89 @@ mod tests {
         assert_relative_eq!(b.x, -6.0);
         assert_relative_eq!(b.y, 2.0);
         assert_relative_eq!(b.z, 1.0);
+    }
+
+    #[test]
+    fn multiply_by_translation() {
+        let a = Matrix::translation(5.0, -3.0, 2.0);
+        let p = Tuple::point(-3.0, 4.0, 5.0);
+
+        let result = a * p;
+
+        assert_relative_eq!(result.x, 2.0);
+        assert_relative_eq!(result.y, 1.0);
+        assert_relative_eq!(result.z, 7.0);
+    }
+
+    #[test]
+    fn multiply_by_inverse_translation() {
+        let a = Matrix::translation(5.0, -3.0, 2.0);
+        let p = Tuple::point(-3.0, 4.0, 5.0);
+
+        let result = a.inverse() * p;
+
+        assert_relative_eq!(result.x, -8.0);
+        assert_relative_eq!(result.y, 7.0);
+        assert_relative_eq!(result.z, 3.0);
+    }
+
+    #[test]
+    fn translation_doesnt_affect_vectors() {
+        let a = Matrix::translation(5.0, -3.0, 2.0);
+        let v = Tuple::vector(-3.0, 4.0, 5.0);
+
+        let result = a * v;
+
+        assert_relative_eq!(result.x, -3.0);
+        assert_relative_eq!(result.y, 4.0);
+        assert_relative_eq!(result.z, 5.0);
+    }
+
+    #[test]
+    fn scaling_matrix_applied_to_point() {
+        let a = Matrix::scaling(2.0, 3.0, 4.0);
+        let p = Tuple::point(-4.0, 6.0, 8.0);
+
+        let result = a * p;
+
+        assert_relative_eq!(result.x, -8.0);
+        assert_relative_eq!(result.y, 18.0);
+        assert_relative_eq!(result.z, 32.0);
+    }
+
+    #[test]
+    fn scaling_matrix_applied_to_vector() {
+        let a = Matrix::scaling(2.0, 3.0, 4.0);
+        let v = Tuple::vector(-4.0, 6.0, 8.0);
+
+        let result = a * v;
+
+        assert_relative_eq!(result.x, -8.0);
+        assert_relative_eq!(result.y, 18.0);
+        assert_relative_eq!(result.z, 32.0);
+    }
+
+    #[test]
+    fn multiply_inverse_of_scaling_matrix() {
+        let a = Matrix::scaling(2.0, 3.0, 4.0);
+        let p = Tuple::point(-4.0, 6.0, 8.0);
+
+        let result = a.inverse() * p;
+
+        assert_relative_eq!(result.x, -2.0);
+        assert_relative_eq!(result.y, 2.0);
+        assert_relative_eq!(result.z, 2.0);
+    }
+
+    #[test]
+    fn reflection_is_scaling_by_negative_value() {
+        let a = Matrix::scaling(-1.0, 1.0, 1.0);
+        let p = Tuple::point(2.0, 3.0, 4.0);
+
+        let result = a * p;
+
+        assert_relative_eq!(result.x, -2.0);
+        assert_relative_eq!(result.y, 3.0);
+        assert_relative_eq!(result.z, 4.0);
     }
 }
