@@ -185,6 +185,47 @@ impl Matrix<4> {
 
         m
     }
+
+    pub fn rotation_y(radians: f64) -> Self {
+        let mut m = Self::identity();
+
+        let cos_r = radians.cos();
+        let sin_r = radians.sin();
+
+        m[0][0] = cos_r;
+        m[0][2] = sin_r;
+        m[2][0] = -sin_r;
+        m[2][2] = cos_r;
+
+        m
+    }
+
+    pub fn rotation_z(radians: f64) -> Self {
+        let mut m = Self::identity();
+
+        let cos_r = radians.cos();
+        let sin_r = radians.sin();
+
+        m[0][0] = cos_r;
+        m[0][1] = -sin_r;
+        m[1][0] = sin_r;
+        m[1][1] = cos_r;
+
+        m
+    }
+
+    pub fn shearing(xy: f64, xz: f64, yx: f64, yz: f64, zx: f64, zy: f64) -> Self {
+        let mut m = Self::identity();
+
+        m[0][1] = xy;
+        m[0][2] = xz;
+        m[1][0] = yx;
+        m[1][2] = yz;
+        m[2][0] = zx;
+        m[2][1] = zy;
+
+        m
+    }
 }
 
 impl<const N: usize> ops::Index<usize> for Matrix<N> {
@@ -698,5 +739,108 @@ mod tests {
             Tuple::point(0.0, 2.0_f64.sqrt() / 2.0, 2.0_f64.sqrt() / 2.0)
         );
         assert_abs_diff_eq!(full_quarter * p, Tuple::point(0.0, 0.0, 1.0));
+    }
+
+    #[test]
+    fn rotation_around_y_axis() {
+        let p = Tuple::point(0.0, 0.0, 1.0);
+        let half_quarter = Matrix::rotation_y(PI / 4.0);
+        let full_quarter = Matrix::rotation_y(PI / 2.0);
+
+        assert_abs_diff_eq!(
+            half_quarter * p,
+            Tuple::point(2.0_f64.sqrt() / 2.0, 0.0, 2.0_f64.sqrt() / 2.0)
+        );
+        assert_abs_diff_eq!(full_quarter * p, Tuple::point(1.0, 0.0, 0.0));
+    }
+
+    #[test]
+    fn rotation_around_z_axis() {
+        let p = Tuple::point(0.0, 1.0, 0.0);
+        let half_quarter = Matrix::rotation_z(PI / 4.0);
+        let full_quarter = Matrix::rotation_z(PI / 2.0);
+
+        assert_abs_diff_eq!(
+            half_quarter * p,
+            Tuple::point(-(2.0_f64.sqrt()) / 2.0, 2.0_f64.sqrt() / 2.0, 0.0)
+        );
+        assert_abs_diff_eq!(full_quarter * p, Tuple::point(-1.0, 0.0, 0.0));
+    }
+
+    #[test]
+    fn shearing_moves_x_in_proportion_to_y() {
+        let a = Matrix::shearing(1.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+        let p = Tuple::point(2.0, 3.0, 4.0);
+
+        assert_abs_diff_eq!(a * p, Tuple::point(5.0, 3.0, 4.0));
+    }
+
+    #[test]
+    fn shearing_moves_x_in_proportion_to_z() {
+        let a = Matrix::shearing(0.0, 1.0, 0.0, 0.0, 0.0, 0.0);
+        let p = Tuple::point(2.0, 3.0, 4.0);
+
+        assert_abs_diff_eq!(a * p, Tuple::point(6.0, 3.0, 4.0));
+    }
+
+    #[test]
+    fn shearing_moves_y_in_proportion_to_x() {
+        let a = Matrix::shearing(0.0, 0.0, 1.0, 0.0, 0.0, 0.0);
+        let p = Tuple::point(2.0, 3.0, 4.0);
+
+        assert_abs_diff_eq!(a * p, Tuple::point(2.0, 5.0, 4.0));
+    }
+
+    #[test]
+    fn shearing_moves_y_in_proportion_to_z() {
+        let a = Matrix::shearing(0.0, 0.0, 0.0, 1.0, 0.0, 0.0);
+        let p = Tuple::point(2.0, 3.0, 4.0);
+
+        assert_abs_diff_eq!(a * p, Tuple::point(2.0, 7.0, 4.0));
+    }
+
+    #[test]
+    fn shearing_moves_z_in_proportion_to_x() {
+        let a = Matrix::shearing(0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
+        let p = Tuple::point(2.0, 3.0, 4.0);
+
+        assert_abs_diff_eq!(a * p, Tuple::point(2.0, 3.0, 6.0));
+    }
+
+    #[test]
+    fn shearing_moves_z_in_proportion_to_y() {
+        let a = Matrix::shearing(0.0, 0.0, 0.0, 0.0, 0.0, 1.0);
+        let p = Tuple::point(2.0, 3.0, 4.0);
+
+        assert_abs_diff_eq!(a * p, Tuple::point(2.0, 3.0, 7.0));
+    }
+
+    #[test]
+    fn transformations_applied_in_sequence() {
+        let p = Tuple::point(1.0, 0.0, 1.0);
+        let a = Matrix::rotation_x(PI / 2.0);
+        let b = Matrix::scaling(5.0, 5.0, 5.0);
+        let c = Matrix::translation(10.0, 5.0, 7.0);
+
+        let p2 = a * p;
+        assert_abs_diff_eq!(p2, Tuple::point(1.0, -1.0, 0.0));
+
+        let p3 = b * p2;
+        assert_abs_diff_eq!(p3, Tuple::point(5.0, -5.0, 0.0));
+
+        let p4 = c * p3;
+        assert_abs_diff_eq!(p4, Tuple::point(15.0, 0.0, 7.0));
+    }
+
+    #[test]
+    fn chained_transformations() {
+        let p = Tuple::point(1.0, 0.0, 1.0);
+        let a = Matrix::rotation_x(PI / 2.0);
+        let b = Matrix::scaling(5.0, 5.0, 5.0);
+        let c = Matrix::translation(10.0, 5.0, 7.0);
+
+        let t = c * b * a;
+
+        assert_abs_diff_eq!(t * p, Tuple::point(15.0, 0.0, 7.0));
     }
 }
