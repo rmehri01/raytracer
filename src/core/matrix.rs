@@ -171,6 +171,20 @@ impl Matrix<4> {
 
         m
     }
+
+    pub fn rotation_x(radians: f64) -> Self {
+        let mut m = Self::identity();
+
+        let cos_r = radians.cos();
+        let sin_r = radians.sin();
+
+        m[1][1] = cos_r;
+        m[1][2] = -sin_r;
+        m[2][1] = sin_r;
+        m[2][2] = cos_r;
+
+        m
+    }
 }
 
 impl<const N: usize> ops::Index<usize> for Matrix<N> {
@@ -238,6 +252,8 @@ impl ops::Mul<Tuple> for Matrix<4> {
 
 #[cfg(test)]
 mod tests {
+    use std::f64::consts::PI;
+
     use approx::{assert_abs_diff_eq, assert_abs_diff_ne, assert_relative_eq};
 
     use super::*;
@@ -352,12 +368,7 @@ mod tests {
         ]);
         let t = Tuple::new(1.0, 2.0, 3.0, 1.0);
 
-        let result_t = a * t;
-
-        assert_relative_eq!(result_t.x, 18.0);
-        assert_relative_eq!(result_t.y, 24.0);
-        assert_relative_eq!(result_t.z, 33.0);
-        assert_relative_eq!(result_t.w, 1.0);
+        assert_abs_diff_eq!(a * t, Tuple::new(18.0, 24.0, 33.0, 1.0));
     }
 
     #[test]
@@ -369,9 +380,7 @@ mod tests {
             [4.0, 8.0, 16.0, 32.0],
         ]);
 
-        let result = a * Matrix::identity();
-
-        assert_abs_diff_eq!(result, a);
+        assert_abs_diff_eq!(a * Matrix::identity(), a);
     }
 
     #[test]
@@ -383,10 +392,8 @@ mod tests {
             [0.0, 0.0, 5.0, 8.0],
         ]);
 
-        let result = a.transpose();
-
         assert_abs_diff_eq!(
-            result,
+            a.transpose(),
             Matrix([
                 [0.0, 9.0, 1.0, 0.0],
                 [9.0, 8.0, 8.0, 0.0],
@@ -407,9 +414,7 @@ mod tests {
     fn submatrix_3x3() {
         let a = Matrix([[1.0, 5.0, 0.0], [-3.0, 2.0, 7.0], [0.0, 6.0, -3.0]]);
 
-        let result = a.submatrix(0, 2);
-
-        assert_abs_diff_eq!(result, Matrix([[-3.0, 2.0], [0.0, 6.0]]));
+        assert_abs_diff_eq!(a.submatrix(0, 2), Matrix([[-3.0, 2.0], [0.0, 6.0]]));
     }
 
     #[test]
@@ -421,10 +426,8 @@ mod tests {
             [-7.0, 1.0, -1.0, 1.0],
         ]);
 
-        let result = a.submatrix(2, 1);
-
         assert_abs_diff_eq!(
-            result,
+            a.submatrix(2, 1),
             Matrix([[-6.0, 1.0, 6.0], [-8.0, 8.0, 6.0], [-7.0, -1.0, 1.0]])
         );
     }
@@ -508,15 +511,15 @@ mod tests {
             [1.0, -3.0, 7.0, 4.0],
         ]);
 
-        let b = a.inverse();
+        let inv = a.inverse();
 
         assert_relative_eq!(a.determinant(), 532.0);
         assert_relative_eq!(a.cofactor(2, 3), -160.0);
-        assert_relative_eq!(b[3][2], -160.0 / 532.0);
+        assert_relative_eq!(inv[3][2], -160.0 / 532.0);
         assert_relative_eq!(a.cofactor(3, 2), 105.0);
-        assert_relative_eq!(b[2][3], 105.0 / 532.0);
+        assert_relative_eq!(inv[2][3], 105.0 / 532.0);
         assert_abs_diff_eq!(
-            b,
+            inv,
             Matrix([
                 [0.21805, 0.45113, 0.24060, -0.04511],
                 [-0.80827, -1.45677, -0.44361, 0.52068],
@@ -535,10 +538,8 @@ mod tests {
             [-3.0, 0.0, -9.0, -4.0],
         ]);
 
-        let b = a.inverse();
-
         assert_abs_diff_eq!(
-            b,
+            a.inverse(),
             Matrix([
                 [-0.15385, -0.15385, -0.28205, -0.53846],
                 [-0.07692, 0.12308, 0.02564, 0.03077],
@@ -557,10 +558,8 @@ mod tests {
             [-7.0, 6.0, 6.0, 2.0],
         ]);
 
-        let b = a.inverse();
-
         assert_abs_diff_eq!(
-            b,
+            a.inverse(),
             Matrix([
                 [-0.04074, -0.07778, 0.14444, -0.22222],
                 [-0.07778, 0.03333, 0.36667, -0.33333],
@@ -586,9 +585,7 @@ mod tests {
             [6.0, -2.0, 0.0, 5.0],
         ]);
 
-        let c = a * b;
-
-        assert_abs_diff_eq!(c * b.inverse(), a);
+        assert_abs_diff_eq!(a * b * b.inverse(), a);
     }
 
     #[test]
@@ -639,11 +636,7 @@ mod tests {
         let a = Matrix::translation(5.0, -3.0, 2.0);
         let p = Tuple::point(-3.0, 4.0, 5.0);
 
-        let result = a * p;
-
-        assert_relative_eq!(result.x, 2.0);
-        assert_relative_eq!(result.y, 1.0);
-        assert_relative_eq!(result.z, 7.0);
+        assert_abs_diff_eq!(a * p, Tuple::point(2.0, 1.0, 7.0));
     }
 
     #[test]
@@ -651,11 +644,7 @@ mod tests {
         let a = Matrix::translation(5.0, -3.0, 2.0);
         let p = Tuple::point(-3.0, 4.0, 5.0);
 
-        let result = a.inverse() * p;
-
-        assert_relative_eq!(result.x, -8.0);
-        assert_relative_eq!(result.y, 7.0);
-        assert_relative_eq!(result.z, 3.0);
+        assert_abs_diff_eq!(a.inverse() * p, Tuple::point(-8.0, 7.0, 3.0));
     }
 
     #[test]
@@ -663,11 +652,7 @@ mod tests {
         let a = Matrix::translation(5.0, -3.0, 2.0);
         let v = Tuple::vector(-3.0, 4.0, 5.0);
 
-        let result = a * v;
-
-        assert_relative_eq!(result.x, -3.0);
-        assert_relative_eq!(result.y, 4.0);
-        assert_relative_eq!(result.z, 5.0);
+        assert_abs_diff_eq!(a * v, v);
     }
 
     #[test]
@@ -675,11 +660,7 @@ mod tests {
         let a = Matrix::scaling(2.0, 3.0, 4.0);
         let p = Tuple::point(-4.0, 6.0, 8.0);
 
-        let result = a * p;
-
-        assert_relative_eq!(result.x, -8.0);
-        assert_relative_eq!(result.y, 18.0);
-        assert_relative_eq!(result.z, 32.0);
+        assert_abs_diff_eq!(a * p, Tuple::point(-8.0, 18.0, 32.0));
     }
 
     #[test]
@@ -687,11 +668,7 @@ mod tests {
         let a = Matrix::scaling(2.0, 3.0, 4.0);
         let v = Tuple::vector(-4.0, 6.0, 8.0);
 
-        let result = a * v;
-
-        assert_relative_eq!(result.x, -8.0);
-        assert_relative_eq!(result.y, 18.0);
-        assert_relative_eq!(result.z, 32.0);
+        assert_abs_diff_eq!(a * v, Tuple::vector(-8.0, 18.0, 32.0));
     }
 
     #[test]
@@ -699,11 +676,7 @@ mod tests {
         let a = Matrix::scaling(2.0, 3.0, 4.0);
         let p = Tuple::point(-4.0, 6.0, 8.0);
 
-        let result = a.inverse() * p;
-
-        assert_relative_eq!(result.x, -2.0);
-        assert_relative_eq!(result.y, 2.0);
-        assert_relative_eq!(result.z, 2.0);
+        assert_abs_diff_eq!(a.inverse() * p, Tuple::point(-2.0, 2.0, 2.0));
     }
 
     #[test]
@@ -711,10 +684,19 @@ mod tests {
         let a = Matrix::scaling(-1.0, 1.0, 1.0);
         let p = Tuple::point(2.0, 3.0, 4.0);
 
-        let result = a * p;
+        assert_abs_diff_eq!(a * p, Tuple::point(-2.0, 3.0, 4.0));
+    }
 
-        assert_relative_eq!(result.x, -2.0);
-        assert_relative_eq!(result.y, 3.0);
-        assert_relative_eq!(result.z, 4.0);
+    #[test]
+    fn rotation_around_x_axis() {
+        let p = Tuple::point(0.0, 1.0, 0.0);
+        let half_quarter = Matrix::rotation_x(PI / 4.0);
+        let full_quarter = Matrix::rotation_x(PI / 2.0);
+
+        assert_abs_diff_eq!(
+            half_quarter * p,
+            Tuple::point(0.0, 2.0_f64.sqrt() / 2.0, 2.0_f64.sqrt() / 2.0)
+        );
+        assert_abs_diff_eq!(full_quarter * p, Tuple::point(0.0, 0.0, 1.0));
     }
 }
