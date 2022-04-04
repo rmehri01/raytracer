@@ -5,7 +5,10 @@ use exercises::clock::plot_clock;
 mod core {
     pub mod canvas;
     pub mod color;
+    pub mod intersection;
     pub mod matrix;
+    pub mod object;
+    pub mod ray;
     pub mod tuple;
 }
 
