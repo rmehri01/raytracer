@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use crate::core::{canvas::Canvas, color::Color, tuple::Tuple};
 
 pub struct Projectile {
@@ -22,7 +24,6 @@ impl Environment {
     }
 }
 
-#[allow(dead_code)]
 pub fn plot_trajectory(mut p: Projectile, e: &Environment, path: &str) {
     let mut canvas = Canvas::new(900, 550);
     let pixel_color = Color::new(0.85, 0.35, 0.40);
@@ -39,7 +40,6 @@ pub fn plot_trajectory(mut p: Projectile, e: &Environment, path: &str) {
     canvas.write_ppm(path);
 }
 
-#[allow(dead_code)]
 pub fn print_trajectory(mut p: Projectile, e: &Environment) {
     let mut ticks = 0;
     while p.position.y > 0.0 {
