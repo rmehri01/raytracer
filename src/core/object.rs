@@ -1,6 +1,11 @@
 use approx::AbsDiffEq;
 
-use super::{intersection::Intersection, matrix::Matrix, ray::Ray, tuple::Tuple};
+use super::{
+    intersection::{Intersection, Intersections},
+    matrix::Matrix,
+    ray::Ray,
+    tuple::Tuple,
+};
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Object {
@@ -35,7 +40,7 @@ impl Sphere {
         }
     }
 
-    fn intersects(&self, ray: &Ray) -> Option<(Intersection, Intersection)> {
+    pub fn intersect(&self, ray: &Ray) -> Intersections {
         let transformed_ray = ray.transform(&self.transform.inverse());
         let sphere_to_ray = transformed_ray.origin - Tuple::point(0.0, 0.0, 0.0);
 
@@ -46,14 +51,15 @@ impl Sphere {
         let discriminant = b * b - 4.0 * a * c;
 
         if discriminant < 0.0 {
-            None
+            Intersections(Vec::new())
         } else {
             let t1 = (-b - discriminant.sqrt()) / (2.0 * a);
             let t2 = (-b + discriminant.sqrt()) / (2.0 * a);
 
             let i1 = Intersection::new(t1, Object::Sphere(*self));
             let i2 = Intersection::new(t2, Object::Sphere(*self));
-            Some((i1, i2))
+
+            Intersections(vec![i1, i2])
         }
     }
 }
@@ -69,10 +75,11 @@ mod tests {
         let r = Ray::new(Tuple::point(0.0, 0.0, -5.0), Tuple::vector(0.0, 0.0, 1.0));
         let s = Sphere::new();
 
-        let (i1, i2) = s.intersects(&r).expect("two valid intersections");
+        let xs = s.intersect(&r);
 
-        assert_abs_diff_eq!(i1.t, 4.0);
-        assert_abs_diff_eq!(i2.t, 6.0);
+        assert_eq!(xs.0.len(), 2);
+        assert_abs_diff_eq!(xs[0].t, 4.0);
+        assert_abs_diff_eq!(xs[1].t, 6.0);
     }
 
     #[test]
@@ -80,10 +87,11 @@ mod tests {
         let r = Ray::new(Tuple::point(0.0, 1.0, -5.0), Tuple::vector(0.0, 0.0, 1.0));
         let s = Sphere::new();
 
-        let (i1, i2) = s.intersects(&r).expect("two valid intersections");
+        let xs = s.intersect(&r);
 
-        assert_abs_diff_eq!(i1.t, 5.0);
-        assert_abs_diff_eq!(i2.t, 5.0);
+        assert_eq!(xs.0.len(), 2);
+        assert_abs_diff_eq!(xs[0].t, 5.0);
+        assert_abs_diff_eq!(xs[1].t, 5.0);
     }
 
     #[test]
@@ -91,9 +99,9 @@ mod tests {
         let r = Ray::new(Tuple::point(0.0, 2.0, -5.0), Tuple::vector(0.0, 0.0, 1.0));
         let s = Sphere::new();
 
-        let intersects = s.intersects(&r);
+        let intersects = s.intersect(&r);
 
-        assert!(intersects.is_none());
+        assert!(intersects.0.is_empty());
     }
 
     #[test]
@@ -101,10 +109,11 @@ mod tests {
         let r = Ray::new(Tuple::point(0.0, 0.0, 0.0), Tuple::vector(0.0, 0.0, 1.0));
         let s = Sphere::new();
 
-        let (i1, i2) = s.intersects(&r).expect("two valid intersections");
+        let xs = s.intersect(&r);
 
-        assert_abs_diff_eq!(i1.t, -1.0);
-        assert_abs_diff_eq!(i2.t, 1.0);
+        assert_eq!(xs.0.len(), 2);
+        assert_abs_diff_eq!(xs[0].t, -1.0);
+        assert_abs_diff_eq!(xs[1].t, 1.0);
     }
 
     #[test]
@@ -112,10 +121,11 @@ mod tests {
         let r = Ray::new(Tuple::point(0.0, 0.0, 5.0), Tuple::vector(0.0, 0.0, 1.0));
         let s = Sphere::new();
 
-        let (i1, i2) = s.intersects(&r).expect("two valid intersections");
+        let xs = s.intersect(&r);
 
-        assert_abs_diff_eq!(i1.t, -6.0);
-        assert_abs_diff_eq!(i2.t, -4.0);
+        assert_eq!(xs.0.len(), 2);
+        assert_abs_diff_eq!(xs[0].t, -6.0);
+        assert_abs_diff_eq!(xs[1].t, -4.0);
     }
 
     #[test]
@@ -123,10 +133,10 @@ mod tests {
         let r = Ray::new(Tuple::point(0.0, 0.0, -5.0), Tuple::vector(0.0, 0.0, 1.0));
         let s = Sphere::new();
 
-        let (i1, i2) = s.intersects(&r).expect("two valid intersections");
+        let xs = s.intersect(&r);
 
-        assert_eq!(i1.object, Object::Sphere(s));
-        assert_eq!(i2.object, Object::Sphere(s));
+        assert_eq!(xs[0].object, Object::Sphere(s));
+        assert_eq!(xs[1].object, Object::Sphere(s));
     }
 
     #[test]
@@ -150,9 +160,10 @@ mod tests {
         let mut s = Sphere::new();
         s.transform = Matrix::scaling(2.0, 2.0, 2.0);
 
-        let (i1, i2) = s.intersects(&r).expect("two valid intersections");
+        let xs = s.intersect(&r);
 
-        assert_abs_diff_eq!(i1.t, 3.0);
-        assert_abs_diff_eq!(i2.t, 7.0);
+        assert_eq!(xs.0.len(), 2);
+        assert_abs_diff_eq!(xs[0].t, 3.0);
+        assert_abs_diff_eq!(xs[1].t, 7.0);
     }
 }

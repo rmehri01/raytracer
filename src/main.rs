@@ -1,6 +1,6 @@
 #![warn(clippy::use_self, clippy::semicolon_if_nothing_returned)]
 
-use exercises::clock::plot_clock;
+use exercises::sphere::plot_sphere;
 
 mod core {
     pub mod canvas;
@@ -15,8 +15,9 @@ mod core {
 mod exercises {
     pub mod clock;
     pub mod projectile;
+    pub mod sphere;
 }
 
 fn main() {
-    plot_clock(400, "images/clock.ppm");
+    plot_sphere("images/sphere.ppm");
 }

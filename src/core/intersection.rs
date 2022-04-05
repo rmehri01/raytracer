@@ -1,3 +1,5 @@
+use std::ops;
+
 use approx::AbsDiffEq;
 
 use super::object::Object;
@@ -27,7 +29,7 @@ impl AbsDiffEq for Intersection {
 }
 
 // TODO: maybe sorted list instead of vector
-pub struct Intersections(Vec<Intersection>);
+pub struct Intersections(pub Vec<Intersection>);
 
 impl Intersections {
     pub fn hit(&self) -> Option<Intersection> {
@@ -36,6 +38,14 @@ impl Intersections {
             .filter(|i| i.t >= 0.0)
             .min_by(|i1, i2| i1.t.partial_cmp(&i2.t).unwrap())
             .cloned()
+    }
+}
+
+impl ops::Index<usize> for Intersections {
+    type Output = Intersection;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.0[index]
     }
 }
 
