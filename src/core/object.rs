@@ -1,6 +1,6 @@
 use approx::AbsDiffEq;
 
-use super::{intersection::Intersection, ray::Ray, tuple::Tuple};
+use super::{intersection::Intersection, matrix::Matrix, ray::Ray, tuple::Tuple};
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Object {
@@ -23,18 +23,24 @@ impl AbsDiffEq for Object {
 
 /// A unit sphere with center at the origin.
 #[derive(Debug, PartialEq, Clone, Copy)]
-pub struct Sphere {}
+pub struct Sphere {
+    transform: Matrix<4>,
+}
 
 impl Sphere {
+    // TODO: should this be passed a transform
     pub fn new() -> Self {
-        Self {}
+        Self {
+            transform: Matrix::identity(),
+        }
     }
 
     fn intersects(&self, ray: &Ray) -> Option<(Intersection, Intersection)> {
-        let sphere_to_ray = ray.origin - Tuple::point(0.0, 0.0, 0.0);
+        let transformed_ray = ray.transform(&self.transform.inverse());
+        let sphere_to_ray = transformed_ray.origin - Tuple::point(0.0, 0.0, 0.0);
 
-        let a = ray.direction.dot(&ray.direction);
-        let b = 2.0 * sphere_to_ray.dot(&ray.direction);
+        let a = transformed_ray.direction.dot(&transformed_ray.direction);
+        let b = 2.0 * sphere_to_ray.dot(&transformed_ray.direction);
         let c = sphere_to_ray.dot(&sphere_to_ray) - 1.0;
 
         let discriminant = b * b - 4.0 * a * c;
@@ -121,5 +127,32 @@ mod tests {
 
         assert_eq!(i1.object, Object::Sphere(s));
         assert_eq!(i2.object, Object::Sphere(s));
+    }
+
+    #[test]
+    fn default_transformation() {
+        let s = Sphere::new();
+
+        assert_eq!(s.transform, Matrix::identity());
+    }
+
+    #[test]
+    fn change_sphere_transformation() {
+        let mut s = Sphere::new();
+        s.transform = Matrix::translation(2.0, 3.0, 4.0);
+
+        assert_eq!(s.transform, Matrix::translation(2.0, 3.0, 4.0));
+    }
+
+    #[test]
+    fn intersect_scaled_sphere_with_ray() {
+        let r = Ray::new(Tuple::point(0.0, 0.0, -5.0), Tuple::vector(0.0, 0.0, 1.0));
+        let mut s = Sphere::new();
+        s.transform = Matrix::scaling(2.0, 2.0, 2.0);
+
+        let (i1, i2) = s.intersects(&r).expect("two valid intersections");
+
+        assert_abs_diff_eq!(i1.t, 3.0);
+        assert_abs_diff_eq!(i2.t, 7.0);
     }
 }
