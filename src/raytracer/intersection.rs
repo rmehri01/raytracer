@@ -53,7 +53,7 @@ impl ops::Index<usize> for Intersections {
 mod tests {
     use approx::{assert_abs_diff_eq, assert_relative_eq};
 
-    use crate::core::{object::Sphere, tuple::Tuple};
+    use crate::raytracer::object::Sphere;
 
     use super::*;
 

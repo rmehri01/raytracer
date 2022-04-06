@@ -2,7 +2,7 @@ use std::fs;
 
 use itertools::Itertools;
 
-use crate::core::color::Color;
+use super::color::Color;
 
 pub struct Canvas {
     pub width: usize,

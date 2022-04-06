@@ -3,12 +3,7 @@
 use exercises::sphere::plot_sphere;
 
 mod core {
-    pub mod canvas;
-    pub mod color;
-    pub mod intersection;
     pub mod matrix;
-    pub mod object;
-    pub mod ray;
     pub mod tuple;
 }
 
@@ -16,6 +11,18 @@ mod exercises {
     pub mod clock;
     pub mod projectile;
     pub mod sphere;
+}
+
+mod graphics {
+    pub mod canvas;
+    pub mod color;
+}
+
+mod raytracer {
+    pub mod intersection;
+    pub mod object;
+    pub mod point_light;
+    pub mod ray;
 }
 
 fn main() {

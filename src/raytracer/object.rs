@@ -1,10 +1,10 @@
 use approx::AbsDiffEq;
 
+use crate::core::{matrix::Matrix, tuple::Tuple};
+
 use super::{
     intersection::{Intersection, Intersections},
-    matrix::Matrix,
     ray::Ray,
-    tuple::Tuple,
 };
 
 #[derive(Debug, PartialEq, Clone, Copy)]

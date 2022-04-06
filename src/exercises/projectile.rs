@@ -1,6 +1,9 @@
 #![allow(dead_code)]
 
-use crate::core::{canvas::Canvas, color::Color, tuple::Tuple};
+use crate::{
+    core::tuple::Tuple,
+    graphics::{canvas::Canvas, color::Color},
+};
 
 pub struct Projectile {
     position: Tuple,

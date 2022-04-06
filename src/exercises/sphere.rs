@@ -1,6 +1,10 @@
 #![allow(dead_code)]
 
-use crate::core::{canvas::Canvas, color::Color, object::Sphere, ray::Ray, tuple::Tuple};
+use crate::{
+    core::tuple::Tuple,
+    graphics::{canvas::Canvas, color::Color},
+    raytracer::{object::Sphere, ray::Ray},
+};
 
 pub fn plot_sphere(path: &str) {
     let side_len = 500;

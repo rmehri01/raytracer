@@ -48,6 +48,10 @@ impl Tuple {
             self.x * other.y - self.y * other.x,
         )
     }
+
+    pub fn reflect(&self, normal: &Self) -> Self {
+        *self - *normal * 2.0 * self.dot(normal)
+    }
 }
 
 impl ops::Add for Tuple {
@@ -323,5 +327,21 @@ mod tests {
 
         assert_abs_diff_eq!(v1.cross(&v2), Tuple::vector(-1.0, 2.0, -1.0));
         assert_abs_diff_eq!(v2.cross(&v1), Tuple::vector(1.0, -2.0, 1.0));
+    }
+
+    #[test]
+    fn reflect_vector_45() {
+        let v = Tuple::vector(1.0, -1.0, 0.0);
+        let n = Tuple::vector(0.0, 1.0, 0.0);
+
+        assert_abs_diff_eq!(v.reflect(&n), Tuple::vector(1.0, 1.0, 0.0));
+    }
+
+    #[test]
+    fn reflect_vector_slanted_surface() {
+        let v = Tuple::vector(0.0, -1.0, 0.0);
+        let n = Tuple::vector(2.0_f64.sqrt() / 2.0, 2.0_f64.sqrt() / 2.0, 0.0);
+
+        assert_abs_diff_eq!(v.reflect(&n), Tuple::vector(1.0, 0.0, 0.0));
     }
 }

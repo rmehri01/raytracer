@@ -1,4 +1,4 @@
-use super::{matrix::Matrix, tuple::Tuple};
+use crate::core::{matrix::Matrix, tuple::Tuple};
 
 /// A ray in 3D space with a origin position and direction vector.
 pub struct Ray {
