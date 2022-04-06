@@ -293,7 +293,7 @@ impl ops::Mul<Tuple> for Matrix<4> {
 
 #[cfg(test)]
 mod tests {
-    use std::f64::consts::PI;
+    use std::f64::consts::{FRAC_PI_2, FRAC_PI_4, PI};
 
     use approx::{assert_abs_diff_eq, assert_abs_diff_ne, assert_relative_eq};
 
@@ -731,8 +731,8 @@ mod tests {
     #[test]
     fn rotation_around_x_axis() {
         let p = Tuple::point(0.0, 1.0, 0.0);
-        let half_quarter = Matrix::rotation_x(PI / 4.0);
-        let full_quarter = Matrix::rotation_x(PI / 2.0);
+        let half_quarter = Matrix::rotation_x(FRAC_PI_4);
+        let full_quarter = Matrix::rotation_x(FRAC_PI_2);
 
         assert_abs_diff_eq!(
             half_quarter * p,
@@ -744,8 +744,8 @@ mod tests {
     #[test]
     fn rotation_around_y_axis() {
         let p = Tuple::point(0.0, 0.0, 1.0);
-        let half_quarter = Matrix::rotation_y(PI / 4.0);
-        let full_quarter = Matrix::rotation_y(PI / 2.0);
+        let half_quarter = Matrix::rotation_y(FRAC_PI_4);
+        let full_quarter = Matrix::rotation_y(FRAC_PI_2);
 
         assert_abs_diff_eq!(
             half_quarter * p,
@@ -757,8 +757,8 @@ mod tests {
     #[test]
     fn rotation_around_z_axis() {
         let p = Tuple::point(0.0, 1.0, 0.0);
-        let half_quarter = Matrix::rotation_z(PI / 4.0);
-        let full_quarter = Matrix::rotation_z(PI / 2.0);
+        let half_quarter = Matrix::rotation_z(FRAC_PI_4);
+        let full_quarter = Matrix::rotation_z(FRAC_PI_2);
 
         assert_abs_diff_eq!(
             half_quarter * p,
@@ -818,7 +818,7 @@ mod tests {
     #[test]
     fn transformations_applied_in_sequence() {
         let p = Tuple::point(1.0, 0.0, 1.0);
-        let a = Matrix::rotation_x(PI / 2.0);
+        let a = Matrix::rotation_x(FRAC_PI_2);
         let b = Matrix::scaling(5.0, 5.0, 5.0);
         let c = Matrix::translation(10.0, 5.0, 7.0);
 
@@ -835,7 +835,7 @@ mod tests {
     #[test]
     fn chained_transformations() {
         let p = Tuple::point(1.0, 0.0, 1.0);
-        let a = Matrix::rotation_x(PI / 2.0);
+        let a = Matrix::rotation_x(FRAC_PI_2);
         let b = Matrix::scaling(5.0, 5.0, 5.0);
         let c = Matrix::translation(10.0, 5.0, 7.0);
 

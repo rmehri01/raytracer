@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use std::f64::consts::PI;
+use std::f64::consts::FRAC_PI_6;
 
 use crate::core::{canvas::Canvas, color::Color, matrix::Matrix, tuple::Tuple};
 
@@ -8,7 +8,7 @@ pub fn plot_clock(side_len: usize, path: &str) {
     let mut canvas = Canvas::new(side_len, side_len);
 
     let twelve = Tuple::point(0.0, 0.0, 1.0);
-    let angle = PI / 6.0;
+    let angle = FRAC_PI_6;
     let pixel_color = Color::new(1.0, 1.0, 1.0);
     let radius = 3.0 / 8.0 * canvas.width as f64;
 

@@ -62,10 +62,21 @@ impl Sphere {
             Intersections(vec![i1, i2])
         }
     }
+
+    pub fn normal_at(&self, world_point: &Tuple) -> Tuple {
+        let object_point = self.transform.inverse() * *world_point;
+        let object_normal = object_point - Tuple::point(0.0, 0.0, 0.0);
+        let mut world_normal = self.transform.inverse().transpose() * object_normal;
+        world_normal.w = 0.0;
+
+        world_normal.normalize()
+    }
 }
 
 #[cfg(test)]
 mod tests {
+    use std::f64::consts::{FRAC_1_SQRT_2, FRAC_PI_4};
+
     use approx::assert_abs_diff_eq;
 
     use super::*;
@@ -165,5 +176,84 @@ mod tests {
         assert_eq!(xs.0.len(), 2);
         assert_abs_diff_eq!(xs[0].t, 3.0);
         assert_abs_diff_eq!(xs[1].t, 7.0);
+    }
+
+    #[test]
+    fn sphere_normal_x_axis() {
+        let s = Sphere::new();
+        let n = s.normal_at(&Tuple::point(1.0, 0.0, 0.0));
+
+        assert_abs_diff_eq!(n, Tuple::vector(1.0, 0.0, 0.0));
+    }
+
+    #[test]
+    fn sphere_normal_y_axis() {
+        let s = Sphere::new();
+        let n = s.normal_at(&Tuple::point(0.0, 1.0, 0.0));
+
+        assert_abs_diff_eq!(n, Tuple::vector(0.0, 1.0, 0.0));
+    }
+
+    #[test]
+    fn sphere_normal_z_axis() {
+        let s = Sphere::new();
+        let n = s.normal_at(&Tuple::point(0.0, 0.0, 1.0));
+
+        assert_abs_diff_eq!(n, Tuple::vector(0.0, 0.0, 1.0));
+    }
+
+    #[test]
+    fn sphere_normal_non_axial_point() {
+        let s = Sphere::new();
+        let n = s.normal_at(&Tuple::point(
+            3.0_f64.sqrt() / 3.0,
+            3.0_f64.sqrt() / 3.0,
+            3.0_f64.sqrt() / 3.0,
+        ));
+
+        assert_abs_diff_eq!(
+            n,
+            Tuple::vector(
+                3.0_f64.sqrt() / 3.0,
+                3.0_f64.sqrt() / 3.0,
+                3.0_f64.sqrt() / 3.0
+            )
+        );
+    }
+
+    #[test]
+    fn normal_is_normalized() {
+        let s = Sphere::new();
+        let n = s.normal_at(&Tuple::point(
+            3.0_f64.sqrt() / 3.0,
+            3.0_f64.sqrt() / 3.0,
+            3.0_f64.sqrt() / 3.0,
+        ));
+
+        assert_abs_diff_eq!(n, n.normalize());
+    }
+
+    #[test]
+    fn normal_on_translated_sphere() {
+        let mut s = Sphere::new();
+        s.transform = Matrix::translation(0.0, 1.0, 0.0);
+
+        let n = s.normal_at(&Tuple::point(0.0, 1.70711, -FRAC_1_SQRT_2));
+
+        assert_abs_diff_eq!(n, Tuple::vector(0.0, FRAC_1_SQRT_2, -FRAC_1_SQRT_2));
+    }
+
+    #[test]
+    fn normal_on_transformed_sphere() {
+        let mut s = Sphere::new();
+        s.transform = Matrix::scaling(1.0, 0.5, 1.0) * Matrix::rotation_z(FRAC_PI_4);
+
+        let n = s.normal_at(&Tuple::point(
+            0.0,
+            2.0_f64.sqrt() / 2.0,
+            -(2.0_f64.sqrt()) / 2.0,
+        ));
+
+        assert_abs_diff_eq!(n, Tuple::vector(0.0, 0.97014, -0.24254));
     }
 }
