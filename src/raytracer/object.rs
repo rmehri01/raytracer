@@ -4,6 +4,7 @@ use crate::core::{matrix::Matrix, tuple::Tuple};
 
 use super::{
     intersection::{Intersection, Intersections},
+    material::Material,
     ray::Ray,
 };
 
@@ -19,9 +20,9 @@ impl AbsDiffEq for Object {
         1e-5
     }
 
-    fn abs_diff_eq(&self, other: &Self, epsilon: Self::Epsilon) -> bool {
+    fn abs_diff_eq(&self, other: &Self, _epsilon: Self::Epsilon) -> bool {
         match (self, other) {
-            (Object::Sphere(s1), Object::Sphere(s2)) => true,
+            (Object::Sphere(_), Object::Sphere(_)) => true,
         }
     }
 }
@@ -30,6 +31,7 @@ impl AbsDiffEq for Object {
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Sphere {
     transform: Matrix<4>,
+    material: Material,
 }
 
 impl Sphere {
@@ -37,6 +39,7 @@ impl Sphere {
     pub fn new() -> Self {
         Self {
             transform: Matrix::identity(),
+            material: Material::new(),
         }
     }
 
@@ -255,5 +258,23 @@ mod tests {
         ));
 
         assert_abs_diff_eq!(n, Tuple::vector(0.0, 0.97014, -0.24254));
+    }
+
+    #[test]
+    fn sphere_has_default_material() {
+        let s = Sphere::new();
+
+        assert_eq!(s.material, Material::new());
+    }
+
+    #[test]
+    fn material_assigned_to_sphere() {
+        let mut material = Material::new();
+        material.ambient = 1.0;
+
+        let mut s = Sphere::new();
+        s.material = material;
+
+        assert_eq!(s.material, material);
     }
 }

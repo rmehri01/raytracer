@@ -20,6 +20,7 @@ mod graphics {
 
 mod raytracer {
     pub mod intersection;
+    pub mod material;
     pub mod object;
     pub mod point_light;
     pub mod ray;

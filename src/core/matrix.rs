@@ -293,7 +293,7 @@ impl ops::Mul<Tuple> for Matrix<4> {
 
 #[cfg(test)]
 mod tests {
-    use std::f64::consts::{FRAC_PI_2, FRAC_PI_4, PI};
+    use std::f64::consts::{FRAC_PI_2, FRAC_PI_4};
 
     use approx::{assert_abs_diff_eq, assert_abs_diff_ne, assert_relative_eq};
 
