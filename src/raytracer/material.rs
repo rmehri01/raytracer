@@ -13,8 +13,8 @@ pub struct Material {
     pub shininess: f64,
 }
 
-impl Material {
-    pub fn new() -> Self {
+impl Default for Material {
+    fn default() -> Self {
         Self {
             color: Color::new(1.0, 1.0, 1.0),
             ambient: 0.1,
@@ -23,9 +23,11 @@ impl Material {
             shininess: 200.0,
         }
     }
+}
 
+impl Material {
     /// Returns the color of the material using the Phuong Reflection Model.
-    fn lighting(
+    pub fn lighting(
         &self,
         light: &PointLight,
         position: &Tuple,
@@ -84,7 +86,7 @@ mod tests {
 
     #[test]
     fn default_material() {
-        let material = Material::new();
+        let material = Material::default();
 
         assert_abs_diff_eq!(
             material,
@@ -100,7 +102,7 @@ mod tests {
 
     #[test]
     fn lighting_with_eye_between_light_and_surface() {
-        let material = Material::new();
+        let material = Material::default();
         let position = Tuple::point(0.0, 0.0, 0.0);
 
         let eye_v = Tuple::vector(0.0, 0.0, -1.0);
@@ -114,7 +116,7 @@ mod tests {
 
     #[test]
     fn lighting_with_eye_between_light_and_surface_eye_offset_45_degrees() {
-        let material = Material::new();
+        let material = Material::default();
         let position = Tuple::point(0.0, 0.0, 0.0);
 
         let eye_v = Tuple::vector(0.0, 2_f64.sqrt() / 2.0, -(2_f64.sqrt()) / 2.0);
@@ -128,7 +130,7 @@ mod tests {
 
     #[test]
     fn lighting_with_eye_opposite_surface_light_offset_45_degrees() {
-        let material = Material::new();
+        let material = Material::default();
         let position = Tuple::point(0.0, 0.0, 0.0);
 
         let eye_v = Tuple::vector(0.0, 0.0, -1.0);
@@ -142,7 +144,7 @@ mod tests {
 
     #[test]
     fn lighting_with_eye_in_path_of_reflection_vector() {
-        let material = Material::new();
+        let material = Material::default();
         let position = Tuple::point(0.0, 0.0, 0.0);
 
         let eye_v = Tuple::vector(0.0, -(2_f64.sqrt()) / 2.0, -(2_f64.sqrt()) / 2.0);
@@ -156,7 +158,7 @@ mod tests {
 
     #[test]
     fn lighting_with_light_behind_surface() {
-        let material = Material::new();
+        let material = Material::default();
         let position = Tuple::point(0.0, 0.0, 0.0);
 
         let eye_v = Tuple::vector(0.0, 0.0, -1.0);

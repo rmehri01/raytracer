@@ -6,3 +6,20 @@ edition = "2021"
 [dependencies]
 approx = "0.5.1"
 itertools = "0.10.2"
+
+[[bin]]
+name = "circle"
+path = "exercises/circle.rs"
+
+[[bin]]
+name = "clock"
+path = "exercises/clock.rs"
+
+[[bin]]
+name = "projectile"
+path = "exercises/projectile.rs"
+
+[[bin]]
+name = "shading"
+path = "exercises/shading.rs"
+

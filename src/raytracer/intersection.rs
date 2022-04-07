@@ -2,16 +2,16 @@ use std::ops;
 
 use approx::AbsDiffEq;
 
-use super::object::Object;
+use super::sphere::Sphere;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Intersection {
     pub t: f64,
-    pub object: Object,
+    pub object: Sphere,
 }
 
 impl Intersection {
-    pub fn new(t: f64, object: Object) -> Self {
+    pub fn new(t: f64, object: Sphere) -> Self {
         Self { t, object }
     }
 }
@@ -53,24 +53,24 @@ impl ops::Index<usize> for Intersections {
 mod tests {
     use approx::{assert_abs_diff_eq, assert_relative_eq};
 
-    use crate::raytracer::object::Sphere;
+    use crate::raytracer::sphere::Sphere;
 
     use super::*;
 
     #[test]
     fn test_intersection_new() {
-        let s = Sphere::new();
-        let intersection = Intersection::new(3.5, Object::Sphere(s));
+        let s = Sphere::default();
+        let intersection = Intersection::new(3.5, s);
 
         assert_relative_eq!(intersection.t, 3.5);
-        assert_eq!(intersection.object, Object::Sphere(s));
+        assert_eq!(intersection.object, s);
     }
 
     #[test]
     fn hit_all_positive() {
-        let s = Sphere::new();
-        let i1 = Intersection::new(1.0, Object::Sphere(s));
-        let i2 = Intersection::new(2.0, Object::Sphere(s));
+        let s = Sphere::default();
+        let i1 = Intersection::new(1.0, s);
+        let i2 = Intersection::new(2.0, s);
         let xs = vec![i1, i2];
 
         let hit = Intersections(xs).hit().expect("valid hit");
@@ -80,9 +80,9 @@ mod tests {
 
     #[test]
     fn hit_some_negative() {
-        let s = Sphere::new();
-        let i1 = Intersection::new(-1.0, Object::Sphere(s));
-        let i2 = Intersection::new(1.0, Object::Sphere(s));
+        let s = Sphere::default();
+        let i1 = Intersection::new(-1.0, s);
+        let i2 = Intersection::new(1.0, s);
         let xs = vec![i1, i2];
 
         let hit = Intersections(xs).hit().expect("valid hit");
@@ -92,9 +92,9 @@ mod tests {
 
     #[test]
     fn hit_all_negative() {
-        let s = Sphere::new();
-        let i1 = Intersection::new(-2.0, Object::Sphere(s));
-        let i2 = Intersection::new(-1.0, Object::Sphere(s));
+        let s = Sphere::default();
+        let i1 = Intersection::new(-2.0, s);
+        let i2 = Intersection::new(-1.0, s);
         let xs = vec![i1, i2];
 
         let hit = Intersections(xs).hit();
@@ -104,11 +104,11 @@ mod tests {
 
     #[test]
     fn hit_lowest_nonnegative() {
-        let s = Sphere::new();
-        let i1 = Intersection::new(5.0, Object::Sphere(s));
-        let i2 = Intersection::new(7.0, Object::Sphere(s));
-        let i3 = Intersection::new(-3.0, Object::Sphere(s));
-        let i4 = Intersection::new(2.0, Object::Sphere(s));
+        let s = Sphere::default();
+        let i1 = Intersection::new(5.0, s);
+        let i2 = Intersection::new(7.0, s);
+        let i3 = Intersection::new(-3.0, s);
+        let i4 = Intersection::new(2.0, s);
         let xs = vec![i1, i2, i3, i4];
 
         let hit = Intersections(xs).hit().expect("valid hit");

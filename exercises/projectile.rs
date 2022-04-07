@@ -1,6 +1,4 @@
-#![allow(dead_code)]
-
-use crate::{
+use raytracer::{
     core::tuple::Tuple,
     graphics::{canvas::Canvas, color::Color},
 };
@@ -61,4 +59,16 @@ fn tick(proj: Projectile, env: &Environment) -> Projectile {
         position: proj.position + proj.velocity,
         velocity: proj.velocity + env.gravity + env.wind,
     }
+}
+
+fn main() {
+    let start = Tuple::point(0.0, 1.0, 0.0);
+    let velocity = Tuple::vector(1.0, 1.8, 0.0).normalize() * 11.25;
+    let p = Projectile::new(start, velocity);
+
+    let gravity = Tuple::vector(0.0, -0.1, 0.0);
+    let wind = Tuple::vector(-0.01, 0.0, 0.0);
+    let e = Environment::new(gravity, wind);
+
+    plot_trajectory(p, &e, "images/trajectory.ppm");
 }

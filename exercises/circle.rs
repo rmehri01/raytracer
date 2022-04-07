@@ -1,9 +1,7 @@
-#![allow(dead_code)]
-
-use crate::{
+use raytracer::{
     core::tuple::Tuple,
     graphics::{canvas::Canvas, color::Color},
-    raytracer::{object::Sphere, ray::Ray},
+    raytracer::{ray::Ray, sphere::Sphere},
 };
 
 pub fn plot_sphere(path: &str) {
@@ -18,7 +16,7 @@ pub fn plot_sphere(path: &str) {
     let half = wall_size / 2.0;
 
     let color = Color::new(1.0, 0.0, 0.0);
-    let sphere = Sphere::new();
+    let sphere = Sphere::default();
 
     for y in 0..side_len {
         let world_y = half - pixel_size * y as f64;
@@ -37,4 +35,8 @@ pub fn plot_sphere(path: &str) {
     }
 
     canvas.write_ppm(path);
+}
+
+fn main() {
+    plot_sphere("images/circle.ppm");
 }

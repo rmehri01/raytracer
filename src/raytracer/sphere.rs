@@ -8,41 +8,36 @@ use super::{
     ray::Ray,
 };
 
+/// A unit sphere with center at the origin.
 #[derive(Debug, PartialEq, Clone, Copy)]
-pub enum Object {
-    Sphere(Sphere),
+pub struct Sphere {
+    pub transform: Matrix<4>,
+    pub material: Material,
 }
 
-impl AbsDiffEq for Object {
+impl AbsDiffEq for Sphere {
     type Epsilon = f64;
 
     fn default_epsilon() -> Self::Epsilon {
         1e-5
     }
 
-    fn abs_diff_eq(&self, other: &Self, _epsilon: Self::Epsilon) -> bool {
-        match (self, other) {
-            (Object::Sphere(_), Object::Sphere(_)) => true,
-        }
+    fn abs_diff_eq(&self, other: &Self, epsilon: Self::Epsilon) -> bool {
+        self.transform.abs_diff_eq(&other.transform, epsilon)
+            && self.material.abs_diff_eq(&other.material, epsilon)
     }
 }
 
-/// A unit sphere with center at the origin.
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub struct Sphere {
-    transform: Matrix<4>,
-    material: Material,
+impl Default for Sphere {
+    fn default() -> Self {
+        Self {
+            transform: Matrix::identity(),
+            material: Material::default(),
+        }
+    }
 }
 
 impl Sphere {
-    // TODO: should this be passed a transform
-    pub fn new() -> Self {
-        Self {
-            transform: Matrix::identity(),
-            material: Material::new(),
-        }
-    }
-
     pub fn intersect(&self, ray: &Ray) -> Intersections {
         let transformed_ray = ray.transform(&self.transform.inverse());
         let sphere_to_ray = transformed_ray.origin - Tuple::point(0.0, 0.0, 0.0);
@@ -59,8 +54,8 @@ impl Sphere {
             let t1 = (-b - discriminant.sqrt()) / (2.0 * a);
             let t2 = (-b + discriminant.sqrt()) / (2.0 * a);
 
-            let i1 = Intersection::new(t1, Object::Sphere(*self));
-            let i2 = Intersection::new(t2, Object::Sphere(*self));
+            let i1 = Intersection::new(t1, *self);
+            let i2 = Intersection::new(t2, *self);
 
             Intersections(vec![i1, i2])
         }
@@ -87,7 +82,7 @@ mod tests {
     #[test]
     fn ray_intersects_sphere() {
         let r = Ray::new(Tuple::point(0.0, 0.0, -5.0), Tuple::vector(0.0, 0.0, 1.0));
-        let s = Sphere::new();
+        let s = Sphere::default();
 
         let xs = s.intersect(&r);
 
@@ -99,7 +94,7 @@ mod tests {
     #[test]
     fn ray_tangent_to_sphere() {
         let r = Ray::new(Tuple::point(0.0, 1.0, -5.0), Tuple::vector(0.0, 0.0, 1.0));
-        let s = Sphere::new();
+        let s = Sphere::default();
 
         let xs = s.intersect(&r);
 
@@ -111,7 +106,7 @@ mod tests {
     #[test]
     fn ray_misses_sphere() {
         let r = Ray::new(Tuple::point(0.0, 2.0, -5.0), Tuple::vector(0.0, 0.0, 1.0));
-        let s = Sphere::new();
+        let s = Sphere::default();
 
         let intersects = s.intersect(&r);
 
@@ -121,7 +116,7 @@ mod tests {
     #[test]
     fn ray_originates_inside_sphere() {
         let r = Ray::new(Tuple::point(0.0, 0.0, 0.0), Tuple::vector(0.0, 0.0, 1.0));
-        let s = Sphere::new();
+        let s = Sphere::default();
 
         let xs = s.intersect(&r);
 
@@ -133,7 +128,7 @@ mod tests {
     #[test]
     fn sphere_behind_ray() {
         let r = Ray::new(Tuple::point(0.0, 0.0, 5.0), Tuple::vector(0.0, 0.0, 1.0));
-        let s = Sphere::new();
+        let s = Sphere::default();
 
         let xs = s.intersect(&r);
 
@@ -145,25 +140,27 @@ mod tests {
     #[test]
     fn intersect_sets_object() {
         let r = Ray::new(Tuple::point(0.0, 0.0, -5.0), Tuple::vector(0.0, 0.0, 1.0));
-        let s = Sphere::new();
+        let s = Sphere::default();
 
         let xs = s.intersect(&r);
 
-        assert_eq!(xs[0].object, Object::Sphere(s));
-        assert_eq!(xs[1].object, Object::Sphere(s));
+        assert_eq!(xs[0].object, s);
+        assert_eq!(xs[1].object, s);
     }
 
     #[test]
     fn default_transformation() {
-        let s = Sphere::new();
+        let s = Sphere::default();
 
         assert_eq!(s.transform, Matrix::identity());
     }
 
     #[test]
     fn change_sphere_transformation() {
-        let mut s = Sphere::new();
-        s.transform = Matrix::translation(2.0, 3.0, 4.0);
+        let s = Sphere {
+            transform: Matrix::translation(2.0, 3.0, 4.0),
+            ..Sphere::default()
+        };
 
         assert_eq!(s.transform, Matrix::translation(2.0, 3.0, 4.0));
     }
@@ -171,8 +168,10 @@ mod tests {
     #[test]
     fn intersect_scaled_sphere_with_ray() {
         let r = Ray::new(Tuple::point(0.0, 0.0, -5.0), Tuple::vector(0.0, 0.0, 1.0));
-        let mut s = Sphere::new();
-        s.transform = Matrix::scaling(2.0, 2.0, 2.0);
+        let s = Sphere {
+            transform: Matrix::scaling(2.0, 2.0, 2.0),
+            ..Sphere::default()
+        };
 
         let xs = s.intersect(&r);
 
@@ -183,7 +182,7 @@ mod tests {
 
     #[test]
     fn sphere_normal_x_axis() {
-        let s = Sphere::new();
+        let s = Sphere::default();
         let n = s.normal_at(&Tuple::point(1.0, 0.0, 0.0));
 
         assert_abs_diff_eq!(n, Tuple::vector(1.0, 0.0, 0.0));
@@ -191,7 +190,7 @@ mod tests {
 
     #[test]
     fn sphere_normal_y_axis() {
-        let s = Sphere::new();
+        let s = Sphere::default();
         let n = s.normal_at(&Tuple::point(0.0, 1.0, 0.0));
 
         assert_abs_diff_eq!(n, Tuple::vector(0.0, 1.0, 0.0));
@@ -199,7 +198,7 @@ mod tests {
 
     #[test]
     fn sphere_normal_z_axis() {
-        let s = Sphere::new();
+        let s = Sphere::default();
         let n = s.normal_at(&Tuple::point(0.0, 0.0, 1.0));
 
         assert_abs_diff_eq!(n, Tuple::vector(0.0, 0.0, 1.0));
@@ -207,7 +206,7 @@ mod tests {
 
     #[test]
     fn sphere_normal_non_axial_point() {
-        let s = Sphere::new();
+        let s = Sphere::default();
         let n = s.normal_at(&Tuple::point(
             3.0_f64.sqrt() / 3.0,
             3.0_f64.sqrt() / 3.0,
@@ -226,7 +225,7 @@ mod tests {
 
     #[test]
     fn normal_is_normalized() {
-        let s = Sphere::new();
+        let s = Sphere::default();
         let n = s.normal_at(&Tuple::point(
             3.0_f64.sqrt() / 3.0,
             3.0_f64.sqrt() / 3.0,
@@ -238,8 +237,10 @@ mod tests {
 
     #[test]
     fn normal_on_translated_sphere() {
-        let mut s = Sphere::new();
-        s.transform = Matrix::translation(0.0, 1.0, 0.0);
+        let s = Sphere {
+            transform: Matrix::translation(0.0, 1.0, 0.0),
+            ..Sphere::default()
+        };
 
         let n = s.normal_at(&Tuple::point(0.0, 1.70711, -FRAC_1_SQRT_2));
 
@@ -248,8 +249,10 @@ mod tests {
 
     #[test]
     fn normal_on_transformed_sphere() {
-        let mut s = Sphere::new();
-        s.transform = Matrix::scaling(1.0, 0.5, 1.0) * Matrix::rotation_z(FRAC_PI_4);
+        let s = Sphere {
+            transform: Matrix::scaling(1.0, 0.5, 1.0) * Matrix::rotation_z(FRAC_PI_4),
+            ..Sphere::default()
+        };
 
         let n = s.normal_at(&Tuple::point(
             0.0,
@@ -262,18 +265,22 @@ mod tests {
 
     #[test]
     fn sphere_has_default_material() {
-        let s = Sphere::new();
+        let s = Sphere::default();
 
-        assert_eq!(s.material, Material::new());
+        assert_eq!(s.material, Material::default());
     }
 
     #[test]
     fn material_assigned_to_sphere() {
-        let mut material = Material::new();
-        material.ambient = 1.0;
+        let material = Material {
+            ambient: 1.0,
+            ..Material::default()
+        };
 
-        let mut s = Sphere::new();
-        s.material = material;
+        let s = Sphere {
+            material,
+            ..Sphere::default()
+        };
 
         assert_eq!(s.material, material);
     }

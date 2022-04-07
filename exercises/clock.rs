@@ -1,8 +1,6 @@
-#![allow(dead_code)]
-
 use std::f64::consts::FRAC_PI_6;
 
-use crate::{
+use raytracer::{
     core::{matrix::Matrix, tuple::Tuple},
     graphics::{canvas::Canvas, color::Color},
 };
@@ -24,4 +22,8 @@ pub fn plot_clock(side_len: usize, path: &str) {
     }
 
     canvas.write_ppm(path);
+}
+
+fn main() {
+    plot_clock(400, "images/clock.ppm");
 }
