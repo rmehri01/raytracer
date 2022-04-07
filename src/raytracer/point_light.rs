@@ -1,6 +1,9 @@
+use approx::AbsDiffEq;
+
 use crate::{core::tuple::Tuple, graphics::color::Color};
 
 /// A light source existing in a single point in space.
+#[derive(Debug, PartialEq)]
 pub struct PointLight {
     pub position: Tuple,
     pub intensity: Color,
@@ -12,6 +15,19 @@ impl PointLight {
             position,
             intensity,
         }
+    }
+}
+
+impl AbsDiffEq for PointLight {
+    type Epsilon = f64;
+
+    fn default_epsilon() -> Self::Epsilon {
+        1e-5
+    }
+
+    fn abs_diff_eq(&self, other: &Self, epsilon: Self::Epsilon) -> bool {
+        self.position.abs_diff_eq(&other.position, epsilon)
+            && self.intensity.abs_diff_eq(&other.intensity, epsilon)
     }
 }
 

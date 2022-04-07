@@ -33,7 +33,7 @@ pub fn plot_shaded_sphere(path: &str) {
             let xs = sphere.intersect(&r);
 
             if let Some(hit) = xs.hit() {
-                let point = r.position(hit.t);
+                let point = r.position(hit.t.0);
                 let normal = sphere.normal_at(&point);
                 let eye = -r.direction;
                 let color = hit.object.material.lighting(&light, &point, &eye, &normal);

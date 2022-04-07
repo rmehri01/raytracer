@@ -1,18 +1,23 @@
-use std::ops;
+use std::collections::BTreeSet;
 
 use approx::AbsDiffEq;
+use ordered_float::OrderedFloat;
 
 use super::sphere::Sphere;
 
+// TODO: what to do about partial eq and eq
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Intersection {
-    pub t: f64,
+    pub t: OrderedFloat<f64>,
     pub object: Sphere,
 }
 
 impl Intersection {
     pub fn new(t: f64, object: Sphere) -> Self {
-        Self { t, object }
+        Self {
+            t: OrderedFloat(t),
+            object,
+        }
     }
 }
 
@@ -28,24 +33,26 @@ impl AbsDiffEq for Intersection {
     }
 }
 
-// TODO: maybe sorted list instead of vector
-pub struct Intersections(pub Vec<Intersection>);
+impl Eq for Intersection {}
 
-impl Intersections {
-    pub fn hit(&self) -> Option<Intersection> {
-        self.0
-            .iter()
-            .filter(|i| i.t >= 0.0)
-            .min_by(|i1, i2| i1.t.partial_cmp(&i2.t).unwrap())
-            .cloned()
+impl PartialOrd for Intersection {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        self.t.partial_cmp(&other.t)
     }
 }
 
-impl ops::Index<usize> for Intersections {
-    type Output = Intersection;
+impl Ord for Intersection {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.t.cmp(&other.t)
+    }
+}
 
-    fn index(&self, index: usize) -> &Self::Output {
-        &self.0[index]
+// TODO: need to keep duplicates?
+pub struct Intersections(pub BTreeSet<Intersection>);
+
+impl Intersections {
+    pub fn hit(&self) -> Option<Intersection> {
+        self.0.iter().find(|i| i.t >= OrderedFloat(0.0)).cloned()
     }
 }
 
@@ -62,7 +69,7 @@ mod tests {
         let s = Sphere::default();
         let intersection = Intersection::new(3.5, s);
 
-        assert_relative_eq!(intersection.t, 3.5);
+        assert_relative_eq!(intersection.t.0, 3.5);
         assert_eq!(intersection.object, s);
     }
 
@@ -71,7 +78,7 @@ mod tests {
         let s = Sphere::default();
         let i1 = Intersection::new(1.0, s);
         let i2 = Intersection::new(2.0, s);
-        let xs = vec![i1, i2];
+        let xs = BTreeSet::from([i1, i2]);
 
         let hit = Intersections(xs).hit().expect("valid hit");
 
@@ -83,7 +90,7 @@ mod tests {
         let s = Sphere::default();
         let i1 = Intersection::new(-1.0, s);
         let i2 = Intersection::new(1.0, s);
-        let xs = vec![i1, i2];
+        let xs = BTreeSet::from([i1, i2]);
 
         let hit = Intersections(xs).hit().expect("valid hit");
 
@@ -95,7 +102,7 @@ mod tests {
         let s = Sphere::default();
         let i1 = Intersection::new(-2.0, s);
         let i2 = Intersection::new(-1.0, s);
-        let xs = vec![i1, i2];
+        let xs = BTreeSet::from([i1, i2]);
 
         let hit = Intersections(xs).hit();
 
@@ -109,7 +116,7 @@ mod tests {
         let i2 = Intersection::new(7.0, s);
         let i3 = Intersection::new(-3.0, s);
         let i4 = Intersection::new(2.0, s);
-        let xs = vec![i1, i2, i3, i4];
+        let xs = BTreeSet::from([i1, i2, i3, i4]);
 
         let hit = Intersections(xs).hit().expect("valid hit");
 

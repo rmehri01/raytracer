@@ -1,3 +1,5 @@
+use std::collections::BTreeSet;
+
 use approx::AbsDiffEq;
 
 use crate::core::{matrix::Matrix, tuple::Tuple};
@@ -49,7 +51,7 @@ impl Sphere {
         let discriminant = b * b - 4.0 * a * c;
 
         if discriminant < 0.0 {
-            Intersections(Vec::new())
+            Intersections(BTreeSet::new())
         } else {
             let t1 = (-b - discriminant.sqrt()) / (2.0 * a);
             let t2 = (-b + discriminant.sqrt()) / (2.0 * a);
@@ -57,7 +59,7 @@ impl Sphere {
             let i1 = Intersection::new(t1, *self);
             let i2 = Intersection::new(t2, *self);
 
-            Intersections(vec![i1, i2])
+            Intersections(BTreeSet::from([i1, i2]))
         }
     }
 
@@ -84,11 +86,16 @@ mod tests {
         let r = Ray::new(Tuple::point(0.0, 0.0, -5.0), Tuple::vector(0.0, 0.0, 1.0));
         let s = Sphere::default();
 
-        let xs = s.intersect(&r);
+        let xs = s
+            .intersect(&r)
+            .0
+            .iter()
+            .map(|i| i.t.0)
+            .collect::<Vec<f64>>();
 
-        assert_eq!(xs.0.len(), 2);
-        assert_abs_diff_eq!(xs[0].t, 4.0);
-        assert_abs_diff_eq!(xs[1].t, 6.0);
+        assert_eq!(xs.len(), 2);
+        assert_abs_diff_eq!(xs[0], 4.0);
+        assert_abs_diff_eq!(xs[1], 6.0);
     }
 
     #[test]
@@ -96,11 +103,15 @@ mod tests {
         let r = Ray::new(Tuple::point(0.0, 1.0, -5.0), Tuple::vector(0.0, 0.0, 1.0));
         let s = Sphere::default();
 
-        let xs = s.intersect(&r);
+        let xs = s
+            .intersect(&r)
+            .0
+            .iter()
+            .map(|i| i.t.0)
+            .collect::<Vec<f64>>();
 
-        assert_eq!(xs.0.len(), 2);
-        assert_abs_diff_eq!(xs[0].t, 5.0);
-        assert_abs_diff_eq!(xs[1].t, 5.0);
+        assert_eq!(xs.len(), 1);
+        assert_abs_diff_eq!(xs[0], 5.0);
     }
 
     #[test]
@@ -118,11 +129,16 @@ mod tests {
         let r = Ray::new(Tuple::point(0.0, 0.0, 0.0), Tuple::vector(0.0, 0.0, 1.0));
         let s = Sphere::default();
 
-        let xs = s.intersect(&r);
+        let xs = s
+            .intersect(&r)
+            .0
+            .iter()
+            .map(|i| i.t.0)
+            .collect::<Vec<f64>>();
 
-        assert_eq!(xs.0.len(), 2);
-        assert_abs_diff_eq!(xs[0].t, -1.0);
-        assert_abs_diff_eq!(xs[1].t, 1.0);
+        assert_eq!(xs.len(), 2);
+        assert_abs_diff_eq!(xs[0], -1.0);
+        assert_abs_diff_eq!(xs[1], 1.0);
     }
 
     #[test]
@@ -130,11 +146,11 @@ mod tests {
         let r = Ray::new(Tuple::point(0.0, 0.0, 5.0), Tuple::vector(0.0, 0.0, 1.0));
         let s = Sphere::default();
 
-        let xs = s.intersect(&r);
+        let xs = s.intersect(&r).0.into_iter().collect::<Vec<_>>();
 
-        assert_eq!(xs.0.len(), 2);
-        assert_abs_diff_eq!(xs[0].t, -6.0);
-        assert_abs_diff_eq!(xs[1].t, -4.0);
+        assert_eq!(xs.len(), 2);
+        assert_abs_diff_eq!(xs[0].t.0, -6.0);
+        assert_abs_diff_eq!(xs[1].t.0, -4.0);
     }
 
     #[test]
@@ -142,7 +158,7 @@ mod tests {
         let r = Ray::new(Tuple::point(0.0, 0.0, -5.0), Tuple::vector(0.0, 0.0, 1.0));
         let s = Sphere::default();
 
-        let xs = s.intersect(&r);
+        let xs = s.intersect(&r).0.into_iter().collect::<Vec<_>>();
 
         assert_eq!(xs[0].object, s);
         assert_eq!(xs[1].object, s);
@@ -173,11 +189,11 @@ mod tests {
             ..Sphere::default()
         };
 
-        let xs = s.intersect(&r);
+        let xs = s.intersect(&r).0.iter().map(|i| i.t.0).collect::<Vec<_>>();
 
-        assert_eq!(xs.0.len(), 2);
-        assert_abs_diff_eq!(xs[0].t, 3.0);
-        assert_abs_diff_eq!(xs[1].t, 7.0);
+        assert_eq!(xs.len(), 2);
+        assert_abs_diff_eq!(xs[0], 3.0);
+        assert_abs_diff_eq!(xs[1], 7.0);
     }
 
     #[test]
