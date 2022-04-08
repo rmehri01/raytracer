@@ -153,78 +153,82 @@ impl Matrix<4> {
     }
 
     pub fn translation(x: f64, y: f64, z: f64) -> Self {
-        let mut m = Self::identity();
-
-        m[0][3] = x;
-        m[1][3] = y;
-        m[2][3] = z;
-
-        m
+        Self([
+            [1.0, 0.0, 0.0, x],
+            [0.0, 1.0, 0.0, y],
+            [0.0, 0.0, 1.0, z],
+            [0.0, 0.0, 0.0, 1.0],
+        ])
     }
 
     pub fn scaling(x: f64, y: f64, z: f64) -> Self {
-        let mut m = Self::identity();
-
-        m[0][0] = x;
-        m[1][1] = y;
-        m[2][2] = z;
-
-        m
+        Self([
+            [x, 0.0, 0.0, 0.0],
+            [0.0, y, 0.0, 0.0],
+            [0.0, 0.0, z, 0.0],
+            [0.0, 0.0, 0.0, 1.0],
+        ])
     }
 
     pub fn rotation_x(radians: f64) -> Self {
-        let mut m = Self::identity();
-
         let cos_r = radians.cos();
         let sin_r = radians.sin();
 
-        m[1][1] = cos_r;
-        m[1][2] = -sin_r;
-        m[2][1] = sin_r;
-        m[2][2] = cos_r;
-
-        m
+        Self([
+            [1.0, 0.0, 0.0, 0.0],
+            [0.0, cos_r, -sin_r, 0.0],
+            [0.0, sin_r, cos_r, 0.0],
+            [0.0, 0.0, 0.0, 1.0],
+        ])
     }
 
     pub fn rotation_y(radians: f64) -> Self {
-        let mut m = Self::identity();
-
         let cos_r = radians.cos();
         let sin_r = radians.sin();
 
-        m[0][0] = cos_r;
-        m[0][2] = sin_r;
-        m[2][0] = -sin_r;
-        m[2][2] = cos_r;
-
-        m
+        Self([
+            [cos_r, 0.0, sin_r, 0.0],
+            [0.0, 1.0, 0.0, 0.0],
+            [-sin_r, 0.0, cos_r, 0.0],
+            [0.0, 0.0, 0.0, 1.0],
+        ])
     }
 
     pub fn rotation_z(radians: f64) -> Self {
-        let mut m = Self::identity();
-
         let cos_r = radians.cos();
         let sin_r = radians.sin();
 
-        m[0][0] = cos_r;
-        m[0][1] = -sin_r;
-        m[1][0] = sin_r;
-        m[1][1] = cos_r;
-
-        m
+        Self([
+            [cos_r, -sin_r, 0.0, 0.0],
+            [sin_r, cos_r, 0.0, 0.0],
+            [0.0, 0.0, 1.0, 0.0],
+            [0.0, 0.0, 0.0, 1.0],
+        ])
     }
 
     pub fn shearing(xy: f64, xz: f64, yx: f64, yz: f64, zx: f64, zy: f64) -> Self {
-        let mut m = Self::identity();
+        Self([
+            [1.0, xy, xz, 0.0],
+            [yx, 1.0, yz, 0.0],
+            [zx, zy, 1.0, 0.0],
+            [0.0, 0.0, 0.0, 1.0],
+        ])
+    }
 
-        m[0][1] = xy;
-        m[0][2] = xz;
-        m[1][0] = yx;
-        m[1][2] = yz;
-        m[2][0] = zx;
-        m[2][1] = zy;
+    pub fn view_transform(from: Tuple, to: Tuple, up: Tuple) -> Self {
+        let forward = (to - from).normalize();
+        let upn = up.normalize();
+        let left = forward.cross(&upn);
+        let true_up = left.cross(&forward);
 
-        m
+        let orientation = Self([
+            [left.x, left.y, left.z, 0.0],
+            [true_up.x, true_up.y, true_up.z, 0.0],
+            [-forward.x, -forward.y, -forward.z, 0.0],
+            [0.0, 0.0, 0.0, 1.0],
+        ]);
+
+        orientation * Self::translation(-from.x, -from.y, -from.z)
     }
 }
 
@@ -842,5 +846,57 @@ mod tests {
         let t = c * b * a;
 
         assert_abs_diff_eq!(t * p, Tuple::point(15.0, 0.0, 7.0));
+    }
+
+    #[test]
+    fn view_transformation_default_orientation() {
+        let from = Tuple::point(0.0, 0.0, 0.0);
+        let to = Tuple::point(0.0, 0.0, -1.0);
+        let up = Tuple::vector(0.0, 1.0, 0.0);
+
+        let t = Matrix::view_transform(from, to, up);
+
+        assert_abs_diff_eq!(t, Matrix::identity());
+    }
+
+    #[test]
+    fn view_transformation_positive_z_direction() {
+        let from = Tuple::point(0.0, 0.0, 0.0);
+        let to = Tuple::point(0.0, 0.0, 1.0);
+        let up = Tuple::vector(0.0, 1.0, 0.0);
+
+        let t = Matrix::view_transform(from, to, up);
+
+        assert_abs_diff_eq!(t, Matrix::scaling(-1.0, 1.0, -1.0));
+    }
+
+    #[test]
+    fn view_transformation_moves_world() {
+        let from = Tuple::point(0.0, 0.0, 8.0);
+        let to = Tuple::point(0.0, 0.0, 0.0);
+        let up = Tuple::vector(0.0, 1.0, 0.0);
+
+        let t = Matrix::view_transform(from, to, up);
+
+        assert_abs_diff_eq!(t, Matrix::translation(0.0, 0.0, -8.0));
+    }
+
+    #[test]
+    fn arbitrary_view_transformation() {
+        let from = Tuple::point(1.0, 3.0, 2.0);
+        let to = Tuple::point(4.0, -2.0, 8.0);
+        let up = Tuple::vector(1.0, 1.0, 0.0);
+
+        let t = Matrix::view_transform(from, to, up);
+
+        assert_abs_diff_eq!(
+            t,
+            Matrix([
+                [-0.50709, 0.50709, 0.67612, -2.36643],
+                [0.76772, 0.60609, 0.12122, -2.82843],
+                [-0.35857, 0.59761, -0.71714, 0.00000],
+                [0.00000, 0.00000, 0.00000, 1.00000]
+            ])
+        );
     }
 }
