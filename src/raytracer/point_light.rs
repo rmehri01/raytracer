@@ -3,7 +3,7 @@ use approx::AbsDiffEq;
 use crate::{core::tuple::Tuple, graphics::color::Color};
 
 /// A light source existing in a single point in space.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub struct PointLight {
     pub position: Tuple,
     pub intensity: Color,
