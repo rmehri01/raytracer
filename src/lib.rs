@@ -11,6 +11,7 @@ pub mod graphics {
 }
 
 pub mod raytracer {
+    pub mod camera;
     pub mod intersection;
     pub mod material;
     pub mod point_light;
