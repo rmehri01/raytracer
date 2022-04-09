@@ -1,12 +1,14 @@
 use std::collections::BTreeSet;
 
+use approx::AbsDiffEq;
+
 use crate::{
     core::{matrix::Matrix, tuple::Tuple},
     graphics::color::Color,
 };
 
 use super::{
-    intersection::{Computations, Intersection, Intersections},
+    intersection::{Intersection, Intersections},
     material::Material,
     point_light::PointLight,
     ray::Ray,
@@ -52,11 +54,14 @@ impl World {
     }
 
     fn shade_hit(&self, comps: Computations) -> Color {
+        let is_shadowed = self.is_shadowed(&comps.over_point);
+
         comps.object.material.lighting(
             &self.light.expect("world should have light"),
             &comps.point,
             &comps.eyev,
             &comps.normalv,
+            is_shadowed,
         )
     }
 
@@ -65,15 +70,32 @@ impl World {
         let eyev = -ray.direction;
         let normalv = intersection.object.normal_at(&point);
         let inside = normalv.dot(&eyev) < 0.0;
+        let normalv = if inside { -normalv } else { normalv };
+        let epsilon = <Tuple as AbsDiffEq>::default_epsilon();
 
         Computations {
             t: intersection.t.0,
             object: intersection.object,
             point,
             eyev,
-            normalv: if inside { -normalv } else { normalv },
+            normalv,
             inside,
+            over_point: point + normalv * epsilon,
         }
+    }
+
+    fn is_shadowed(&self, point: &Tuple) -> bool {
+        let v = self.light.expect("world should have light").position - *point;
+        let distance = v.magnitude();
+        let direction = v.normalize();
+
+        let r = Ray::new(*point, direction);
+        let intersections = self.intersect(&r);
+
+        intersections
+            .hit()
+            .map(|hit| hit.t.0 < distance)
+            .unwrap_or(false)
     }
 }
 
@@ -103,6 +125,17 @@ impl Default for World {
             light,
         }
     }
+}
+
+/// Encapsulates precomputed information for an intersection.
+pub struct Computations {
+    pub t: f64,
+    pub object: Sphere,
+    pub point: Tuple,
+    pub eyev: Tuple,
+    pub normalv: Tuple,
+    pub inside: bool,
+    pub over_point: Tuple,
 }
 
 #[cfg(test)]
@@ -254,5 +287,76 @@ mod tests {
         let color = world.color_at(&r);
 
         assert_abs_diff_eq!(color, world.objects[1].material.color);
+    }
+
+    #[test]
+    fn no_shadow_when_no_object_between_light_and_point() {
+        let w = World::default();
+        let p = Tuple::point(0.0, 10.0, 0.0);
+
+        assert!(!w.is_shadowed(&p));
+    }
+
+    #[test]
+    fn shadow_when_object_between_light_and_point() {
+        let w = World::default();
+        let p = Tuple::point(10.0, -10.0, 10.0);
+
+        assert!(w.is_shadowed(&p));
+    }
+
+    #[test]
+    fn no_shadow_when_object_behind_light() {
+        let w = World::default();
+        let p = Tuple::point(-20.0, 20.0, -20.0);
+
+        assert!(!w.is_shadowed(&p));
+    }
+
+    #[test]
+    fn no_shadow_when_object_behind_point() {
+        let w = World::default();
+        let p = Tuple::point(-2.0, 2.0, -2.0);
+
+        assert!(!w.is_shadowed(&p));
+    }
+
+    #[test]
+    fn shade_hit_given_intersection_in_shadow() {
+        let s1 = Sphere::default();
+        let s2 = Sphere {
+            transform: Matrix::translation(0.0, 0.0, 10.0),
+            ..Sphere::default()
+        };
+
+        let w = World {
+            light: Some(PointLight::new(
+                Tuple::point(0.0, 0.0, -10.0),
+                Color::new(1.0, 1.0, 1.0),
+            )),
+            objects: vec![s1, s2],
+        };
+
+        let r = Ray::new(Tuple::point(0.0, 0.0, 5.0), Tuple::vector(0.0, 0.0, 1.0));
+        let i = Intersection::new(4.0, s2);
+        let comps = World::prepare_computations(&i, &r);
+
+        assert_abs_diff_eq!(w.shade_hit(comps), Color::new(0.1, 0.1, 0.1));
+    }
+
+    #[test]
+    fn hit_should_offset_the_point() {
+        let r = Ray::new(Tuple::point(0.0, 0.0, -5.0), Tuple::vector(0.0, 0.0, 1.0));
+        let shape = Sphere {
+            transform: Matrix::translation(0.0, 0.0, 1.0),
+            ..Sphere::default()
+        };
+
+        let i = Intersection::new(5.0, shape);
+        let comps = World::prepare_computations(&i, &r);
+        let epsilon = <Tuple as AbsDiffEq>::default_epsilon();
+
+        assert!(comps.over_point.z < epsilon / 2.0);
+        assert!(comps.point.z > comps.over_point.z);
     }
 }

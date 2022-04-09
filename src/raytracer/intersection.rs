@@ -3,8 +3,6 @@ use std::collections::BTreeSet;
 use approx::AbsDiffEq;
 use ordered_float::OrderedFloat;
 
-use crate::core::tuple::Tuple;
-
 use super::sphere::Sphere;
 
 // TODO: what to do about partial eq and eq
@@ -47,16 +45,6 @@ impl Ord for Intersection {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         self.t.cmp(&other.t)
     }
-}
-
-/// Encapsulates precomputed information for an intersection.
-pub struct Computations {
-    pub t: f64,
-    pub object: Sphere,
-    pub point: Tuple,
-    pub eyev: Tuple,
-    pub normalv: Tuple,
-    pub inside: bool,
 }
 
 // TODO: need to keep duplicates?

@@ -36,7 +36,10 @@ pub fn render_shaded_sphere(path: &str) {
                 let point = r.position(hit.t.0);
                 let normal = sphere.normal_at(&point);
                 let eye = -r.direction;
-                let color = hit.object.material.lighting(&light, &point, &eye, &normal);
+                let color = hit
+                    .object
+                    .material
+                    .lighting(&light, &point, &eye, &normal, false);
                 canvas.write_pixel(x, y, color);
             }
         }
