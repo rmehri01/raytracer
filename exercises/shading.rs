@@ -4,7 +4,7 @@ use raytracer::{
     raytracer::{point_light::PointLight, ray::Ray, sphere::Sphere},
 };
 
-pub fn plot_shaded_sphere(path: &str) {
+pub fn render_shaded_sphere(path: &str) {
     let side_len = 500;
     let mut canvas = Canvas::new(side_len, side_len);
 
@@ -46,5 +46,5 @@ pub fn plot_shaded_sphere(path: &str) {
 }
 
 fn main() {
-    plot_shaded_sphere("images/shading.ppm");
+    render_shaded_sphere("images/shading.ppm");
 }

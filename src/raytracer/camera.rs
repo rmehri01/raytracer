@@ -9,7 +9,8 @@ pub struct Camera {
     hsize: usize,
     vsize: usize,
     field_of_view: f64,
-    transform: Matrix<4>,
+    // TODO: better way of setting/using this
+    pub transform: Matrix<4>,
     half_width: f64,
     half_height: f64,
     pixel_size: f64,

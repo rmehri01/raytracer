@@ -15,9 +15,9 @@ use super::{
 
 #[derive(Debug, PartialEq)]
 pub struct World {
-    objects: Vec<Sphere>,
+    pub objects: Vec<Sphere>,
     // TODO: does this need to be optional
-    light: Option<PointLight>,
+    pub light: Option<PointLight>,
 }
 
 impl World {

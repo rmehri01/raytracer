@@ -21,6 +21,10 @@ name = "projectile"
 path = "exercises/projectile.rs"
 
 [[bin]]
+name = "scene"
+path = "exercises/scene.rs"
+
+[[bin]]
 name = "shading"
 path = "exercises/shading.rs"
 

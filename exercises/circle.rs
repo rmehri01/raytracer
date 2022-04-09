@@ -4,7 +4,7 @@ use raytracer::{
     raytracer::{ray::Ray, sphere::Sphere},
 };
 
-pub fn plot_sphere(path: &str) {
+pub fn render_circle(path: &str) {
     let side_len = 500;
     let mut canvas = Canvas::new(side_len, side_len);
 
@@ -38,5 +38,5 @@ pub fn plot_sphere(path: &str) {
 }
 
 fn main() {
-    plot_sphere("images/circle.ppm");
+    render_circle("images/circle.ppm");
 }
