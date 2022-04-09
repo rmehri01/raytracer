@@ -69,7 +69,7 @@ fn render_scene(path: &str) {
     let world = World {
         light: Some(PointLight::new(
             Tuple::point(-10.0, 10.0, -10.0),
-            Color::new(1.0, 1.0, 1.0),
+            Color::white(),
         )),
         objects: vec![floor, left_wall, right_wall, middle, right, left],
     };

@@ -19,7 +19,7 @@ pub fn render_shaded_sphere(path: &str) {
     sphere.material.color = Color::new(1.0, 0.2, 1.0);
 
     let light_position = Tuple::point(-10.0, 10.0, -10.0);
-    let light_color = Color::new(1.0, 1.0, 1.0);
+    let light_color = Color::white();
     let light = PointLight::new(light_position, light_color);
 
     for y in 0..side_len {

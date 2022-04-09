@@ -10,7 +10,7 @@ pub fn plot_clock(side_len: usize, path: &str) {
 
     let twelve = Tuple::point(0.0, 0.0, 1.0);
     let angle = FRAC_PI_6;
-    let pixel_color = Color::new(1.0, 1.0, 1.0);
+    let pixel_color = Color::white();
     let radius = 3.0 / 8.0 * canvas.width as f64;
 
     for i in 0..12 {

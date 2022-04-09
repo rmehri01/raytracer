@@ -39,7 +39,7 @@ impl World {
                 let comps = Self::prepare_computations(&hit, ray);
                 self.shade_hit(comps)
             }
-            None => Color::new(0.0, 0.0, 0.0),
+            None => Color::black(),
         }
     }
 
@@ -103,7 +103,7 @@ impl Default for World {
     fn default() -> Self {
         let light = Some(PointLight::new(
             Tuple::point(-10.0, 10.0, -10.0),
-            Color::new(1.0, 1.0, 1.0),
+            Color::white(),
         ));
 
         let s1 = Sphere {
@@ -159,7 +159,7 @@ mod tests {
         assert_eq!(world.objects.len(), 2);
         assert_abs_diff_eq!(
             world.light.expect("light exists"),
-            PointLight::new(Tuple::point(-10.0, 10.0, -10.0), Color::new(1.0, 1.0, 1.0))
+            PointLight::new(Tuple::point(-10.0, 10.0, -10.0), Color::white())
         );
     }
 
@@ -201,7 +201,7 @@ mod tests {
         let world = World {
             light: Some(PointLight::new(
                 Tuple::point(0.0, 0.25, 0.0),
-                Color::new(1.0, 1.0, 1.0),
+                Color::white(),
             )),
             ..World::default()
         };
@@ -263,7 +263,7 @@ mod tests {
 
         let color = world.color_at(&r);
 
-        assert_abs_diff_eq!(color, Color::new(0.0, 0.0, 0.0));
+        assert_abs_diff_eq!(color, Color::black());
     }
 
     #[test]
@@ -332,7 +332,7 @@ mod tests {
         let w = World {
             light: Some(PointLight::new(
                 Tuple::point(0.0, 0.0, -10.0),
-                Color::new(1.0, 1.0, 1.0),
+                Color::white(),
             )),
             objects: vec![s1, s2],
         };

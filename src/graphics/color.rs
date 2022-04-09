@@ -13,6 +13,14 @@ impl Color {
     pub fn new(red: f64, green: f64, blue: f64) -> Self {
         Self { red, green, blue }
     }
+
+    pub fn black() -> Self {
+        Self::new(0.0, 0.0, 0.0)
+    }
+
+    pub fn white() -> Self {
+        Self::new(1.0, 1.0, 1.0)
+    }
 }
 
 impl ops::Add for Color {
