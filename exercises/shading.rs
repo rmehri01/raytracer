@@ -39,7 +39,7 @@ pub fn render_shaded_sphere(path: &str) {
                 let color = hit
                     .object
                     .material
-                    .lighting(&light, &point, &eye, &normal, false);
+                    .lighting(&sphere, &light, &point, &eye, &normal, false);
                 canvas.write_pixel(x, y, color);
             }
         }

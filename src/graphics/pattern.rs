@@ -1,6 +1,9 @@
 use approx::AbsDiffEq;
 
-use crate::core::tuple::Tuple;
+use crate::{
+    core::{matrix::Matrix, tuple::Tuple},
+    raytracer::object::Object,
+};
 
 use super::color::Color;
 
@@ -9,11 +12,16 @@ use super::color::Color;
 pub struct Stripe {
     a: Color,
     b: Color,
+    transform: Matrix<4>,
 }
 
 impl Stripe {
     pub fn new(a: Color, b: Color) -> Self {
-        Self { a, b }
+        Self {
+            a,
+            b,
+            transform: Matrix::identity(),
+        }
     }
 
     pub fn stripe_at(&self, point: &Tuple) -> Color {
@@ -22,6 +30,13 @@ impl Stripe {
         } else {
             self.b
         }
+    }
+
+    pub fn stripe_at_object(&self, object: &Object, world_point: &Tuple) -> Color {
+        let object_point = object.transform.inverse() * *world_point;
+        let pattern_point = self.transform.inverse() * object_point;
+
+        self.stripe_at(&pattern_point)
     }
 }
 
@@ -86,6 +101,46 @@ mod tests {
         );
         assert_abs_diff_eq!(
             stripe.stripe_at(&Tuple::point(-1.1, 0.0, 0.0)),
+            Color::WHITE
+        );
+    }
+
+    #[test]
+    fn stripes_with_object_transformation() {
+        let mut object = Object::new_sphere();
+        object.transform = Matrix::scaling(2.0, 2.0, 2.0);
+
+        let pattern = Stripe::new(Color::WHITE, Color::BLACK);
+
+        assert_abs_diff_eq!(
+            pattern.stripe_at_object(&object, &Tuple::point(1.5, 0.0, 0.0)),
+            Color::WHITE
+        );
+    }
+
+    #[test]
+    fn stripes_with_pattern_transformation() {
+        let object = Object::new_sphere();
+
+        let mut pattern = Stripe::new(Color::WHITE, Color::BLACK);
+        pattern.transform = Matrix::scaling(2.0, 2.0, 2.0);
+
+        assert_abs_diff_eq!(
+            pattern.stripe_at_object(&object, &Tuple::point(1.5, 0.0, 0.0)),
+            Color::WHITE
+        );
+    }
+
+    #[test]
+    fn stripes_with_both_transformations() {
+        let mut object = Object::new_sphere();
+        object.transform = Matrix::scaling(2.0, 2.0, 2.0);
+
+        let mut pattern = Stripe::new(Color::WHITE, Color::BLACK);
+        pattern.transform = Matrix::translation(0.5, 0.0, 0.0);
+
+        assert_abs_diff_eq!(
+            pattern.stripe_at_object(&object, &Tuple::point(2.5, 0.0, 0.0)),
             Color::WHITE
         );
     }

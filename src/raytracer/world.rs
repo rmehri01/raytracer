@@ -57,6 +57,7 @@ impl World {
         let is_shadowed = self.is_shadowed(&comps.over_point);
 
         comps.object.material.lighting(
+            &comps.object,
             &self.light.expect("world should have light"),
             &comps.point,
             &comps.eyev,
