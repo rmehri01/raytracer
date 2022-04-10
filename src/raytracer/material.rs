@@ -16,7 +16,7 @@ pub struct Material {
 impl Default for Material {
     fn default() -> Self {
         Self {
-            color: Color::white(),
+            color: Color::WHITE,
             ambient: 0.1,
             diffuse: 0.9,
             specular: 0.9,
@@ -44,8 +44,8 @@ impl Material {
 
         let light_dot_normal = light_v.dot(normal_v);
         if light_dot_normal < 0.0 || in_shadow {
-            diffuse = Color::black();
-            specular = Color::black();
+            diffuse = Color::BLACK;
+            specular = Color::BLACK;
         } else {
             diffuse = effective_color * self.diffuse * light_dot_normal;
 
@@ -53,7 +53,7 @@ impl Material {
             let reflect_dot_eye = reflect_v.dot(eye_v);
 
             specular = if reflect_dot_eye <= 0.0 {
-                Color::black()
+                Color::BLACK
             } else {
                 let factor = reflect_dot_eye.powf(self.shininess);
                 light.intensity * self.specular * factor
@@ -92,7 +92,7 @@ mod tests {
         assert_abs_diff_eq!(
             material,
             Material {
-                color: Color::white(),
+                color: Color::WHITE,
                 ambient: 0.1,
                 diffuse: 0.9,
                 specular: 0.9,
@@ -108,7 +108,7 @@ mod tests {
 
         let eye_v = Tuple::vector(0.0, 0.0, -1.0);
         let normal_v = Tuple::vector(0.0, 0.0, -1.0);
-        let light = PointLight::new(Tuple::point(0.0, 0.0, -10.0), Color::white());
+        let light = PointLight::new(Tuple::point(0.0, 0.0, -10.0), Color::WHITE);
 
         let result = material.lighting(&light, &position, &eye_v, &normal_v, false);
 
@@ -122,11 +122,11 @@ mod tests {
 
         let eye_v = Tuple::vector(0.0, 2_f64.sqrt() / 2.0, -(2_f64.sqrt()) / 2.0);
         let normal_v = Tuple::vector(0.0, 0.0, -1.0);
-        let light = PointLight::new(Tuple::point(0.0, 0.0, -10.0), Color::white());
+        let light = PointLight::new(Tuple::point(0.0, 0.0, -10.0), Color::WHITE);
 
         let result = material.lighting(&light, &position, &eye_v, &normal_v, false);
 
-        assert_abs_diff_eq!(result, Color::white());
+        assert_abs_diff_eq!(result, Color::WHITE);
     }
 
     #[test]
@@ -136,7 +136,7 @@ mod tests {
 
         let eye_v = Tuple::vector(0.0, 0.0, -1.0);
         let normal_v = Tuple::vector(0.0, 0.0, -1.0);
-        let light = PointLight::new(Tuple::point(0.0, 10.0, -10.0), Color::white());
+        let light = PointLight::new(Tuple::point(0.0, 10.0, -10.0), Color::WHITE);
 
         let result = material.lighting(&light, &position, &eye_v, &normal_v, false);
 
@@ -150,7 +150,7 @@ mod tests {
 
         let eye_v = Tuple::vector(0.0, -(2_f64.sqrt()) / 2.0, -(2_f64.sqrt()) / 2.0);
         let normal_v = Tuple::vector(0.0, 0.0, -1.0);
-        let light = PointLight::new(Tuple::point(0.0, 10.0, -10.0), Color::white());
+        let light = PointLight::new(Tuple::point(0.0, 10.0, -10.0), Color::WHITE);
 
         let result = material.lighting(&light, &position, &eye_v, &normal_v, false);
 
@@ -164,7 +164,7 @@ mod tests {
 
         let eye_v = Tuple::vector(0.0, 0.0, -1.0);
         let normal_v = Tuple::vector(0.0, 0.0, -1.0);
-        let light = PointLight::new(Tuple::point(0.0, 0.0, 10.0), Color::white());
+        let light = PointLight::new(Tuple::point(0.0, 0.0, 10.0), Color::WHITE);
 
         let result = material.lighting(&light, &position, &eye_v, &normal_v, false);
 
@@ -178,7 +178,7 @@ mod tests {
 
         let eye_v = Tuple::vector(0.0, 0.0, -1.0);
         let normal_v = Tuple::vector(0.0, 0.0, -1.0);
-        let light = PointLight::new(Tuple::point(0.0, 0.0, -10.0), Color::white());
+        let light = PointLight::new(Tuple::point(0.0, 0.0, -10.0), Color::WHITE);
         let in_shadow = true;
 
         assert_abs_diff_eq!(

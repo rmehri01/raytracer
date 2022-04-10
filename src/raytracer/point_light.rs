@@ -39,9 +39,9 @@ mod tests {
 
     #[test]
     fn test_point_light_position() {
-        let light = PointLight::new(Tuple::point(0.0, 0.0, 0.0), Color::white());
+        let light = PointLight::new(Tuple::point(0.0, 0.0, 0.0), Color::WHITE);
 
         assert_abs_diff_eq!(light.position, Tuple::point(0.0, 0.0, 0.0));
-        assert_abs_diff_eq!(light.intensity, Color::white());
+        assert_abs_diff_eq!(light.intensity, Color::WHITE);
     }
 }

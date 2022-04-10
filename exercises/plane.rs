@@ -48,7 +48,7 @@ fn render_plane_scene(path: &str) {
     let world = World {
         light: Some(PointLight::new(
             Tuple::point(-10.0, 10.0, -10.0),
-            Color::white(),
+            Color::WHITE,
         )),
         objects: vec![floor, middle, right, left],
     };

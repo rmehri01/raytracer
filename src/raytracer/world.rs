@@ -39,7 +39,7 @@ impl World {
                 let comps = Self::prepare_computations(&hit, ray);
                 self.shade_hit(comps)
             }
-            None => Color::black(),
+            None => Color::BLACK,
         }
     }
 
@@ -104,7 +104,7 @@ impl Default for World {
     fn default() -> Self {
         let light = Some(PointLight::new(
             Tuple::point(-10.0, 10.0, -10.0),
-            Color::white(),
+            Color::WHITE,
         ));
 
         let mut s1 = Object::new_sphere();
@@ -157,7 +157,7 @@ mod tests {
         assert_eq!(world.objects.len(), 2);
         assert_abs_diff_eq!(
             world.light.expect("light exists"),
-            PointLight::new(Tuple::point(-10.0, 10.0, -10.0), Color::white())
+            PointLight::new(Tuple::point(-10.0, 10.0, -10.0), Color::WHITE)
         );
     }
 
@@ -197,10 +197,7 @@ mod tests {
     #[test]
     fn shade_intersection_from_inside() {
         let world = World {
-            light: Some(PointLight::new(
-                Tuple::point(0.0, 0.25, 0.0),
-                Color::white(),
-            )),
+            light: Some(PointLight::new(Tuple::point(0.0, 0.25, 0.0), Color::WHITE)),
             ..World::default()
         };
 
@@ -261,7 +258,7 @@ mod tests {
 
         let color = world.color_at(&r);
 
-        assert_abs_diff_eq!(color, Color::black());
+        assert_abs_diff_eq!(color, Color::BLACK);
     }
 
     #[test]
@@ -326,10 +323,7 @@ mod tests {
         s2.transform = Matrix::translation(0.0, 0.0, 10.0);
 
         let w = World {
-            light: Some(PointLight::new(
-                Tuple::point(0.0, 0.0, -10.0),
-                Color::white(),
-            )),
+            light: Some(PointLight::new(Tuple::point(0.0, 0.0, -10.0), Color::WHITE)),
             objects: vec![s1, s2],
         };
 
