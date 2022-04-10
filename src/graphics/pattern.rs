@@ -7,7 +7,7 @@ use crate::{
 
 use super::{
     color::Color,
-    patterns::{gradient::Gradient, ring::Ring, stripe::Stripe},
+    patterns::{checker::Checker, gradient::Gradient, ring::Ring, stripe::Stripe},
 };
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -36,6 +36,10 @@ impl Pattern {
         Self::new(Matrix::identity(), PatternKind::Ring(Ring::new(a, b)))
     }
 
+    pub fn new_checker(a: Color, b: Color) -> Self {
+        Self::new(Matrix::identity(), PatternKind::Checker(Checker::new(a, b)))
+    }
+
     pub fn pattern_at_object(&self, object: &Object, world_point: &Tuple) -> Color {
         let object_point = object.transform.inverse() * *world_point;
         let pattern_point = self.transform.inverse() * object_point;
@@ -62,6 +66,7 @@ enum PatternKind {
     Stripe(Stripe),
     Gradient(Gradient),
     Ring(Ring),
+    Checker(Checker),
 }
 
 impl PatternKind {
@@ -70,6 +75,7 @@ impl PatternKind {
             PatternKind::Stripe(stripe) => stripe.pattern_at(pattern_point),
             PatternKind::Gradient(gradient) => gradient.pattern_at(pattern_point),
             PatternKind::Ring(ring) => ring.pattern_at(pattern_point),
+            PatternKind::Checker(checker) => checker.pattern_at(pattern_point),
         }
     }
 }
@@ -86,6 +92,7 @@ impl AbsDiffEq for PatternKind {
             (PatternKind::Stripe(a), PatternKind::Stripe(b)) => a.abs_diff_eq(b, epsilon),
             (PatternKind::Gradient(a), PatternKind::Gradient(b)) => a.abs_diff_eq(b, epsilon),
             (PatternKind::Ring(a), PatternKind::Ring(b)) => a.abs_diff_eq(b, epsilon),
+            (PatternKind::Checker(a), PatternKind::Checker(b)) => a.abs_diff_eq(b, epsilon),
             _ => false,
         }
     }
