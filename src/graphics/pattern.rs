@@ -5,7 +5,10 @@ use crate::{
     raytracer::object::Object,
 };
 
-use super::{color::Color, patterns::stripe::Stripe};
+use super::{
+    color::Color,
+    patterns::{gradient::Gradient, stripe::Stripe},
+};
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Pattern {
@@ -20,6 +23,13 @@ impl Pattern {
 
     pub fn new_stripe(a: Color, b: Color) -> Self {
         Self::new(Matrix::identity(), PatternKind::Stripe(Stripe::new(a, b)))
+    }
+
+    pub fn new_gradient(start: Color, end: Color) -> Self {
+        Self::new(
+            Matrix::identity(),
+            PatternKind::Gradient(Gradient::new(start, end)),
+        )
     }
 
     pub fn pattern_at_object(&self, object: &Object, world_point: &Tuple) -> Color {
@@ -46,12 +56,14 @@ impl AbsDiffEq for Pattern {
 #[derive(Debug, PartialEq, Clone, Copy)]
 enum PatternKind {
     Stripe(Stripe),
+    Gradient(Gradient),
 }
 
 impl PatternKind {
     fn pattern_at(&self, pattern_point: &Tuple) -> Color {
         match self {
             PatternKind::Stripe(stripe) => stripe.pattern_at(pattern_point),
+            PatternKind::Gradient(gradient) => gradient.pattern_at(pattern_point),
         }
     }
 }
@@ -66,6 +78,8 @@ impl AbsDiffEq for PatternKind {
     fn abs_diff_eq(&self, other: &Self, epsilon: Self::Epsilon) -> bool {
         match (self, other) {
             (PatternKind::Stripe(a), PatternKind::Stripe(b)) => a.abs_diff_eq(b, epsilon),
+            (PatternKind::Gradient(a), PatternKind::Gradient(b)) => a.abs_diff_eq(b, epsilon),
+            _ => false,
         }
     }
 }
