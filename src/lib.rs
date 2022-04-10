@@ -20,6 +20,7 @@ pub mod raytracer {
     pub mod world;
 
     pub mod shapes {
+        pub mod plane;
         pub mod shape;
         pub mod sphere;
     }

@@ -17,6 +17,10 @@ name = "clock"
 path = "exercises/clock.rs"
 
 [[bin]]
+name = "plane"
+path = "exercises/plane.rs"
+
+[[bin]]
 name = "projectile"
 path = "exercises/projectile.rs"
 

@@ -8,7 +8,7 @@ use super::{
     intersection::{Intersection, Intersections},
     material::Material,
     ray::Ray,
-    shapes::{shape::Shape, sphere::Sphere},
+    shapes::{plane::Plane, shape::Shape, sphere::Sphere},
 };
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -30,6 +30,10 @@ impl Object {
 
     pub fn new_sphere() -> Self {
         Self::new(Shape::Sphere(Sphere::default()))
+    }
+
+    pub fn new_plane() -> Self {
+        Self::new(Shape::Plane(Plane::default()))
     }
 
     pub fn intersect(&self, ray: &Ray) -> Intersections {
