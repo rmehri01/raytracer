@@ -12,6 +12,7 @@ pub mod graphics {
 
     pub mod patterns {
         pub mod gradient;
+        pub mod ring;
         pub mod stripe;
     }
 }
