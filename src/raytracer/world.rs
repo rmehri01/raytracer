@@ -10,14 +10,14 @@ use crate::{
 use super::{
     intersection::{Intersection, Intersections},
     material::Material,
+    object::Object,
     point_light::PointLight,
     ray::Ray,
-    sphere::Sphere,
 };
 
 #[derive(Debug, PartialEq)]
 pub struct World {
-    pub objects: Vec<Sphere>,
+    pub objects: Vec<Object>,
     // TODO: does this need to be optional
     pub light: Option<PointLight>,
 }
@@ -65,6 +65,7 @@ impl World {
         )
     }
 
+    // TODO: belongs in intersection?
     fn prepare_computations(intersection: &Intersection, ray: &Ray) -> Computations {
         let point = ray.position(intersection.t.0);
         let eyev = -ray.direction;
@@ -106,19 +107,16 @@ impl Default for World {
             Color::white(),
         ));
 
-        let s1 = Sphere {
-            material: Material {
-                color: Color::new(0.8, 1.0, 0.6),
-                diffuse: 0.7,
-                specular: 0.2,
-                ..Material::default()
-            },
-            ..Sphere::default()
+        let mut s1 = Object::new_sphere();
+        s1.material = Material {
+            color: Color::new(0.8, 1.0, 0.6),
+            diffuse: 0.7,
+            specular: 0.2,
+            ..Material::default()
         };
-        let s2 = Sphere {
-            transform: Matrix::scaling(0.5, 0.5, 0.5),
-            ..Sphere::default()
-        };
+
+        let mut s2 = Object::new_sphere();
+        s2.transform = Matrix::scaling(0.5, 0.5, 0.5);
 
         Self {
             objects: vec![s1, s2],
@@ -130,7 +128,7 @@ impl Default for World {
 /// Encapsulates precomputed information for an intersection.
 pub struct Computations {
     pub t: f64,
-    pub object: Sphere,
+    pub object: Object,
     pub point: Tuple,
     pub eyev: Tuple,
     pub normalv: Tuple,
@@ -219,7 +217,7 @@ mod tests {
     #[test]
     fn precomputing_state_of_intersection() {
         let r = Ray::new(Tuple::point(0.0, 0.0, -5.0), Tuple::vector(0.0, 0.0, 1.0));
-        let shape = Sphere::default();
+        let shape = Object::new_sphere();
         let i = Intersection::new(4.0, shape);
 
         let comps = World::prepare_computations(&i, &r);
@@ -234,7 +232,7 @@ mod tests {
     #[test]
     fn hit_when_intersection_outside() {
         let r = Ray::new(Tuple::point(0.0, 0.0, -5.0), Tuple::vector(0.0, 0.0, 1.0));
-        let shape = Sphere::default();
+        let shape = Object::new_sphere();
         let i = Intersection::new(4.0, shape);
 
         let comps = World::prepare_computations(&i, &r);
@@ -245,7 +243,7 @@ mod tests {
     #[test]
     fn hit_when_intersection_inside() {
         let r = Ray::new(Tuple::point(0.0, 0.0, 0.0), Tuple::vector(0.0, 0.0, 1.0));
-        let shape = Sphere::default();
+        let shape = Object::new_sphere();
         let i = Intersection::new(1.0, shape);
 
         let comps = World::prepare_computations(&i, &r);
@@ -323,11 +321,9 @@ mod tests {
 
     #[test]
     fn shade_hit_given_intersection_in_shadow() {
-        let s1 = Sphere::default();
-        let s2 = Sphere {
-            transform: Matrix::translation(0.0, 0.0, 10.0),
-            ..Sphere::default()
-        };
+        let s1 = Object::new_sphere();
+        let mut s2 = Object::new_sphere();
+        s2.transform = Matrix::translation(0.0, 0.0, 10.0);
 
         let w = World {
             light: Some(PointLight::new(
@@ -347,12 +343,10 @@ mod tests {
     #[test]
     fn hit_should_offset_the_point() {
         let r = Ray::new(Tuple::point(0.0, 0.0, -5.0), Tuple::vector(0.0, 0.0, 1.0));
-        let shape = Sphere {
-            transform: Matrix::translation(0.0, 0.0, 1.0),
-            ..Sphere::default()
-        };
+        let mut obj = Object::new_sphere();
+        obj.transform = Matrix::translation(0.0, 0.0, 1.0);
 
-        let i = Intersection::new(5.0, shape);
+        let i = Intersection::new(5.0, obj);
         let comps = World::prepare_computations(&i, &r);
         let epsilon = <Tuple as AbsDiffEq>::default_epsilon();
 

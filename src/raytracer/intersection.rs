@@ -3,17 +3,17 @@ use std::collections::BTreeSet;
 use approx::AbsDiffEq;
 use ordered_float::OrderedFloat;
 
-use super::sphere::Sphere;
+use super::object::Object;
 
 // TODO: what to do about partial eq and eq
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Intersection {
     pub t: OrderedFloat<f64>,
-    pub object: Sphere,
+    pub object: Object,
 }
 
 impl Intersection {
-    pub fn new(t: f64, object: Sphere) -> Self {
+    pub fn new(t: f64, object: Object) -> Self {
         Self {
             t: OrderedFloat(t),
             object,
@@ -60,24 +60,22 @@ impl Intersections {
 mod tests {
     use approx::{assert_abs_diff_eq, assert_relative_eq};
 
-    use crate::raytracer::sphere::Sphere;
-
     use super::*;
 
     #[test]
     fn test_intersection_new() {
-        let s = Sphere::default();
-        let intersection = Intersection::new(3.5, s);
+        let obj = Object::new_sphere();
+        let intersection = Intersection::new(3.5, obj);
 
         assert_relative_eq!(intersection.t.0, 3.5);
-        assert_eq!(intersection.object, s);
+        assert_eq!(intersection.object, obj);
     }
 
     #[test]
     fn hit_all_positive() {
-        let s = Sphere::default();
-        let i1 = Intersection::new(1.0, s);
-        let i2 = Intersection::new(2.0, s);
+        let obj = Object::new_sphere();
+        let i1 = Intersection::new(1.0, obj);
+        let i2 = Intersection::new(2.0, obj);
         let xs = BTreeSet::from([i1, i2]);
 
         let hit = Intersections(xs).hit().expect("valid hit");
@@ -87,9 +85,9 @@ mod tests {
 
     #[test]
     fn hit_some_negative() {
-        let s = Sphere::default();
-        let i1 = Intersection::new(-1.0, s);
-        let i2 = Intersection::new(1.0, s);
+        let obj = Object::new_sphere();
+        let i1 = Intersection::new(-1.0, obj);
+        let i2 = Intersection::new(1.0, obj);
         let xs = BTreeSet::from([i1, i2]);
 
         let hit = Intersections(xs).hit().expect("valid hit");
@@ -99,9 +97,9 @@ mod tests {
 
     #[test]
     fn hit_all_negative() {
-        let s = Sphere::default();
-        let i1 = Intersection::new(-2.0, s);
-        let i2 = Intersection::new(-1.0, s);
+        let obj = Object::new_sphere();
+        let i1 = Intersection::new(-2.0, obj);
+        let i2 = Intersection::new(-1.0, obj);
         let xs = BTreeSet::from([i1, i2]);
 
         let hit = Intersections(xs).hit();
@@ -111,11 +109,11 @@ mod tests {
 
     #[test]
     fn hit_lowest_nonnegative() {
-        let s = Sphere::default();
-        let i1 = Intersection::new(5.0, s);
-        let i2 = Intersection::new(7.0, s);
-        let i3 = Intersection::new(-3.0, s);
-        let i4 = Intersection::new(2.0, s);
+        let obj = Object::new_sphere();
+        let i1 = Intersection::new(5.0, obj);
+        let i2 = Intersection::new(7.0, obj);
+        let i3 = Intersection::new(-3.0, obj);
+        let i4 = Intersection::new(2.0, obj);
         let xs = BTreeSet::from([i1, i2, i3, i4]);
 
         let hit = Intersections(xs).hit().expect("valid hit");

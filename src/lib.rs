@@ -14,8 +14,13 @@ pub mod raytracer {
     pub mod camera;
     pub mod intersection;
     pub mod material;
+    pub mod object;
     pub mod point_light;
     pub mod ray;
-    pub mod sphere;
     pub mod world;
+
+    pub mod shapes {
+        pub mod shape;
+        pub mod sphere;
+    }
 }

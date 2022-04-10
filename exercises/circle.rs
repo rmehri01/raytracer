@@ -1,7 +1,7 @@
 use raytracer::{
     core::tuple::Tuple,
     graphics::{canvas::Canvas, color::Color},
-    raytracer::{ray::Ray, sphere::Sphere},
+    raytracer::{object::Object, ray::Ray},
 };
 
 pub fn render_circle(path: &str) {
@@ -16,7 +16,7 @@ pub fn render_circle(path: &str) {
     let half = wall_size / 2.0;
 
     let color = Color::new(1.0, 0.0, 0.0);
-    let sphere = Sphere::default();
+    let sphere = Object::new_sphere();
 
     for y in 0..side_len {
         let world_y = half - pixel_size * y as f64;
