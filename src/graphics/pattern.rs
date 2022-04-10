@@ -5,50 +5,68 @@ use crate::{
     raytracer::object::Object,
 };
 
-use super::color::Color;
+use super::{color::Color, patterns::stripe::Stripe};
 
-/// A striped pattern that alternates between two colors.
 #[derive(Debug, PartialEq, Clone, Copy)]
-pub struct Stripe {
-    a: Color,
-    b: Color,
+pub struct Pattern {
     transform: Matrix<4>,
+    kind: PatternKind,
 }
 
-impl Stripe {
-    pub fn new(a: Color, b: Color) -> Self {
-        Self {
-            a,
-            b,
-            transform: Matrix::identity(),
-        }
+impl Pattern {
+    fn new(transform: Matrix<4>, kind: PatternKind) -> Self {
+        Self { transform, kind }
     }
 
-    pub fn stripe_at(&self, point: &Tuple) -> Color {
-        if point.x.floor() as i32 % 2 == 0 {
-            self.a
-        } else {
-            self.b
-        }
+    pub fn new_stripe(a: Color, b: Color) -> Self {
+        Self::new(Matrix::identity(), PatternKind::Stripe(Stripe::new(a, b)))
     }
 
-    pub fn stripe_at_object(&self, object: &Object, world_point: &Tuple) -> Color {
+    pub fn pattern_at_object(&self, object: &Object, world_point: &Tuple) -> Color {
         let object_point = object.transform.inverse() * *world_point;
         let pattern_point = self.transform.inverse() * object_point;
 
-        self.stripe_at(&pattern_point)
+        self.kind.pattern_at(&pattern_point)
     }
 }
 
-impl AbsDiffEq for Stripe {
-    type Epsilon = <Color as AbsDiffEq>::Epsilon;
+impl AbsDiffEq for Pattern {
+    type Epsilon = f64;
 
     fn default_epsilon() -> Self::Epsilon {
-        Color::default_epsilon()
+        1e-5
     }
 
     fn abs_diff_eq(&self, other: &Self, epsilon: Self::Epsilon) -> bool {
-        self.a.abs_diff_eq(&other.a, epsilon) && self.b.abs_diff_eq(&other.b, epsilon)
+        self.transform.abs_diff_eq(&other.transform, epsilon)
+            && self.kind.abs_diff_eq(&other.kind, epsilon)
+    }
+}
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+enum PatternKind {
+    Stripe(Stripe),
+}
+
+impl PatternKind {
+    fn pattern_at(&self, pattern_point: &Tuple) -> Color {
+        match self {
+            PatternKind::Stripe(stripe) => stripe.pattern_at(pattern_point),
+        }
+    }
+}
+
+impl AbsDiffEq for PatternKind {
+    type Epsilon = f64;
+
+    fn default_epsilon() -> Self::Epsilon {
+        1e-5
+    }
+
+    fn abs_diff_eq(&self, other: &Self, epsilon: Self::Epsilon) -> bool {
+        match (self, other) {
+            (PatternKind::Stripe(a), PatternKind::Stripe(b)) => a.abs_diff_eq(b, epsilon),
+        }
     }
 }
 
@@ -59,61 +77,14 @@ mod tests {
     use super::*;
 
     #[test]
-    fn stripe_new() {
-        let stripe = Stripe::new(Color::WHITE, Color::BLACK);
-
-        assert_abs_diff_eq!(stripe.a, Color::WHITE);
-        assert_abs_diff_eq!(stripe.b, Color::BLACK);
-    }
-
-    #[test]
-    fn stripe_constant_in_y() {
-        let stripe = Stripe::new(Color::WHITE, Color::BLACK);
-
-        assert_abs_diff_eq!(stripe.stripe_at(&Tuple::point(0.0, 0.0, 0.0)), Color::WHITE);
-        assert_abs_diff_eq!(stripe.stripe_at(&Tuple::point(0.0, 1.0, 0.0)), Color::WHITE);
-        assert_abs_diff_eq!(stripe.stripe_at(&Tuple::point(0.0, 2.0, 0.0)), Color::WHITE);
-    }
-
-    #[test]
-    fn stripe_constant_in_z() {
-        let stripe = Stripe::new(Color::WHITE, Color::BLACK);
-
-        assert_abs_diff_eq!(stripe.stripe_at(&Tuple::point(0.0, 0.0, 0.0)), Color::WHITE);
-        assert_abs_diff_eq!(stripe.stripe_at(&Tuple::point(0.0, 0.0, 1.0)), Color::WHITE);
-        assert_abs_diff_eq!(stripe.stripe_at(&Tuple::point(0.0, 0.0, 2.0)), Color::WHITE);
-    }
-
-    #[test]
-    fn stripe_alternates_in_x() {
-        let stripe = Stripe::new(Color::WHITE, Color::BLACK);
-
-        assert_abs_diff_eq!(stripe.stripe_at(&Tuple::point(0.0, 0.0, 0.0)), Color::WHITE);
-        assert_abs_diff_eq!(stripe.stripe_at(&Tuple::point(0.9, 0.0, 0.0)), Color::WHITE);
-        assert_abs_diff_eq!(stripe.stripe_at(&Tuple::point(1.0, 0.0, 0.0)), Color::BLACK);
-        assert_abs_diff_eq!(
-            stripe.stripe_at(&Tuple::point(-0.1, 0.0, 0.0)),
-            Color::BLACK
-        );
-        assert_abs_diff_eq!(
-            stripe.stripe_at(&Tuple::point(-1.0, 0.0, 0.0)),
-            Color::BLACK
-        );
-        assert_abs_diff_eq!(
-            stripe.stripe_at(&Tuple::point(-1.1, 0.0, 0.0)),
-            Color::WHITE
-        );
-    }
-
-    #[test]
     fn stripes_with_object_transformation() {
         let mut object = Object::new_sphere();
         object.transform = Matrix::scaling(2.0, 2.0, 2.0);
 
-        let pattern = Stripe::new(Color::WHITE, Color::BLACK);
+        let pattern = Pattern::new_stripe(Color::WHITE, Color::BLACK);
 
         assert_abs_diff_eq!(
-            pattern.stripe_at_object(&object, &Tuple::point(1.5, 0.0, 0.0)),
+            pattern.pattern_at_object(&object, &Tuple::point(1.5, 0.0, 0.0)),
             Color::WHITE
         );
     }
@@ -122,11 +93,11 @@ mod tests {
     fn stripes_with_pattern_transformation() {
         let object = Object::new_sphere();
 
-        let mut pattern = Stripe::new(Color::WHITE, Color::BLACK);
+        let mut pattern = Pattern::new_stripe(Color::WHITE, Color::BLACK);
         pattern.transform = Matrix::scaling(2.0, 2.0, 2.0);
 
         assert_abs_diff_eq!(
-            pattern.stripe_at_object(&object, &Tuple::point(1.5, 0.0, 0.0)),
+            pattern.pattern_at_object(&object, &Tuple::point(1.5, 0.0, 0.0)),
             Color::WHITE
         );
     }
@@ -136,11 +107,11 @@ mod tests {
         let mut object = Object::new_sphere();
         object.transform = Matrix::scaling(2.0, 2.0, 2.0);
 
-        let mut pattern = Stripe::new(Color::WHITE, Color::BLACK);
+        let mut pattern = Pattern::new_stripe(Color::WHITE, Color::BLACK);
         pattern.transform = Matrix::translation(0.5, 0.0, 0.0);
 
         assert_abs_diff_eq!(
-            pattern.stripe_at_object(&object, &Tuple::point(2.5, 0.0, 0.0)),
+            pattern.pattern_at_object(&object, &Tuple::point(2.5, 0.0, 0.0)),
             Color::WHITE
         );
     }

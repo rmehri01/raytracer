@@ -2,7 +2,7 @@ use approx::AbsDiffEq;
 
 use crate::{
     core::tuple::Tuple,
-    graphics::{color::Color, pattern::Stripe},
+    graphics::{color::Color, pattern::Pattern},
 };
 
 use super::{object::Object, point_light::PointLight};
@@ -14,7 +14,7 @@ pub struct Material {
     pub diffuse: f64,
     pub specular: f64,
     pub shininess: f64,
-    pub pattern: Option<Stripe>,
+    pub pattern: Option<Pattern>,
 }
 
 impl Material {
@@ -29,7 +29,7 @@ impl Material {
         in_shadow: bool,
     ) -> Color {
         let color = self.pattern.map_or(self.color, |pattern| {
-            pattern.stripe_at_object(object, position)
+            pattern.pattern_at_object(object, position)
         });
 
         let effective_color = color * light.intensity;
@@ -97,8 +97,6 @@ impl AbsDiffEq for Material {
 #[cfg(test)]
 mod tests {
     use approx::assert_abs_diff_eq;
-
-    use crate::graphics::pattern::Stripe;
 
     use super::*;
 
@@ -216,7 +214,7 @@ mod tests {
             ambient: 1.0,
             diffuse: 0.0,
             specular: 0.0,
-            pattern: Some(Stripe::new(Color::WHITE, Color::BLACK)),
+            pattern: Some(Pattern::new_stripe(Color::WHITE, Color::BLACK)),
             ..Material::default()
         };
 
