@@ -59,7 +59,7 @@ impl World {
         comps.object.material.lighting(
             &comps.object,
             &self.light.expect("world should have light"),
-            &comps.point,
+            &comps.over_point,
             &comps.eyev,
             &comps.normalv,
             is_shadowed,
