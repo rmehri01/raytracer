@@ -1,6 +1,9 @@
 use approx::AbsDiffEq;
 
-use crate::{core::tuple::Tuple, graphics::color::Color};
+use crate::{
+    core::tuple::Tuple,
+    graphics::{color::Color, pattern::Stripe},
+};
 
 use super::point_light::PointLight;
 
@@ -11,18 +14,7 @@ pub struct Material {
     pub diffuse: f64,
     pub specular: f64,
     pub shininess: f64,
-}
-
-impl Default for Material {
-    fn default() -> Self {
-        Self {
-            color: Color::WHITE,
-            ambient: 0.1,
-            diffuse: 0.9,
-            specular: 0.9,
-            shininess: 200.0,
-        }
-    }
+    pub pattern: Option<Stripe>,
 }
 
 impl Material {
@@ -35,7 +27,11 @@ impl Material {
         normal_v: &Tuple,
         in_shadow: bool,
     ) -> Color {
-        let effective_color = self.color * light.intensity;
+        let color = self
+            .pattern
+            .map_or(self.color, |pattern| pattern.stripe_at(position));
+
+        let effective_color = color * light.intensity;
         let light_v = (light.position - *position).normalize();
         let ambient = effective_color * self.ambient;
 
@@ -64,6 +60,19 @@ impl Material {
     }
 }
 
+impl Default for Material {
+    fn default() -> Self {
+        Self {
+            color: Color::WHITE,
+            ambient: 0.1,
+            diffuse: 0.9,
+            specular: 0.9,
+            shininess: 200.0,
+            pattern: None,
+        }
+    }
+}
+
 impl AbsDiffEq for Material {
     type Epsilon = f64;
 
@@ -72,16 +81,23 @@ impl AbsDiffEq for Material {
     }
 
     fn abs_diff_eq(&self, other: &Self, epsilon: Self::Epsilon) -> bool {
-        self.ambient.abs_diff_eq(&other.ambient, epsilon)
+        self.color.abs_diff_eq(&other.color, epsilon)
+            && self.ambient.abs_diff_eq(&other.ambient, epsilon)
             && self.diffuse.abs_diff_eq(&other.diffuse, epsilon)
             && self.specular.abs_diff_eq(&other.specular, epsilon)
             && self.shininess.abs_diff_eq(&other.shininess, epsilon)
+            && self
+                .pattern
+                .and_then(|p1| other.pattern.map(|p2| p1.abs_diff_eq(&p2, epsilon)))
+                .unwrap_or(true)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use approx::assert_abs_diff_eq;
+
+    use crate::graphics::pattern::Stripe;
 
     use super::*;
 
@@ -97,6 +113,7 @@ mod tests {
                 diffuse: 0.9,
                 specular: 0.9,
                 shininess: 200.0,
+                pattern: None,
             }
         );
     }
@@ -185,5 +202,38 @@ mod tests {
             material.lighting(&light, &position, &eye_v, &normal_v, in_shadow),
             Color::new(0.1, 0.1, 0.1)
         );
+    }
+
+    #[test]
+    fn lighting_with_pattern_applied() {
+        let material = Material {
+            ambient: 1.0,
+            diffuse: 0.0,
+            specular: 0.0,
+            pattern: Some(Stripe::new(Color::WHITE, Color::BLACK)),
+            ..Material::default()
+        };
+
+        let eye_v = Tuple::vector(0.0, 0.0, -1.0);
+        let normal_v = Tuple::vector(0.0, 0.0, -1.0);
+        let light = PointLight::new(Tuple::point(0.0, 0.0, -10.0), Color::WHITE);
+
+        let c1 = material.lighting(
+            &light,
+            &Tuple::point(0.9, 0.0, 0.0),
+            &eye_v,
+            &normal_v,
+            false,
+        );
+        let c2 = material.lighting(
+            &light,
+            &Tuple::point(1.1, 0.0, 0.0),
+            &eye_v,
+            &normal_v,
+            false,
+        );
+
+        assert_abs_diff_eq!(c1, Color::WHITE);
+        assert_abs_diff_eq!(c2, Color::BLACK);
     }
 }
