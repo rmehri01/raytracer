@@ -8,8 +8,7 @@ pub struct Plane {}
 
 impl Plane {
     pub fn intersect(&self, ray: &Ray) -> Vec<f64> {
-        let epsilon = <Tuple as AbsDiffEq>::default_epsilon();
-        if ray.direction.y.abs() < epsilon {
+        if ray.direction.y.abs() < Tuple::default_epsilon() {
             Vec::new()
         } else {
             vec![-ray.origin.y / ray.direction.y]

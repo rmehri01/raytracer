@@ -52,7 +52,7 @@ pub struct Intersections(pub BTreeSet<Intersection>);
 
 impl Intersections {
     pub fn hit(&self) -> Option<Intersection> {
-        self.0.iter().find(|i| i.t >= OrderedFloat(0.0)).cloned()
+        self.0.iter().find(|i| i.t.0 >= 0.0).cloned()
     }
 }
 

@@ -15,8 +15,9 @@ impl Gradient {
 
     pub fn pattern_at(&self, point: &Tuple) -> Color {
         let distance = self.end - self.start;
+        let fraction = point.x - point.x.floor();
 
-        self.start + distance * point.x.fract()
+        self.start + distance * fraction
     }
 }
 

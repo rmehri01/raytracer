@@ -73,7 +73,6 @@ impl World {
         let normalv = intersection.object.normal_at(&point);
         let inside = normalv.dot(&eyev) < 0.0;
         let normalv = if inside { -normalv } else { normalv };
-        let epsilon = <Tuple as AbsDiffEq>::default_epsilon();
 
         Computations {
             t: intersection.t.0,
@@ -82,7 +81,7 @@ impl World {
             eyev,
             normalv,
             inside,
-            over_point: point + normalv * epsilon,
+            over_point: point + normalv * Tuple::default_epsilon(),
         }
     }
 
@@ -343,7 +342,7 @@ mod tests {
 
         let i = Intersection::new(5.0, obj);
         let comps = World::prepare_computations(&i, &r);
-        let epsilon = <Tuple as AbsDiffEq>::default_epsilon();
+        let epsilon = Tuple::default_epsilon();
 
         assert!(comps.over_point.z < epsilon / 2.0);
         assert!(comps.point.z > comps.over_point.z);

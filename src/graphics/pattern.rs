@@ -12,7 +12,7 @@ use super::{
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Pattern {
-    transform: Matrix<4>,
+    pub transform: Matrix<4>,
     kind: PatternKind,
 }
 
