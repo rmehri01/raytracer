@@ -3,6 +3,10 @@ name = "raytracer"
 version = "0.1.0"
 edition = "2021"
 
+[profile.release]
+lto = true
+panic = "abort"
+
 [dependencies]
 approx = "0.5.1"
 itertools = "0.10.2"
