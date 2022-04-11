@@ -1,5 +1,3 @@
-use approx::AbsDiffEq;
-
 use crate::{
     core::{matrix::Matrix, tuple::Tuple},
     raytracer::object::Object,
@@ -48,19 +46,6 @@ impl Pattern {
     }
 }
 
-impl AbsDiffEq for Pattern {
-    type Epsilon = f64;
-
-    fn default_epsilon() -> Self::Epsilon {
-        1e-5
-    }
-
-    fn abs_diff_eq(&self, other: &Self, epsilon: Self::Epsilon) -> bool {
-        self.transform.abs_diff_eq(&other.transform, epsilon)
-            && self.kind.abs_diff_eq(&other.kind, epsilon)
-    }
-}
-
 #[derive(Debug, PartialEq, Clone, Copy)]
 enum PatternKind {
     Stripe(Stripe),
@@ -76,24 +61,6 @@ impl PatternKind {
             PatternKind::Gradient(gradient) => gradient.pattern_at(pattern_point),
             PatternKind::Ring(ring) => ring.pattern_at(pattern_point),
             PatternKind::Checker(checker) => checker.pattern_at(pattern_point),
-        }
-    }
-}
-
-impl AbsDiffEq for PatternKind {
-    type Epsilon = f64;
-
-    fn default_epsilon() -> Self::Epsilon {
-        1e-5
-    }
-
-    fn abs_diff_eq(&self, other: &Self, epsilon: Self::Epsilon) -> bool {
-        match (self, other) {
-            (PatternKind::Stripe(a), PatternKind::Stripe(b)) => a.abs_diff_eq(b, epsilon),
-            (PatternKind::Gradient(a), PatternKind::Gradient(b)) => a.abs_diff_eq(b, epsilon),
-            (PatternKind::Ring(a), PatternKind::Ring(b)) => a.abs_diff_eq(b, epsilon),
-            (PatternKind::Checker(a), PatternKind::Checker(b)) => a.abs_diff_eq(b, epsilon),
-            _ => false,
         }
     }
 }

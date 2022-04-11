@@ -1,7 +1,5 @@
 use std::collections::BTreeSet;
 
-use approx::AbsDiffEq;
-
 use crate::core::{matrix::Matrix, tuple::Tuple};
 
 use super::{
@@ -55,20 +53,6 @@ impl Object {
     }
 }
 
-impl AbsDiffEq for Object {
-    type Epsilon = f64;
-
-    fn default_epsilon() -> Self::Epsilon {
-        1e-5
-    }
-
-    fn abs_diff_eq(&self, other: &Self, epsilon: Self::Epsilon) -> bool {
-        self.transform.abs_diff_eq(&other.transform, epsilon)
-            && self.material.abs_diff_eq(&other.material, epsilon)
-            && self.shape == other.shape
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use std::f64::consts::{FRAC_1_SQRT_2, FRAC_PI_4};
@@ -118,12 +102,7 @@ mod tests {
         let mut obj = Object::new_sphere();
         obj.transform = Matrix::scaling(2.0, 2.0, 2.0);
 
-        let xs = obj
-            .intersect(&r)
-            .0
-            .iter()
-            .map(|i| i.t.0)
-            .collect::<Vec<_>>();
+        let xs = obj.intersect(&r).0.iter().map(|i| i.t).collect::<Vec<_>>();
 
         assert_eq!(xs.len(), 2);
         assert_abs_diff_eq!(xs[0], 3.0);

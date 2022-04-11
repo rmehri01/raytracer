@@ -4,7 +4,7 @@ use approx::AbsDiffEq;
 
 use super::tuple::Tuple;
 
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub struct Matrix<const N: usize>([[f64; N]; N]);
 
 impl<const N: usize> Matrix<N> {
@@ -243,6 +243,12 @@ impl<const N: usize> ops::Index<usize> for Matrix<N> {
 impl<const N: usize> ops::IndexMut<usize> for Matrix<N> {
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
         &mut self.0[index]
+    }
+}
+
+impl<const N: usize> PartialEq for Matrix<N> {
+    fn eq(&self, other: &Self) -> bool {
+        self.abs_diff_eq(other, Self::default_epsilon())
     }
 }
 

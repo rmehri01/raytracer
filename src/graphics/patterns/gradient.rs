@@ -1,5 +1,3 @@
-use approx::AbsDiffEq;
-
 use crate::{core::tuple::Tuple, graphics::color::Color};
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -18,18 +16,6 @@ impl Gradient {
         let fraction = point.x - point.x.floor();
 
         self.start + distance * fraction
-    }
-}
-
-impl AbsDiffEq for Gradient {
-    type Epsilon = <Color as AbsDiffEq>::Epsilon;
-
-    fn default_epsilon() -> Self::Epsilon {
-        Color::default_epsilon()
-    }
-
-    fn abs_diff_eq(&self, other: &Self, epsilon: Self::Epsilon) -> bool {
-        self.start.abs_diff_eq(&other.start, epsilon) && self.end.abs_diff_eq(&other.end, epsilon)
     }
 }
 

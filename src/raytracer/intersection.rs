@@ -1,35 +1,25 @@
 use std::collections::BTreeSet;
 
-use approx::AbsDiffEq;
-use ordered_float::OrderedFloat;
+use approx::{AbsDiffEq, UlpsEq};
 
 use super::object::Object;
 
-// TODO: what to do about partial eq and eq
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub struct Intersection {
-    pub t: OrderedFloat<f64>,
+    pub t: f64,
     pub object: Object,
 }
 
 impl Intersection {
     pub fn new(t: f64, object: Object) -> Self {
-        Self {
-            t: OrderedFloat(t),
-            object,
-        }
+        Self { t, object }
     }
 }
 
-impl AbsDiffEq for Intersection {
-    type Epsilon = f64;
-
-    fn default_epsilon() -> Self::Epsilon {
-        1e-5
-    }
-
-    fn abs_diff_eq(&self, other: &Self, epsilon: Self::Epsilon) -> bool {
-        self.t.abs_diff_eq(&other.t, epsilon) && self.object.abs_diff_eq(&other.object, epsilon)
+impl PartialEq for Intersection {
+    fn eq(&self, other: &Self) -> bool {
+        self.t
+            .ulps_eq(&other.t, Self::default_epsilon(), Self::default_max_ulps())
     }
 }
 
@@ -43,7 +33,29 @@ impl PartialOrd for Intersection {
 
 impl Ord for Intersection {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.t.cmp(&other.t)
+        self.t.partial_cmp(&other.t).expect("t is not NaN")
+    }
+}
+
+impl AbsDiffEq for Intersection {
+    type Epsilon = f64;
+
+    fn default_epsilon() -> Self::Epsilon {
+        1e-5
+    }
+
+    fn abs_diff_eq(&self, other: &Self, epsilon: Self::Epsilon) -> bool {
+        self.t.abs_diff_eq(&other.t, epsilon)
+    }
+}
+
+impl UlpsEq for Intersection {
+    fn default_max_ulps() -> u32 {
+        4
+    }
+
+    fn ulps_eq(&self, other: &Self, epsilon: Self::Epsilon, max_ulps: u32) -> bool {
+        self.t.ulps_eq(&other.t, epsilon, max_ulps)
     }
 }
 
@@ -52,7 +64,7 @@ pub struct Intersections(pub BTreeSet<Intersection>);
 
 impl Intersections {
     pub fn hit(&self) -> Option<Intersection> {
-        self.0.iter().find(|i| i.t.0 >= 0.0).cloned()
+        self.0.iter().find(|i| i.t >= 0.0).cloned()
     }
 }
 
@@ -67,7 +79,7 @@ mod tests {
         let obj = Object::new_sphere();
         let intersection = Intersection::new(3.5, obj);
 
-        assert_relative_eq!(intersection.t.0, 3.5);
+        assert_relative_eq!(intersection.t, 3.5);
         assert_eq!(intersection.object, obj);
     }
 

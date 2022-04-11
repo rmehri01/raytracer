@@ -5,7 +5,7 @@ use approx::AbsDiffEq;
 /// A tuple using left-hand coordinates where:
 /// * `w = 0.0` is a vector
 /// * `w = 1.0` is a point
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub struct Tuple {
     pub x: f64,
     pub y: f64,
@@ -127,6 +127,12 @@ impl ops::IndexMut<usize> for Tuple {
             3 => &mut self.w,
             _ => panic!("Index out of bounds"),
         }
+    }
+}
+
+impl PartialEq for Tuple {
+    fn eq(&self, other: &Self) -> bool {
+        self.abs_diff_eq(other, Self::default_epsilon())
     }
 }
 

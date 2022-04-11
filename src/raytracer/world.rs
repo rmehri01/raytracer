@@ -71,7 +71,7 @@ impl World {
 
     // TODO: belongs in intersection?
     fn prepare_computations(intersection: &Intersection, ray: &Ray) -> Computations {
-        let point = ray.position(intersection.t.0);
+        let point = ray.position(intersection.t);
         let eyev = -ray.direction;
 
         let normalv = intersection.object.normal_at(&point);
@@ -79,7 +79,7 @@ impl World {
         let normalv = if inside { -normalv } else { normalv };
 
         Computations {
-            t: intersection.t.0,
+            t: intersection.t,
             object: intersection.object,
             point,
             over_point: point + normalv * Tuple::default_epsilon(),
@@ -100,7 +100,7 @@ impl World {
 
         intersections
             .hit()
-            .map(|hit| hit.t.0 < distance)
+            .map(|hit| hit.t < distance)
             .unwrap_or(false)
     }
 
@@ -172,7 +172,7 @@ mod tests {
         let world = World::default();
 
         assert_eq!(world.objects.len(), 2);
-        assert_abs_diff_eq!(
+        assert_eq!(
             world.light.expect("light exists"),
             PointLight::new(Tuple::point(-10.0, 10.0, -10.0), Color::WHITE)
         );
@@ -188,7 +188,7 @@ mod tests {
             .intersect(&r)
             .0
             .iter()
-            .map(|x| x.t.0)
+            .map(|x| x.t)
             .collect::<Vec<_>>();
 
         assert_eq!(xs.len(), 4);
@@ -237,7 +237,7 @@ mod tests {
         let comps = World::prepare_computations(&i, &r);
 
         assert_abs_diff_eq!(comps.t, i.t);
-        assert_abs_diff_eq!(comps.object, i.object);
+        assert_eq!(comps.object, i.object);
         assert_abs_diff_eq!(comps.point, Tuple::point(0.0, 0.0, -1.0));
         assert_abs_diff_eq!(comps.eyev, Tuple::vector(0.0, 0.0, -1.0));
         assert_abs_diff_eq!(comps.normalv, Tuple::vector(0.0, 0.0, -1.0));

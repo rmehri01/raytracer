@@ -2,7 +2,7 @@ use std::ops;
 
 use approx::AbsDiffEq;
 
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub struct Color {
     pub red: f64,
     pub green: f64,
@@ -72,6 +72,12 @@ impl ops::Mul for Color {
             green: self.green * other.green,
             blue: self.blue * other.blue,
         }
+    }
+}
+
+impl PartialEq for Color {
+    fn eq(&self, other: &Self) -> bool {
+        self.abs_diff_eq(other, Self::default_epsilon())
     }
 }
 

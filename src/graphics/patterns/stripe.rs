@@ -1,5 +1,3 @@
-use approx::AbsDiffEq;
-
 use crate::{core::tuple::Tuple, graphics::color::Color};
 
 /// A striped pattern that alternates between two colors.
@@ -20,18 +18,6 @@ impl Stripe {
         } else {
             self.b
         }
-    }
-}
-
-impl AbsDiffEq for Stripe {
-    type Epsilon = <Color as AbsDiffEq>::Epsilon;
-
-    fn default_epsilon() -> Self::Epsilon {
-        Color::default_epsilon()
-    }
-
-    fn abs_diff_eq(&self, other: &Self, epsilon: Self::Epsilon) -> bool {
-        self.a.abs_diff_eq(&other.a, epsilon) && self.b.abs_diff_eq(&other.b, epsilon)
     }
 }
 

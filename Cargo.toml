@@ -10,7 +10,6 @@ panic = "abort"
 [dependencies]
 approx = "0.5.1"
 itertools = "0.10.2"
-ordered-float = "2.10"
 
 [[bin]]
 name = "circle"

@@ -7,7 +7,7 @@ use crate::{
 
 use super::{object::Object, point_light::PointLight};
 
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub struct Material {
     pub color: Color,
     pub ambient: f64,
@@ -76,6 +76,12 @@ impl Default for Material {
     }
 }
 
+impl PartialEq for Material {
+    fn eq(&self, other: &Self) -> bool {
+        self.abs_diff_eq(other, Self::default_epsilon())
+    }
+}
+
 impl AbsDiffEq for Material {
     type Epsilon = f64;
 
@@ -84,15 +90,13 @@ impl AbsDiffEq for Material {
     }
 
     fn abs_diff_eq(&self, other: &Self, epsilon: Self::Epsilon) -> bool {
-        self.color.abs_diff_eq(&other.color, epsilon)
+        self.color == other.color
             && self.ambient.abs_diff_eq(&other.ambient, epsilon)
             && self.diffuse.abs_diff_eq(&other.diffuse, epsilon)
             && self.specular.abs_diff_eq(&other.specular, epsilon)
             && self.shininess.abs_diff_eq(&other.shininess, epsilon)
-            && self
-                .pattern
-                .and_then(|p1| other.pattern.map(|p2| p1.abs_diff_eq(&p2, epsilon)))
-                .unwrap_or(true)
+            && self.reflective.abs_diff_eq(&other.reflective, epsilon)
+            && self.pattern == other.pattern
     }
 }
 
