@@ -63,6 +63,10 @@ impl UlpsEq for Intersection {
 pub struct Intersections(pub BTreeSet<Intersection>);
 
 impl Intersections {
+    pub fn new<const N: usize>(xs: [Intersection; N]) -> Self {
+        Self(BTreeSet::from(xs))
+    }
+
     pub fn hit(&self) -> Option<Intersection> {
         self.0.iter().find(|i| i.t >= 0.0).cloned()
     }
@@ -88,9 +92,8 @@ mod tests {
         let obj = Object::new_sphere();
         let i1 = Intersection::new(1.0, obj);
         let i2 = Intersection::new(2.0, obj);
-        let xs = BTreeSet::from([i1, i2]);
 
-        let hit = Intersections(xs).hit().expect("valid hit");
+        let hit = Intersections::new([i1, i2]).hit().expect("valid hit");
 
         assert_abs_diff_eq!(hit, i1);
     }
@@ -100,9 +103,8 @@ mod tests {
         let obj = Object::new_sphere();
         let i1 = Intersection::new(-1.0, obj);
         let i2 = Intersection::new(1.0, obj);
-        let xs = BTreeSet::from([i1, i2]);
 
-        let hit = Intersections(xs).hit().expect("valid hit");
+        let hit = Intersections::new([i1, i2]).hit().expect("valid hit");
 
         assert_abs_diff_eq!(hit, i2);
     }
@@ -112,9 +114,8 @@ mod tests {
         let obj = Object::new_sphere();
         let i1 = Intersection::new(-2.0, obj);
         let i2 = Intersection::new(-1.0, obj);
-        let xs = BTreeSet::from([i1, i2]);
 
-        let hit = Intersections(xs).hit();
+        let hit = Intersections::new([i1, i2]).hit();
 
         assert_eq!(hit, None);
     }
@@ -126,9 +127,10 @@ mod tests {
         let i2 = Intersection::new(7.0, obj);
         let i3 = Intersection::new(-3.0, obj);
         let i4 = Intersection::new(2.0, obj);
-        let xs = BTreeSet::from([i1, i2, i3, i4]);
 
-        let hit = Intersections(xs).hit().expect("valid hit");
+        let hit = Intersections::new([i1, i2, i3, i4])
+            .hit()
+            .expect("valid hit");
 
         assert_abs_diff_eq!(hit, i4);
     }

@@ -30,6 +30,14 @@ impl Object {
         Self::new(Shape::Sphere(Sphere::default()))
     }
 
+    pub fn new_glass_sphere() -> Self {
+        let mut sphere = Self::new_sphere();
+        sphere.material.transparency = 1.0;
+        sphere.material.refractive_index = 1.5;
+
+        sphere
+    }
+
     pub fn new_plane() -> Self {
         Self::new(Shape::Plane(Plane::default()))
     }
@@ -94,6 +102,15 @@ mod tests {
         obj.material = material;
 
         assert_eq!(obj.material, material);
+    }
+
+    #[test]
+    fn glass_sphere() {
+        let obj = Object::new_glass_sphere();
+
+        assert_eq!(obj.transform, Matrix::identity());
+        assert_eq!(obj.material.transparency, 1.0);
+        assert_eq!(obj.material.refractive_index, 1.5);
     }
 
     #[test]
