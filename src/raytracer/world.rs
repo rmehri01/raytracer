@@ -30,14 +30,14 @@ impl World {
         }
     }
 
-    pub fn color_at(&self, ray: &Ray) -> Color {
+    pub fn color_at(&self, ray: &Ray, remaining_recursions: u8) -> Color {
         let intersections = self.intersect(ray);
         let hit = intersections.hit();
 
         match hit {
             Some(hit) => {
                 let comps = Self::prepare_computations(&hit, ray);
-                self.shade_hit(comps)
+                self.shade_hit(comps, remaining_recursions)
             }
             None => Color::BLACK,
         }
@@ -53,23 +53,27 @@ impl World {
         Intersections(intersects)
     }
 
-    fn shade_hit(&self, comps: Computations) -> Color {
+    fn shade_hit(&self, comps: Computations, remaining_recursions: u8) -> Color {
         let is_shadowed = self.is_shadowed(&comps.over_point);
-
-        comps.object.material.lighting(
+        let surface = comps.object.material.lighting(
             &comps.object,
             &self.light.expect("world should have light"),
             &comps.over_point,
             &comps.eyev,
             &comps.normalv,
             is_shadowed,
-        )
+        );
+
+        let reflected = self.reflected_color(&comps, remaining_recursions);
+
+        surface + reflected
     }
 
     // TODO: belongs in intersection?
     fn prepare_computations(intersection: &Intersection, ray: &Ray) -> Computations {
         let point = ray.position(intersection.t.0);
         let eyev = -ray.direction;
+
         let normalv = intersection.object.normal_at(&point);
         let inside = normalv.dot(&eyev) < 0.0;
         let normalv = if inside { -normalv } else { normalv };
@@ -78,10 +82,11 @@ impl World {
             t: intersection.t.0,
             object: intersection.object,
             point,
+            over_point: point + normalv * Tuple::default_epsilon(),
             eyev,
             normalv,
+            reflectv: ray.direction.reflect(&normalv),
             inside,
-            over_point: point + normalv * Tuple::default_epsilon(),
         }
     }
 
@@ -97,6 +102,17 @@ impl World {
             .hit()
             .map(|hit| hit.t.0 < distance)
             .unwrap_or(false)
+    }
+
+    fn reflected_color(&self, comps: &Computations, remaining_recursions: u8) -> Color {
+        if comps.object.material.reflective == 0.0 || remaining_recursions == 0 {
+            Color::BLACK
+        } else {
+            let reflect_ray = Ray::new(comps.over_point, comps.reflectv);
+            let color = self.color_at(&reflect_ray, remaining_recursions - 1);
+
+            color * comps.object.material.reflective
+        }
     }
 }
 
@@ -130,10 +146,11 @@ pub struct Computations {
     pub t: f64,
     pub object: Object,
     pub point: Tuple,
+    pub over_point: Tuple,
     pub eyev: Tuple,
     pub normalv: Tuple,
+    pub reflectv: Tuple,
     pub inside: bool,
-    pub over_point: Tuple,
 }
 
 #[cfg(test)]
@@ -189,7 +206,7 @@ mod tests {
         let i = Intersection::new(4.0, *shape);
         let comps = World::prepare_computations(&i, &r);
 
-        let color = world.shade_hit(comps);
+        let color = world.shade_hit(comps, 5);
 
         assert_abs_diff_eq!(color, Color::new(0.38066, 0.47583, 0.2855));
     }
@@ -206,7 +223,7 @@ mod tests {
         let i = Intersection::new(0.5, *shape);
         let comps = World::prepare_computations(&i, &r);
 
-        let color = world.shade_hit(comps);
+        let color = world.shade_hit(comps, 5);
 
         assert_abs_diff_eq!(color, Color::new(0.90498, 0.90498, 0.90498));
     }
@@ -224,6 +241,23 @@ mod tests {
         assert_abs_diff_eq!(comps.point, Tuple::point(0.0, 0.0, -1.0));
         assert_abs_diff_eq!(comps.eyev, Tuple::vector(0.0, 0.0, -1.0));
         assert_abs_diff_eq!(comps.normalv, Tuple::vector(0.0, 0.0, -1.0));
+    }
+
+    #[test]
+    fn precomputing_reflection_vector() {
+        let shape = Object::new_plane();
+        let r = Ray::new(
+            Tuple::point(0.0, 1.0, -1.0),
+            Tuple::vector(0.0, -(2.0_f64.sqrt()) / 2.0, 2.0_f64.sqrt() / 2.0),
+        );
+        let i = Intersection::new(2.0_f64.sqrt(), shape);
+
+        let comps = World::prepare_computations(&i, &r);
+
+        assert_abs_diff_eq!(
+            comps.reflectv,
+            Tuple::vector(0.0, 2.0_f64.sqrt() / 2.0, 2.0_f64.sqrt() / 2.0)
+        );
     }
 
     #[test]
@@ -256,7 +290,7 @@ mod tests {
         let world = World::default();
         let r = Ray::new(Tuple::point(0.0, 0.0, -5.0), Tuple::vector(0.0, 1.0, 0.0));
 
-        let color = world.color_at(&r);
+        let color = world.color_at(&r, 5);
 
         assert_abs_diff_eq!(color, Color::BLACK);
     }
@@ -266,7 +300,7 @@ mod tests {
         let world = World::default();
         let r = Ray::new(Tuple::point(0.0, 0.0, -5.0), Tuple::vector(0.0, 0.0, 1.0));
 
-        let color = world.color_at(&r);
+        let color = world.color_at(&r, 5);
 
         assert_abs_diff_eq!(color, Color::new(0.38066, 0.47583, 0.2855));
     }
@@ -279,7 +313,7 @@ mod tests {
 
         let r = Ray::new(Tuple::point(0.0, 0.0, 0.75), Tuple::vector(0.0, 0.0, -1.0));
 
-        let color = world.color_at(&r);
+        let color = world.color_at(&r, 5);
 
         assert_abs_diff_eq!(color, world.objects[1].material.color);
     }
@@ -331,7 +365,7 @@ mod tests {
         let i = Intersection::new(4.0, s2);
         let comps = World::prepare_computations(&i, &r);
 
-        assert_abs_diff_eq!(w.shade_hit(comps), Color::new(0.1, 0.1, 0.1));
+        assert_abs_diff_eq!(w.shade_hit(comps, 5), Color::new(0.1, 0.1, 0.1));
     }
 
     #[test]
@@ -346,5 +380,100 @@ mod tests {
 
         assert!(comps.over_point.z < epsilon / 2.0);
         assert!(comps.point.z > comps.over_point.z);
+    }
+
+    #[test]
+    fn reflected_color_nonreflective_material() {
+        let mut w = World::default();
+        w.objects[1].material.ambient = 1.0;
+
+        let r = Ray::new(Tuple::point(0.0, 0.0, 0.0), Tuple::vector(0.0, 0.0, 1.0));
+        let i = Intersection::new(1.0, w.objects[1]);
+
+        let comps = World::prepare_computations(&i, &r);
+
+        assert_abs_diff_eq!(w.reflected_color(&comps, 5), Color::BLACK);
+    }
+
+    #[test]
+    fn reflected_color_reflective_material() {
+        let mut shape = Object::new_plane();
+        shape.material.reflective = 0.5;
+        shape.transform = Matrix::translation(0.0, -1.0, 0.0);
+
+        let mut w = World::default();
+        w.objects.push(shape);
+
+        let r = Ray::new(
+            Tuple::point(0.0, 0.0, -3.0),
+            Tuple::vector(0.0, -(2.0_f64.sqrt()) / 2.0, 2.0_f64.sqrt() / 2.0),
+        );
+        let i = Intersection::new(2.0_f64.sqrt(), shape);
+
+        let comps = World::prepare_computations(&i, &r);
+
+        assert_abs_diff_eq!(
+            w.reflected_color(&comps, 5),
+            Color::new(0.19032, 0.2379, 0.14274)
+        );
+    }
+
+    #[test]
+    fn shade_hit_with_reflective_material() {
+        let mut shape = Object::new_plane();
+        shape.material.reflective = 0.5;
+        shape.transform = Matrix::translation(0.0, -1.0, 0.0);
+
+        let mut w = World::default();
+        w.objects.push(shape);
+
+        let r = Ray::new(
+            Tuple::point(0.0, 0.0, -3.0),
+            Tuple::vector(0.0, -(2.0_f64.sqrt()) / 2.0, 2.0_f64.sqrt() / 2.0),
+        );
+        let i = Intersection::new(2.0_f64.sqrt(), shape);
+
+        let comps = World::prepare_computations(&i, &r);
+
+        assert_abs_diff_eq!(w.shade_hit(comps, 5), Color::new(0.87677, 0.92436, 0.82918));
+    }
+
+    #[test]
+    fn mutually_reflective_surfaces() {
+        let mut lower = Object::new_plane();
+        lower.material.reflective = 1.0;
+        lower.transform = Matrix::translation(0.0, -1.0, 0.0);
+
+        let mut upper = Object::new_plane();
+        upper.material.reflective = 1.0;
+        upper.transform = Matrix::translation(0.0, 1.0, 0.0);
+
+        let mut w = World::default();
+        w.objects.push(lower);
+        w.objects.push(upper);
+
+        let r = Ray::new(Tuple::point(0.0, 0.0, 0.0), Tuple::vector(0.0, 1.0, 0.0));
+
+        w.color_at(&r, 5);
+    }
+
+    #[test]
+    fn reflected_color_at_maximum_recursion_depth() {
+        let mut shape = Object::new_sphere();
+        shape.material.reflective = 0.5;
+        shape.transform = Matrix::translation(0.0, -1.0, 0.0);
+
+        let mut w = World::default();
+        w.objects.push(shape);
+
+        let r = Ray::new(
+            Tuple::point(0.0, 0.0, -3.0),
+            Tuple::vector(0.0, -(2.0_f64.sqrt()) / 2.0, 2.0_f64.sqrt() / 2.0),
+        );
+        let i = Intersection::new(2.0_f64.sqrt(), shape);
+
+        let comps = World::prepare_computations(&i, &r);
+
+        assert_abs_diff_eq!(w.reflected_color(&comps, 0), Color::BLACK);
     }
 }

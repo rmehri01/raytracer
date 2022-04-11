@@ -1,6 +1,7 @@
 use crate::core::{matrix::Matrix, tuple::Tuple};
 
 /// A ray in 3D space with a origin position and direction vector.
+#[derive(Debug)]
 pub struct Ray {
     pub origin: Tuple,
     pub direction: Tuple,

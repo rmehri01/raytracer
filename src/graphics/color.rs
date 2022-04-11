@@ -79,7 +79,7 @@ impl AbsDiffEq for Color {
     type Epsilon = f64;
 
     fn default_epsilon() -> Self::Epsilon {
-        1e-5
+        1e-4
     }
 
     fn abs_diff_eq(&self, other: &Self, epsilon: Self::Epsilon) -> bool {

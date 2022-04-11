@@ -8,7 +8,6 @@ use super::{ray::Ray, world::World};
 pub struct Camera {
     hsize: usize,
     vsize: usize,
-    field_of_view: f64,
     // TODO: better way of setting/using this
     pub transform: Matrix<4>,
     half_width: f64,
@@ -35,7 +34,6 @@ impl Camera {
         Self {
             hsize,
             vsize,
-            field_of_view,
             transform: Matrix::identity(),
             half_width,
             half_height,
@@ -49,7 +47,7 @@ impl Camera {
         for y in 0..self.vsize {
             for x in 0..self.hsize {
                 let ray = self.ray_for_pixel(x, y);
-                let color = world.color_at(&ray);
+                let color = world.color_at(&ray, 5);
                 canvas.write_pixel(x, y, color);
             }
         }
@@ -88,7 +86,6 @@ mod tests {
 
         assert_eq!(c.hsize, 160);
         assert_eq!(c.vsize, 120);
-        assert_abs_diff_eq!(c.field_of_view, FRAC_PI_2);
         assert_eq!(c.transform, Matrix::identity());
     }
 
