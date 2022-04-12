@@ -136,6 +136,31 @@ pub struct Computations {
     pub n2: f64,
 }
 
+impl Computations {
+    /// The Schlick approximation for the Fresnel reflectance.
+    /// Computes the reflectance, which is a number between 0 and 1
+    /// representing the fraction of light reflected.
+    pub fn schlick(&self) -> f64 {
+        let mut cos = self.eyev.dot(&self.normalv);
+
+        if self.n1 > self.n2 {
+            let n = self.n1 / self.n2;
+            let sin2_t = n.powi(2) * (1.0 - cos.powi(2));
+
+            if sin2_t > 1.0 {
+                return 1.0;
+            }
+
+            let cos_t = (1.0 - sin2_t).sqrt();
+            cos = cos_t;
+        }
+
+        let r0 = ((self.n1 - self.n2) / (self.n1 + self.n2)).powi(2);
+
+        r0 + (1.0 - r0) * (1.0 - cos).powi(5)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use approx::{assert_abs_diff_eq, assert_relative_eq};
@@ -330,5 +355,50 @@ mod tests {
 
         assert!(comps.under_point.z > Tuple::default_epsilon() / 2.0);
         assert!(comps.point.z < comps.under_point.z);
+    }
+
+    #[test]
+    fn schlick_approximation_for_total_internal_reflection() {
+        let shape = Object::new_glass_sphere();
+
+        let r = Ray::new(
+            Tuple::point(0.0, 0.0, 2.0_f64.sqrt() / 2.0),
+            Tuple::vector(0.0, 1.0, 0.0),
+        );
+        let xs = Intersections::new([
+            Intersection::new(-(2.0_f64.sqrt()) / 2.0, shape),
+            Intersection::new(2.0_f64.sqrt() / 2.0, shape),
+        ]);
+
+        let comps = xs.0.iter().nth(1).unwrap().prepare_computations(&r, &xs);
+
+        assert_abs_diff_eq!(comps.schlick(), 1.0);
+    }
+
+    #[test]
+    fn schlick_approximation_perpendicular_viewing_angle() {
+        let shape = Object::new_glass_sphere();
+
+        let r = Ray::new(Tuple::point(0.0, 0.0, 0.0), Tuple::vector(0.0, 1.0, 0.0));
+        let xs = Intersections::new([
+            Intersection::new(-1.0, shape),
+            Intersection::new(1.0, shape),
+        ]);
+
+        let comps = xs.0.iter().nth(1).unwrap().prepare_computations(&r, &xs);
+
+        assert_abs_diff_eq!(comps.schlick(), 0.04);
+    }
+
+    #[test]
+    fn schlick_approximation_small_angle_n2_greater_than_n1() {
+        let shape = Object::new_glass_sphere();
+
+        let r = Ray::new(Tuple::point(0.0, 0.99, -2.0), Tuple::vector(0.0, 0.0, 1.0));
+        let xs = Intersections::new([Intersection::new(1.8589, shape)]);
+
+        let comps = xs.0.iter().next().unwrap().prepare_computations(&r, &xs);
+
+        assert_abs_diff_eq!(comps.schlick(), 0.48873, epsilon = Tuple::default_epsilon());
     }
 }

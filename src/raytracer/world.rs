@@ -65,7 +65,13 @@ impl World {
         let reflected = self.reflected_color(&comps, remaining_recursions);
         let refracted = self.refracted_color(&comps, remaining_recursions);
 
-        surface + reflected + refracted
+        let material = comps.object.material;
+        if material.reflective > 0.0 && material.transparency > 0.0 {
+            let reflectance = comps.schlick();
+            surface + reflected * reflectance + refracted * (1.0 - reflectance)
+        } else {
+            surface + reflected + refracted
+        }
     }
 
     fn is_shadowed(&self, point: &Tuple) -> bool {
@@ -491,5 +497,33 @@ mod tests {
         let comps = xs.0.iter().next().unwrap().prepare_computations(&r, &xs);
 
         assert_eq!(w.shade_hit(comps, 5), Color::new(0.93642, 0.68642, 0.68642));
+    }
+
+    #[test]
+    fn shade_hit_with_reflective_transparent_material() {
+        let mut floor = Object::new_plane();
+        floor.transform = Matrix::translation(0.0, -1.0, 0.0);
+        floor.material.reflective = 0.5;
+        floor.material.transparency = 0.5;
+        floor.material.refractive_index = 1.5;
+
+        let mut ball = Object::new_sphere();
+        ball.transform = Matrix::translation(0.0, -3.5, -0.5);
+        ball.material.color = Color::new(1.0, 0.0, 0.0);
+        ball.material.ambient = 0.5;
+
+        let mut w = World::default();
+        w.objects.push(floor);
+        w.objects.push(ball);
+
+        let r = Ray::new(
+            Tuple::point(0.0, 0.0, -3.0),
+            Tuple::vector(0.0, -(2.0_f64.sqrt()) / 2.0, 2.0_f64.sqrt() / 2.0),
+        );
+        let xs = Intersections::new([Intersection::new(2.0_f64.sqrt(), floor)]);
+
+        let comps = xs.0.iter().next().unwrap().prepare_computations(&r, &xs);
+
+        assert_eq!(w.shade_hit(comps, 5), Color::new(0.93391, 0.69643, 0.69243));
     }
 }
