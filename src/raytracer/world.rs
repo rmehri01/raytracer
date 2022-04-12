@@ -209,6 +209,8 @@ pub struct Computations {
 mod tests {
     use approx::assert_abs_diff_eq;
 
+    use crate::graphics::pattern::Pattern;
+
     use super::*;
 
     #[test]
@@ -634,6 +636,30 @@ mod tests {
         let comps = World::prepare_computations(xs.0.iter().nth(1).unwrap(), &r, &xs);
 
         assert_eq!(w.refracted_color(&comps, 5), Color::BLACK);
+    }
+
+    #[test]
+    fn refracted_color_with_refracted_ray() {
+        let mut w = World::default();
+        w.objects[0].material.ambient = 1.0;
+        w.objects[0].material.pattern = Some(Pattern::new_test());
+        w.objects[1].material.transparency = 1.0;
+        w.objects[1].material.refractive_index = 1.5;
+
+        let r = Ray::new(Tuple::point(0.0, 0.0, 0.1), Tuple::vector(0.0, 1.0, 0.0));
+        let xs = Intersections::new([
+            Intersection::new(-0.9899, w.objects[0]),
+            Intersection::new(-0.4899, w.objects[1]),
+            Intersection::new(0.4899, w.objects[1]),
+            Intersection::new(0.9899, w.objects[0]),
+        ]);
+
+        let comps = World::prepare_computations(xs.0.iter().nth(2).unwrap(), &r, &xs);
+
+        assert_eq!(
+            w.refracted_color(&comps, 5),
+            Color::new(0.0, 0.99888, 0.04725)
+        );
     }
 
     #[test]

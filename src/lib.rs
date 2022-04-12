@@ -9,13 +9,6 @@ pub mod graphics {
     pub mod canvas;
     pub mod color;
     pub mod pattern;
-
-    pub mod patterns {
-        pub mod checker;
-        pub mod gradient;
-        pub mod ring;
-        pub mod stripe;
-    }
 }
 
 pub mod raytracer {
