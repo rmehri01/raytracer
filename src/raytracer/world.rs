@@ -65,8 +65,9 @@ impl World {
         );
 
         let reflected = self.reflected_color(&comps, remaining_recursions);
+        let refracted = self.refracted_color(&comps, remaining_recursions);
 
-        surface + reflected
+        surface + reflected + refracted
     }
 
     // TODO: belongs in intersection?
@@ -143,6 +144,23 @@ impl World {
             let color = self.color_at(&reflect_ray, remaining_recursions - 1);
 
             color * comps.object.material.reflective
+        }
+    }
+
+    fn refracted_color(&self, comps: &Computations, remaining_recursions: u8) -> Color {
+        let n_ratio = comps.n1 / comps.n2;
+        let cos_i = comps.eyev.dot(&comps.normalv);
+        let sin2_t = n_ratio.powi(2) * (1.0 - cos_i.powi(2));
+
+        if comps.object.material.transparency == 0.0 || remaining_recursions == 0 || sin2_t > 1.0 {
+            Color::BLACK
+        } else {
+            let cos_t = (1.0 - sin2_t).sqrt();
+            let direction = comps.normalv * (n_ratio * cos_i - cos_t) - comps.eyev * n_ratio;
+            let refract_ray = Ray::new(comps.under_point, direction);
+
+            self.color_at(&refract_ray, remaining_recursions - 1)
+                * comps.object.material.transparency
         }
     }
 }
@@ -565,5 +583,83 @@ mod tests {
 
         assert!(comps.under_point.z > Tuple::default_epsilon() / 2.0);
         assert!(comps.point.z < comps.under_point.z);
+    }
+
+    #[test]
+    fn refracted_color_of_opaque_surface() {
+        let w = World::default();
+        let shape = w.objects[0];
+
+        let r = Ray::new(Tuple::point(0.0, 0.0, -5.0), Tuple::vector(0.0, 0.0, 1.0));
+        let xs = Intersections::new([Intersection::new(4.0, shape), Intersection::new(6.0, shape)]);
+
+        let comps = World::prepare_computations(xs.0.iter().next().unwrap(), &r, &xs);
+
+        assert_eq!(w.refracted_color(&comps, 5), Color::BLACK);
+    }
+
+    #[test]
+    fn refracted_color_at_max_recursion_depth() {
+        let mut w = World::default();
+        w.objects[0].material.transparency = 1.0;
+        w.objects[0].material.refractive_index = 1.5;
+
+        let shape = w.objects[0];
+
+        let r = Ray::new(Tuple::point(0.0, 0.0, -5.0), Tuple::vector(0.0, 0.0, 1.0));
+        let xs = Intersections::new([Intersection::new(4.0, shape), Intersection::new(6.0, shape)]);
+
+        let comps = World::prepare_computations(xs.0.iter().next().unwrap(), &r, &xs);
+
+        assert_eq!(w.refracted_color(&comps, 0), Color::BLACK);
+    }
+
+    #[test]
+    fn refracted_color_under_total_internal_refraction() {
+        let mut w = World::default();
+        w.objects[0].material.transparency = 1.0;
+        w.objects[0].material.refractive_index = 1.5;
+
+        let shape = w.objects[0];
+
+        let r = Ray::new(
+            Tuple::point(0.0, 0.0, 2.0_f64.sqrt() / 2.0),
+            Tuple::vector(0.0, 1.0, 0.0),
+        );
+        let xs = Intersections::new([
+            Intersection::new(-(2.0_f64.sqrt()) / 2.0, shape),
+            Intersection::new(2.0_f64.sqrt() / 2.0, shape),
+        ]);
+
+        let comps = World::prepare_computations(xs.0.iter().nth(1).unwrap(), &r, &xs);
+
+        assert_eq!(w.refracted_color(&comps, 5), Color::BLACK);
+    }
+
+    #[test]
+    fn shade_hit_with_transparent_material() {
+        let mut floor = Object::new_plane();
+        floor.transform = Matrix::translation(0.0, -1.0, 0.0);
+        floor.material.transparency = 0.5;
+        floor.material.refractive_index = 1.5;
+
+        let mut ball = Object::new_sphere();
+        ball.transform = Matrix::translation(0.0, -3.5, -0.5);
+        ball.material.color = Color::new(1.0, 0.0, 0.0);
+        ball.material.ambient = 0.5;
+
+        let mut w = World::default();
+        w.objects.push(floor);
+        w.objects.push(ball);
+
+        let r = Ray::new(
+            Tuple::point(0.0, 0.0, -3.0),
+            Tuple::vector(0.0, -(2.0_f64.sqrt()) / 2.0, 2.0_f64.sqrt() / 2.0),
+        );
+        let xs = Intersections::new([Intersection::new(2.0_f64.sqrt(), floor)]);
+
+        let comps = World::prepare_computations(xs.0.iter().next().unwrap(), &r, &xs);
+
+        assert_eq!(w.shade_hit(comps, 5), Color::new(0.93642, 0.68642, 0.68642));
     }
 }
