@@ -1,7 +1,7 @@
 use raytracer::{
     core::tuple::Tuple,
     graphics::{canvas::Canvas, color::Color},
-    raytracer::{object::Object, point_light::PointLight, ray::Ray},
+    raytracer::{point_light::PointLight, ray::Ray, shape::Shape},
 };
 
 pub fn render_shaded_sphere(path: &str) {
@@ -15,7 +15,7 @@ pub fn render_shaded_sphere(path: &str) {
     let pixel_size = wall_size / side_len as f64;
     let half = wall_size / 2.0;
 
-    let mut sphere = Object::new_sphere();
+    let mut sphere = Shape::new_sphere();
     sphere.material.color = Color::new(1.0, 0.2, 1.0);
 
     let light_position = Tuple::point(-10.0, 10.0, -10.0);
@@ -37,7 +37,7 @@ pub fn render_shaded_sphere(path: &str) {
                 let normal = sphere.normal_at(&point);
                 let eye = -r.direction;
                 let color = hit
-                    .object
+                    .shape
                     .material
                     .lighting(&sphere, &light, &point, &eye, &normal, false);
                 canvas.write_pixel(x, y, color);

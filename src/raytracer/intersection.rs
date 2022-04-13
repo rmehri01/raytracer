@@ -4,40 +4,44 @@ use approx::{AbsDiffEq, UlpsEq};
 
 use crate::core::tuple::Tuple;
 
-use super::{object::Object, ray::Ray};
+use super::{ray::Ray, shape::Shape};
 
 #[derive(Debug, Clone, Copy)]
 pub struct Intersection {
     pub t: f64,
-    pub object: Object,
+    pub shape: Shape,
 }
 
 impl Intersection {
-    pub fn new(t: f64, object: Object) -> Self {
-        Self { t, object }
+    pub fn new(t: f64, shape: Shape) -> Self {
+        Self { t, shape }
     }
 
     pub fn prepare_computations(&self, ray: &Ray, xs: &Intersections) -> Computations {
         // TODO: nicer way to do the containers that doesn't mix with what happens last
-        let mut containers: Vec<Object> = Vec::new();
+        let mut containers: Vec<Shape> = Vec::new();
 
         let mut n1 = None;
         let mut n2 = None;
 
         for i in xs.0.iter() {
             if i == self {
-                n1 = containers.last().map(|obj| obj.material.refractive_index);
+                n1 = containers
+                    .last()
+                    .map(|shape| shape.material.refractive_index);
             }
 
-            match containers.iter().position(|&obj| obj == i.object) {
-                Some(obj_idx) => {
-                    containers.remove(obj_idx);
+            match containers.iter().position(|&shape| shape == i.shape) {
+                Some(shape_idx) => {
+                    containers.remove(shape_idx);
                 }
-                None => containers.push(i.object),
+                None => containers.push(i.shape),
             }
 
             if i == self {
-                n2 = containers.last().map(|obj| obj.material.refractive_index);
+                n2 = containers
+                    .last()
+                    .map(|shape| shape.material.refractive_index);
                 break;
             }
         }
@@ -45,13 +49,13 @@ impl Intersection {
         let point = ray.position(self.t);
         let eyev = -ray.direction;
 
-        let normalv = self.object.normal_at(&point);
+        let normalv = self.shape.normal_at(&point);
         let inside = normalv.dot(&eyev) < 0.0;
         let normalv = if inside { -normalv } else { normalv };
 
         Computations {
             t: self.t,
-            object: self.object,
+            shape: self.shape,
             point,
             over_point: point + normalv * Tuple::default_epsilon(),
             under_point: point - normalv * Tuple::default_epsilon(),
@@ -124,7 +128,7 @@ impl Intersections {
 /// Encapsulates precomputed information for an intersection.
 pub struct Computations {
     pub t: f64,
-    pub object: Object,
+    pub shape: Shape,
     pub point: Tuple,
     pub over_point: Tuple,
     pub under_point: Tuple,
@@ -171,18 +175,18 @@ mod tests {
 
     #[test]
     fn test_intersection_new() {
-        let obj = Object::new_sphere();
-        let intersection = Intersection::new(3.5, obj);
+        let shape = Shape::new_sphere();
+        let intersection = Intersection::new(3.5, shape);
 
         assert_relative_eq!(intersection.t, 3.5);
-        assert_eq!(intersection.object, obj);
+        assert_eq!(intersection.shape, shape);
     }
 
     #[test]
     fn hit_all_positive() {
-        let obj = Object::new_sphere();
-        let i1 = Intersection::new(1.0, obj);
-        let i2 = Intersection::new(2.0, obj);
+        let shape = Shape::new_sphere();
+        let i1 = Intersection::new(1.0, shape);
+        let i2 = Intersection::new(2.0, shape);
 
         let hit = Intersections::new([i1, i2]).hit().expect("valid hit");
 
@@ -191,9 +195,9 @@ mod tests {
 
     #[test]
     fn hit_some_negative() {
-        let obj = Object::new_sphere();
-        let i1 = Intersection::new(-1.0, obj);
-        let i2 = Intersection::new(1.0, obj);
+        let shape = Shape::new_sphere();
+        let i1 = Intersection::new(-1.0, shape);
+        let i2 = Intersection::new(1.0, shape);
 
         let hit = Intersections::new([i1, i2]).hit().expect("valid hit");
 
@@ -202,9 +206,9 @@ mod tests {
 
     #[test]
     fn hit_all_negative() {
-        let obj = Object::new_sphere();
-        let i1 = Intersection::new(-2.0, obj);
-        let i2 = Intersection::new(-1.0, obj);
+        let shape = Shape::new_sphere();
+        let i1 = Intersection::new(-2.0, shape);
+        let i2 = Intersection::new(-1.0, shape);
 
         let hit = Intersections::new([i1, i2]).hit();
 
@@ -213,11 +217,11 @@ mod tests {
 
     #[test]
     fn hit_lowest_nonnegative() {
-        let obj = Object::new_sphere();
-        let i1 = Intersection::new(5.0, obj);
-        let i2 = Intersection::new(7.0, obj);
-        let i3 = Intersection::new(-3.0, obj);
-        let i4 = Intersection::new(2.0, obj);
+        let shape = Shape::new_sphere();
+        let i1 = Intersection::new(5.0, shape);
+        let i2 = Intersection::new(7.0, shape);
+        let i3 = Intersection::new(-3.0, shape);
+        let i4 = Intersection::new(2.0, shape);
 
         let hit = Intersections::new([i1, i2, i3, i4])
             .hit()
@@ -229,13 +233,13 @@ mod tests {
     #[test]
     fn precomputing_state_of_intersection() {
         let r = Ray::new(Tuple::point(0.0, 0.0, -5.0), Tuple::vector(0.0, 0.0, 1.0));
-        let shape = Object::new_sphere();
+        let shape = Shape::new_sphere();
         let i = Intersection::new(4.0, shape);
 
         let comps = i.prepare_computations(&r, &Intersections::new([i]));
 
         assert_abs_diff_eq!(comps.t, i.t);
-        assert_eq!(comps.object, i.object);
+        assert_eq!(comps.shape, i.shape);
         assert_abs_diff_eq!(comps.point, Tuple::point(0.0, 0.0, -1.0));
         assert_abs_diff_eq!(comps.eyev, Tuple::vector(0.0, 0.0, -1.0));
         assert_abs_diff_eq!(comps.normalv, Tuple::vector(0.0, 0.0, -1.0));
@@ -243,7 +247,7 @@ mod tests {
 
     #[test]
     fn precomputing_reflection_vector() {
-        let shape = Object::new_plane();
+        let shape = Shape::new_plane();
         let r = Ray::new(
             Tuple::point(0.0, 1.0, -1.0),
             Tuple::vector(0.0, -(2.0_f64.sqrt()) / 2.0, 2.0_f64.sqrt() / 2.0),
@@ -261,7 +265,7 @@ mod tests {
     #[test]
     fn hit_when_intersection_outside() {
         let r = Ray::new(Tuple::point(0.0, 0.0, -5.0), Tuple::vector(0.0, 0.0, 1.0));
-        let shape = Object::new_sphere();
+        let shape = Shape::new_sphere();
         let i = Intersection::new(4.0, shape);
 
         let comps = i.prepare_computations(&r, &Intersections::new([i]));
@@ -272,7 +276,7 @@ mod tests {
     #[test]
     fn hit_when_intersection_inside() {
         let r = Ray::new(Tuple::point(0.0, 0.0, 0.0), Tuple::vector(0.0, 0.0, 1.0));
-        let shape = Object::new_sphere();
+        let shape = Shape::new_sphere();
         let i = Intersection::new(1.0, shape);
 
         let comps = i.prepare_computations(&r, &Intersections::new([i]));
@@ -286,10 +290,10 @@ mod tests {
     #[test]
     fn hit_should_offset_the_point() {
         let r = Ray::new(Tuple::point(0.0, 0.0, -5.0), Tuple::vector(0.0, 0.0, 1.0));
-        let mut obj = Object::new_sphere();
-        obj.transform = Matrix::translation(0.0, 0.0, 1.0);
+        let mut shape = Shape::new_sphere();
+        shape.transform = Matrix::translation(0.0, 0.0, 1.0);
 
-        let i = Intersection::new(5.0, obj);
+        let i = Intersection::new(5.0, shape);
         let comps = i.prepare_computations(&r, &Intersections::new([i]));
         let epsilon = Tuple::default_epsilon();
 
@@ -299,15 +303,15 @@ mod tests {
 
     #[test]
     fn finding_n1_and_n2_at_various_intersections() {
-        let mut a = Object::new_glass_sphere();
+        let mut a = Shape::new_glass_sphere();
         a.transform = Matrix::scaling(2.0, 2.0, 2.0);
         a.material.refractive_index = 1.5;
 
-        let mut b = Object::new_glass_sphere();
+        let mut b = Shape::new_glass_sphere();
         b.transform = Matrix::translation(0.0, 0.0, -0.25);
         b.material.refractive_index = 2.0;
 
-        let mut c = Object::new_glass_sphere();
+        let mut c = Shape::new_glass_sphere();
         c.transform = Matrix::translation(0.0, 0.0, 0.25);
         c.material.refractive_index = 2.5;
 
@@ -344,7 +348,7 @@ mod tests {
 
     #[test]
     fn under_point_offset_below_surface() {
-        let mut shape = Object::new_glass_sphere();
+        let mut shape = Shape::new_glass_sphere();
         shape.transform = Matrix::translation(0.0, 0.0, -1.0);
 
         let r = Ray::new(Tuple::point(0.0, 0.0, -5.0), Tuple::vector(0.0, 0.0, 1.0));
@@ -359,7 +363,7 @@ mod tests {
 
     #[test]
     fn schlick_approximation_for_total_internal_reflection() {
-        let shape = Object::new_glass_sphere();
+        let shape = Shape::new_glass_sphere();
 
         let r = Ray::new(
             Tuple::point(0.0, 0.0, 2.0_f64.sqrt() / 2.0),
@@ -377,7 +381,7 @@ mod tests {
 
     #[test]
     fn schlick_approximation_perpendicular_viewing_angle() {
-        let shape = Object::new_glass_sphere();
+        let shape = Shape::new_glass_sphere();
 
         let r = Ray::new(Tuple::point(0.0, 0.0, 0.0), Tuple::vector(0.0, 1.0, 0.0));
         let xs = Intersections::new([
@@ -392,7 +396,7 @@ mod tests {
 
     #[test]
     fn schlick_approximation_small_angle_n2_greater_than_n1() {
-        let shape = Object::new_glass_sphere();
+        let shape = Shape::new_glass_sphere();
 
         let r = Ray::new(Tuple::point(0.0, 0.99, -2.0), Tuple::vector(0.0, 0.0, 1.0));
         let xs = Intersections::new([Intersection::new(1.8589, shape)]);

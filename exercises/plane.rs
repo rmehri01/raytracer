@@ -4,7 +4,7 @@ use raytracer::{
     core::{matrix::Matrix, tuple::Tuple},
     graphics::color::Color,
     raytracer::{
-        camera::Camera, material::Material, object::Object, point_light::PointLight, world::World,
+        camera::Camera, material::Material, point_light::PointLight, shape::Shape, world::World,
     },
 };
 
@@ -15,10 +15,10 @@ fn render_plane_scene(path: &str) {
         ..Material::default()
     };
 
-    let mut floor = Object::new_plane();
+    let mut floor = Shape::new_plane();
     floor.material = floor_material;
 
-    let mut middle = Object::new_sphere();
+    let mut middle = Shape::new_sphere();
     middle.transform = Matrix::translation(-0.5, 1.0, 0.5);
     middle.material = Material {
         color: Color::new(0.1, 1.0, 0.5),
@@ -27,7 +27,7 @@ fn render_plane_scene(path: &str) {
         ..Material::default()
     };
 
-    let mut right = Object::new_sphere();
+    let mut right = Shape::new_sphere();
     right.transform = Matrix::translation(1.5, 0.5, -0.5) * Matrix::scaling(0.5, 0.5, 0.5);
     right.material = Material {
         color: Color::new(0.5, 1.0, 0.1),
@@ -36,7 +36,7 @@ fn render_plane_scene(path: &str) {
         ..Material::default()
     };
 
-    let mut left = Object::new_sphere();
+    let mut left = Shape::new_sphere();
     left.transform = Matrix::translation(-1.5, 0.33, -0.75) * Matrix::scaling(0.33, 0.33, 0.33);
     left.material = Material {
         color: Color::new(1.0, 0.8, 0.1),
@@ -50,7 +50,7 @@ fn render_plane_scene(path: &str) {
             Tuple::point(-10.0, 10.0, -10.0),
             Color::WHITE,
         )),
-        objects: vec![floor, middle, right, left],
+        shapes: vec![floor, middle, right, left],
     };
 
     let mut camera = Camera::new(2000, 1000, FRAC_PI_3);

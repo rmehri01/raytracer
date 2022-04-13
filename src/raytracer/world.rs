@@ -8,14 +8,14 @@ use crate::{
 use super::{
     intersection::{Computations, Intersections},
     material::Material,
-    object::Object,
     point_light::PointLight,
     ray::Ray,
+    shape::Shape,
 };
 
 #[derive(Debug, PartialEq)]
 pub struct World {
-    pub objects: Vec<Object>,
+    pub shapes: Vec<Shape>,
     // TODO: does this need to be optional
     pub light: Option<PointLight>,
 }
@@ -23,7 +23,7 @@ pub struct World {
 impl World {
     pub fn empty() -> Self {
         Self {
-            objects: Vec::new(),
+            shapes: Vec::new(),
             light: None,
         }
     }
@@ -43,9 +43,9 @@ impl World {
 
     fn intersect(&self, ray: &Ray) -> Intersections {
         let intersects = self
-            .objects
+            .shapes
             .iter()
-            .flat_map(|object| object.intersect(ray).0)
+            .flat_map(|shape| shape.intersect(ray).0)
             .collect::<BTreeSet<_>>();
 
         Intersections(intersects)
@@ -53,8 +53,8 @@ impl World {
 
     fn shade_hit(&self, comps: Computations, remaining_recursions: u8) -> Color {
         let is_shadowed = self.is_shadowed(&comps.over_point);
-        let surface = comps.object.material.lighting(
-            &comps.object,
+        let surface = comps.shape.material.lighting(
+            &comps.shape,
             &self.light.expect("world should have light"),
             &comps.over_point,
             &comps.eyev,
@@ -65,7 +65,7 @@ impl World {
         let reflected = self.reflected_color(&comps, remaining_recursions);
         let refracted = self.refracted_color(&comps, remaining_recursions);
 
-        let material = comps.object.material;
+        let material = comps.shape.material;
         if material.reflective > 0.0 && material.transparency > 0.0 {
             let reflectance = comps.schlick();
             surface + reflected * reflectance + refracted * (1.0 - reflectance)
@@ -89,13 +89,13 @@ impl World {
     }
 
     fn reflected_color(&self, comps: &Computations, remaining_recursions: u8) -> Color {
-        if comps.object.material.reflective == 0.0 || remaining_recursions == 0 {
+        if comps.shape.material.reflective == 0.0 || remaining_recursions == 0 {
             Color::BLACK
         } else {
             let reflect_ray = Ray::new(comps.over_point, comps.reflectv);
             let color = self.color_at(&reflect_ray, remaining_recursions - 1);
 
-            color * comps.object.material.reflective
+            color * comps.shape.material.reflective
         }
     }
 
@@ -104,7 +104,7 @@ impl World {
         let cos_i = comps.eyev.dot(&comps.normalv);
         let sin2_t = n_ratio.powi(2) * (1.0 - cos_i.powi(2));
 
-        if comps.object.material.transparency == 0.0 || remaining_recursions == 0 || sin2_t > 1.0 {
+        if comps.shape.material.transparency == 0.0 || remaining_recursions == 0 || sin2_t > 1.0 {
             Color::BLACK
         } else {
             let cos_t = (1.0 - sin2_t).sqrt();
@@ -112,7 +112,7 @@ impl World {
             let refract_ray = Ray::new(comps.under_point, direction);
 
             self.color_at(&refract_ray, remaining_recursions - 1)
-                * comps.object.material.transparency
+                * comps.shape.material.transparency
         }
     }
 }
@@ -124,7 +124,7 @@ impl Default for World {
             Color::WHITE,
         ));
 
-        let mut s1 = Object::new_sphere();
+        let mut s1 = Shape::new_sphere();
         s1.material = Material {
             color: Color::new(0.8, 1.0, 0.6),
             diffuse: 0.7,
@@ -132,11 +132,11 @@ impl Default for World {
             ..Material::default()
         };
 
-        let mut s2 = Object::new_sphere();
+        let mut s2 = Shape::new_sphere();
         s2.transform = Matrix::scaling(0.5, 0.5, 0.5);
 
         Self {
-            objects: vec![s1, s2],
+            shapes: vec![s1, s2],
             light,
         }
     }
@@ -154,7 +154,7 @@ mod tests {
     fn empty_world() {
         let world = World::empty();
 
-        assert_eq!(world.objects.len(), 0);
+        assert_eq!(world.shapes.len(), 0);
         assert_eq!(world.light, None);
     }
 
@@ -162,7 +162,7 @@ mod tests {
     fn default_world() {
         let world = World::default();
 
-        assert_eq!(world.objects.len(), 2);
+        assert_eq!(world.shapes.len(), 2);
         assert_eq!(
             world.light.expect("light exists"),
             PointLight::new(Tuple::point(-10.0, 10.0, -10.0), Color::WHITE)
@@ -193,7 +193,7 @@ mod tests {
     fn shade_intersection() {
         let world = World::default();
         let r = Ray::new(Tuple::point(0.0, 0.0, -5.0), Tuple::vector(0.0, 0.0, 1.0));
-        let shape = &world.objects[0];
+        let shape = &world.shapes[0];
         let i = Intersection::new(4.0, *shape);
         let comps = i.prepare_computations(&r, &Intersections::new([i]));
 
@@ -210,7 +210,7 @@ mod tests {
         };
 
         let r = Ray::new(Tuple::point(0.0, 0.0, 0.0), Tuple::vector(0.0, 0.0, 1.0));
-        let shape = &world.objects[1];
+        let shape = &world.shapes[1];
         let i = Intersection::new(0.5, *shape);
         let comps = i.prepare_computations(&r, &Intersections::new([i]));
 
@@ -242,18 +242,18 @@ mod tests {
     #[test]
     fn color_intersection_behind_ray() {
         let mut world = World::default();
-        world.objects[0].material.ambient = 1.0;
-        world.objects[1].material.ambient = 1.0;
+        world.shapes[0].material.ambient = 1.0;
+        world.shapes[1].material.ambient = 1.0;
 
         let r = Ray::new(Tuple::point(0.0, 0.0, 0.75), Tuple::vector(0.0, 0.0, -1.0));
 
         let color = world.color_at(&r, 5);
 
-        assert_abs_diff_eq!(color, world.objects[1].material.color);
+        assert_abs_diff_eq!(color, world.shapes[1].material.color);
     }
 
     #[test]
-    fn no_shadow_when_no_object_between_light_and_point() {
+    fn no_shadow_when_no_shape_between_light_and_point() {
         let w = World::default();
         let p = Tuple::point(0.0, 10.0, 0.0);
 
@@ -261,7 +261,7 @@ mod tests {
     }
 
     #[test]
-    fn shadow_when_object_between_light_and_point() {
+    fn shadow_when_shape_between_light_and_point() {
         let w = World::default();
         let p = Tuple::point(10.0, -10.0, 10.0);
 
@@ -269,7 +269,7 @@ mod tests {
     }
 
     #[test]
-    fn no_shadow_when_object_behind_light() {
+    fn no_shadow_when_shape_behind_light() {
         let w = World::default();
         let p = Tuple::point(-20.0, 20.0, -20.0);
 
@@ -277,7 +277,7 @@ mod tests {
     }
 
     #[test]
-    fn no_shadow_when_object_behind_point() {
+    fn no_shadow_when_shape_behind_point() {
         let w = World::default();
         let p = Tuple::point(-2.0, 2.0, -2.0);
 
@@ -286,13 +286,13 @@ mod tests {
 
     #[test]
     fn shade_hit_given_intersection_in_shadow() {
-        let s1 = Object::new_sphere();
-        let mut s2 = Object::new_sphere();
+        let s1 = Shape::new_sphere();
+        let mut s2 = Shape::new_sphere();
         s2.transform = Matrix::translation(0.0, 0.0, 10.0);
 
         let w = World {
             light: Some(PointLight::new(Tuple::point(0.0, 0.0, -10.0), Color::WHITE)),
-            objects: vec![s1, s2],
+            shapes: vec![s1, s2],
         };
 
         let r = Ray::new(Tuple::point(0.0, 0.0, 5.0), Tuple::vector(0.0, 0.0, 1.0));
@@ -305,10 +305,10 @@ mod tests {
     #[test]
     fn reflected_color_nonreflective_material() {
         let mut w = World::default();
-        w.objects[1].material.ambient = 1.0;
+        w.shapes[1].material.ambient = 1.0;
 
         let r = Ray::new(Tuple::point(0.0, 0.0, 0.0), Tuple::vector(0.0, 0.0, 1.0));
-        let i = Intersection::new(1.0, w.objects[1]);
+        let i = Intersection::new(1.0, w.shapes[1]);
 
         let comps = i.prepare_computations(&r, &Intersections::new([i]));
 
@@ -317,12 +317,12 @@ mod tests {
 
     #[test]
     fn reflected_color_reflective_material() {
-        let mut shape = Object::new_plane();
+        let mut shape = Shape::new_plane();
         shape.material.reflective = 0.5;
         shape.transform = Matrix::translation(0.0, -1.0, 0.0);
 
         let mut w = World::default();
-        w.objects.push(shape);
+        w.shapes.push(shape);
 
         let r = Ray::new(
             Tuple::point(0.0, 0.0, -3.0),
@@ -340,12 +340,12 @@ mod tests {
 
     #[test]
     fn shade_hit_with_reflective_material() {
-        let mut shape = Object::new_plane();
+        let mut shape = Shape::new_plane();
         shape.material.reflective = 0.5;
         shape.transform = Matrix::translation(0.0, -1.0, 0.0);
 
         let mut w = World::default();
-        w.objects.push(shape);
+        w.shapes.push(shape);
 
         let r = Ray::new(
             Tuple::point(0.0, 0.0, -3.0),
@@ -360,17 +360,17 @@ mod tests {
 
     #[test]
     fn mutually_reflective_surfaces() {
-        let mut lower = Object::new_plane();
+        let mut lower = Shape::new_plane();
         lower.material.reflective = 1.0;
         lower.transform = Matrix::translation(0.0, -1.0, 0.0);
 
-        let mut upper = Object::new_plane();
+        let mut upper = Shape::new_plane();
         upper.material.reflective = 1.0;
         upper.transform = Matrix::translation(0.0, 1.0, 0.0);
 
         let mut w = World::default();
-        w.objects.push(lower);
-        w.objects.push(upper);
+        w.shapes.push(lower);
+        w.shapes.push(upper);
 
         let r = Ray::new(Tuple::point(0.0, 0.0, 0.0), Tuple::vector(0.0, 1.0, 0.0));
 
@@ -379,12 +379,12 @@ mod tests {
 
     #[test]
     fn reflected_color_at_maximum_recursion_depth() {
-        let mut shape = Object::new_sphere();
+        let mut shape = Shape::new_sphere();
         shape.material.reflective = 0.5;
         shape.transform = Matrix::translation(0.0, -1.0, 0.0);
 
         let mut w = World::default();
-        w.objects.push(shape);
+        w.shapes.push(shape);
 
         let r = Ray::new(
             Tuple::point(0.0, 0.0, -3.0),
@@ -400,7 +400,7 @@ mod tests {
     #[test]
     fn refracted_color_of_opaque_surface() {
         let w = World::default();
-        let shape = w.objects[0];
+        let shape = w.shapes[0];
 
         let r = Ray::new(Tuple::point(0.0, 0.0, -5.0), Tuple::vector(0.0, 0.0, 1.0));
         let xs = Intersections::new([Intersection::new(4.0, shape), Intersection::new(6.0, shape)]);
@@ -413,10 +413,10 @@ mod tests {
     #[test]
     fn refracted_color_at_max_recursion_depth() {
         let mut w = World::default();
-        w.objects[0].material.transparency = 1.0;
-        w.objects[0].material.refractive_index = 1.5;
+        w.shapes[0].material.transparency = 1.0;
+        w.shapes[0].material.refractive_index = 1.5;
 
-        let shape = w.objects[0];
+        let shape = w.shapes[0];
 
         let r = Ray::new(Tuple::point(0.0, 0.0, -5.0), Tuple::vector(0.0, 0.0, 1.0));
         let xs = Intersections::new([Intersection::new(4.0, shape), Intersection::new(6.0, shape)]);
@@ -429,10 +429,10 @@ mod tests {
     #[test]
     fn refracted_color_under_total_internal_refraction() {
         let mut w = World::default();
-        w.objects[0].material.transparency = 1.0;
-        w.objects[0].material.refractive_index = 1.5;
+        w.shapes[0].material.transparency = 1.0;
+        w.shapes[0].material.refractive_index = 1.5;
 
-        let shape = w.objects[0];
+        let shape = w.shapes[0];
 
         let r = Ray::new(
             Tuple::point(0.0, 0.0, 2.0_f64.sqrt() / 2.0),
@@ -451,17 +451,17 @@ mod tests {
     #[test]
     fn refracted_color_with_refracted_ray() {
         let mut w = World::default();
-        w.objects[0].material.ambient = 1.0;
-        w.objects[0].material.pattern = Some(Pattern::new_test());
-        w.objects[1].material.transparency = 1.0;
-        w.objects[1].material.refractive_index = 1.5;
+        w.shapes[0].material.ambient = 1.0;
+        w.shapes[0].material.pattern = Some(Pattern::new_test());
+        w.shapes[1].material.transparency = 1.0;
+        w.shapes[1].material.refractive_index = 1.5;
 
         let r = Ray::new(Tuple::point(0.0, 0.0, 0.1), Tuple::vector(0.0, 1.0, 0.0));
         let xs = Intersections::new([
-            Intersection::new(-0.9899, w.objects[0]),
-            Intersection::new(-0.4899, w.objects[1]),
-            Intersection::new(0.4899, w.objects[1]),
-            Intersection::new(0.9899, w.objects[0]),
+            Intersection::new(-0.9899, w.shapes[0]),
+            Intersection::new(-0.4899, w.shapes[1]),
+            Intersection::new(0.4899, w.shapes[1]),
+            Intersection::new(0.9899, w.shapes[0]),
         ]);
 
         let comps = xs.0.iter().nth(2).unwrap().prepare_computations(&r, &xs);
@@ -474,19 +474,19 @@ mod tests {
 
     #[test]
     fn shade_hit_with_transparent_material() {
-        let mut floor = Object::new_plane();
+        let mut floor = Shape::new_plane();
         floor.transform = Matrix::translation(0.0, -1.0, 0.0);
         floor.material.transparency = 0.5;
         floor.material.refractive_index = 1.5;
 
-        let mut ball = Object::new_sphere();
+        let mut ball = Shape::new_sphere();
         ball.transform = Matrix::translation(0.0, -3.5, -0.5);
         ball.material.color = Color::new(1.0, 0.0, 0.0);
         ball.material.ambient = 0.5;
 
         let mut w = World::default();
-        w.objects.push(floor);
-        w.objects.push(ball);
+        w.shapes.push(floor);
+        w.shapes.push(ball);
 
         let r = Ray::new(
             Tuple::point(0.0, 0.0, -3.0),
@@ -501,20 +501,20 @@ mod tests {
 
     #[test]
     fn shade_hit_with_reflective_transparent_material() {
-        let mut floor = Object::new_plane();
+        let mut floor = Shape::new_plane();
         floor.transform = Matrix::translation(0.0, -1.0, 0.0);
         floor.material.reflective = 0.5;
         floor.material.transparency = 0.5;
         floor.material.refractive_index = 1.5;
 
-        let mut ball = Object::new_sphere();
+        let mut ball = Shape::new_sphere();
         ball.transform = Matrix::translation(0.0, -3.5, -0.5);
         ball.material.color = Color::new(1.0, 0.0, 0.0);
         ball.material.ambient = 0.5;
 
         let mut w = World::default();
-        w.objects.push(floor);
-        w.objects.push(ball);
+        w.shapes.push(floor);
+        w.shapes.push(ball);
 
         let r = Ray::new(
             Tuple::point(0.0, 0.0, -3.0),
