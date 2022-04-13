@@ -47,8 +47,12 @@ impl Shape {
         Self::new(ShapeKind::Cube)
     }
 
-    pub fn new_cylinnder() -> Self {
-        Self::new(ShapeKind::Cylinder)
+    pub fn new_cylinder() -> Self {
+        Self::new(ShapeKind::Cylinder {
+            minimum: f64::NEG_INFINITY,
+            maximum: f64::INFINITY,
+            closed: false,
+        })
     }
 
     pub fn intersect(&self, ray: &Ray) -> Intersections {
@@ -80,8 +84,12 @@ pub enum ShapeKind {
     /// extends from -1 to 1 along each axis.
     Cube,
     /// A cylinder that is centered at the origin with radius 1 and extends
-    /// to infinity along the y axis.
-    Cylinder,
+    /// from minimum to maximum exclusive along the y axis.
+    Cylinder {
+        minimum: f64,
+        maximum: f64,
+        closed: bool,
+    },
 }
 
 impl ShapeKind {
@@ -90,7 +98,11 @@ impl ShapeKind {
             Self::Sphere => Self::sphere_intersect(ray),
             Self::Plane => Self::plane_intersect(ray),
             Self::Cube => Self::cube_intersect(ray),
-            Self::Cylinder => Self::cylinder_intersect(ray),
+            Self::Cylinder {
+                minimum,
+                maximum,
+                closed,
+            } => Self::cylinder_intersect(ray, *minimum, *maximum, *closed),
         }
     }
 
@@ -136,27 +148,6 @@ impl ShapeKind {
         }
     }
 
-    fn cylinder_intersect(ray: &Ray) -> Vec<f64> {
-        let a = ray.direction.x.powi(2) + ray.direction.z.powi(2);
-
-        if a.abs_diff_eq(&0.0, Tuple::default_epsilon()) {
-            Vec::new()
-        } else {
-            let b = 2.0 * ray.origin.x * ray.direction.x + 2.0 * ray.origin.z * ray.direction.z;
-            let c = ray.origin.x.powi(2) + ray.origin.z.powi(2) - 1.0;
-            let discriminant = b.powi(2) - 4.0 * a * c;
-
-            if discriminant < 0.0 {
-                Vec::new()
-            } else {
-                let t1 = (-b - discriminant.sqrt()) / (2.0 * a);
-                let t2 = (-b + discriminant.sqrt()) / (2.0 * a);
-
-                vec![t1, t2]
-            }
-        }
-    }
-
     fn check_axis(origin: f64, direction: f64) -> (f64, f64) {
         let tmin_numerator = -1.0 - origin;
         let tmax_numerator = 1.0 - origin;
@@ -171,12 +162,75 @@ impl ShapeKind {
         }
     }
 
+    fn cylinder_intersect(ray: &Ray, minimum: f64, maximum: f64, closed: bool) -> Vec<f64> {
+        let a = ray.direction.x.powi(2) + ray.direction.z.powi(2);
+
+        if a.abs_diff_eq(&0.0, Tuple::default_epsilon()) {
+            Self::intersect_caps(ray, minimum, maximum, closed)
+        } else {
+            let b = 2.0 * ray.origin.x * ray.direction.x + 2.0 * ray.origin.z * ray.direction.z;
+            let c = ray.origin.x.powi(2) + ray.origin.z.powi(2) - 1.0;
+            let discriminant = b.powi(2) - 4.0 * a * c;
+
+            if discriminant < 0.0 {
+                Vec::new()
+            } else {
+                let t0 = (-b - discriminant.sqrt()) / (2.0 * a);
+                let t1 = (-b + discriminant.sqrt()) / (2.0 * a);
+
+                let mut xs = Vec::new();
+
+                let y0 = ray.origin.y + t0 * ray.direction.y;
+                if minimum < y0 && y0 < maximum {
+                    xs.push(t0);
+                }
+
+                let y1 = ray.origin.y + t1 * ray.direction.y;
+                if minimum < y1 && y1 < maximum {
+                    xs.push(t1);
+                }
+
+                xs.append(&mut Self::intersect_caps(ray, minimum, maximum, closed));
+                xs
+            }
+        }
+    }
+
+    fn intersect_caps(ray: &Ray, minimum: f64, maximum: f64, closed: bool) -> Vec<f64> {
+        let mut xs = Vec::new();
+
+        if closed && !ray.direction.y.abs_diff_eq(&0.0, Tuple::default_epsilon()) {
+            let t = (minimum - ray.origin.y) / ray.direction.y;
+            if Self::check_cap(ray, t) {
+                xs.push(t);
+            }
+
+            let t = (maximum - ray.origin.y) / ray.direction.y;
+            if Self::check_cap(ray, t) {
+                xs.push(t);
+            }
+        }
+
+        xs
+    }
+
+    fn check_cap(ray: &Ray, t: f64) -> bool {
+        let x = ray.origin.x + t * ray.direction.x;
+        let z = ray.origin.z + t * ray.direction.z;
+
+        (x.powi(2) + z.powi(2)) <= 1.0
+    }
+
     pub fn normal_at(&self, point: &Tuple) -> Tuple {
         match self {
             Self::Sphere => Self::sphere_normal_at(point),
             Self::Plane => Self::plane_normal_at(),
             Self::Cube => Self::cube_normal_at(point),
-            Self::Cylinder => Self::cylinder_normal_at(point),
+            Self::Cylinder {
+                minimum,
+                maximum,
+                closed: _,
+            } => Self::cylinder_normal_at(point, *minimum, *maximum),
         }
     }
 
@@ -204,8 +258,16 @@ impl ShapeKind {
         }
     }
 
-    fn cylinder_normal_at(object_point: &Tuple) -> Tuple {
-        unimplemented!()
+    fn cylinder_normal_at(object_point: &Tuple, minimum: f64, maximum: f64) -> Tuple {
+        let dist = object_point.x.powi(2) + object_point.z.powi(2);
+
+        if dist < 1.0 && object_point.y >= maximum - Tuple::default_epsilon() {
+            Tuple::vector(0.0, 1.0, 0.0)
+        } else if dist < 1.0 && object_point.y <= minimum + Tuple::default_epsilon() {
+            Tuple::vector(0.0, -1.0, 0.0)
+        } else {
+            Tuple::vector(object_point.x, 0.0, object_point.z)
+        }
     }
 }
 
@@ -451,15 +513,15 @@ mod tests {
             ),
         ];
 
-        for (origin, direction, t1, t2) in scenarios {
+        for (origin, direction, t0, t1) in scenarios {
             let c = ShapeKind::Cube;
             let r = Ray::new(origin, direction);
 
             let xs = c.intersect(&r);
 
             assert_eq!(xs.len(), 2);
-            assert_abs_diff_eq!(xs[0], t1);
-            assert_abs_diff_eq!(xs[1], t2);
+            assert_abs_diff_eq!(xs[0], t0);
+            assert_abs_diff_eq!(xs[1], t1);
         }
     }
 
@@ -502,7 +564,11 @@ mod tests {
         ];
 
         for (origin, direction) in scenarios {
-            let c = ShapeKind::Cylinder;
+            let c = ShapeKind::Cylinder {
+                minimum: f64::NEG_INFINITY,
+                maximum: f64::INFINITY,
+                closed: false,
+            };
             let r = Ray::new(origin, direction);
 
             let xs = c.intersect(&r);
@@ -534,15 +600,108 @@ mod tests {
             ),
         ];
 
-        for (origin, direction, t1, t2) in scenarios {
-            let c = ShapeKind::Cylinder;
+        for (origin, direction, t0, t1) in scenarios {
+            let c = ShapeKind::Cylinder {
+                minimum: f64::NEG_INFINITY,
+                maximum: f64::INFINITY,
+                closed: false,
+            };
             let r = Ray::new(origin, direction.normalize());
 
             let xs = c.intersect(&r);
 
             assert_eq!(xs.len(), 2);
-            assert_abs_diff_eq!(xs[0], t1, epsilon = Tuple::default_epsilon());
-            assert_abs_diff_eq!(xs[1], t2, epsilon = Tuple::default_epsilon());
+            assert_abs_diff_eq!(xs[0], t0, epsilon = Tuple::default_epsilon());
+            assert_abs_diff_eq!(xs[1], t1, epsilon = Tuple::default_epsilon());
+        }
+    }
+
+    #[test]
+    fn intersecting_constrained_cylinder() {
+        let scenarios = [
+            (Tuple::point(0.0, 1.5, 0.0), Tuple::vector(0.1, 1.0, 0.0), 0),
+            (
+                Tuple::point(0.0, 3.0, -5.0),
+                Tuple::vector(0.0, 0.0, 1.0),
+                0,
+            ),
+            (
+                Tuple::point(0.0, 0.0, -5.0),
+                Tuple::vector(0.0, 0.0, 1.0),
+                0,
+            ),
+            (
+                Tuple::point(0.0, 2.0, -5.0),
+                Tuple::vector(0.0, 0.0, 1.0),
+                0,
+            ),
+            (
+                Tuple::point(0.0, 1.0, -5.0),
+                Tuple::vector(0.0, 0.0, 1.0),
+                0,
+            ),
+            (
+                Tuple::point(0.0, 1.5, -2.0),
+                Tuple::vector(0.0, 0.0, 1.0),
+                2,
+            ),
+        ];
+
+        for (point, direction, count) in scenarios {
+            let cyl = ShapeKind::Cylinder {
+                minimum: 1.0,
+                maximum: 2.0,
+                closed: false,
+            };
+
+            let r = Ray::new(point, direction.normalize());
+            let xs = cyl.intersect(&r);
+
+            assert_eq!(xs.len(), count);
+        }
+    }
+
+    #[test]
+    fn intersecting_caps_of_closed_cylinder() {
+        let scenarios = [
+            (
+                Tuple::point(0.0, 3.0, 0.0),
+                Tuple::vector(0.0, -1.0, 0.0),
+                2,
+            ),
+            (
+                Tuple::point(0.0, 3.0, -2.0),
+                Tuple::vector(0.0, -1.0, 2.0),
+                2,
+            ),
+            (
+                Tuple::point(0.0, 4.0, -2.0),
+                Tuple::vector(0.0, -1.0, 1.0),
+                2,
+            ),
+            (
+                Tuple::point(0.0, 0.0, -2.0),
+                Tuple::vector(0.0, 1.0, 2.0),
+                2,
+            ),
+            (
+                Tuple::point(0.0, -1.0, -2.0),
+                Tuple::vector(0.0, 1.0, 1.0),
+                2,
+            ),
+        ];
+
+        for (point, direction, count) in scenarios {
+            let cyl = ShapeKind::Cylinder {
+                minimum: 1.0,
+                maximum: 2.0,
+                closed: true,
+            };
+
+            let r = Ray::new(point, direction.normalize());
+            let xs = cyl.intersect(&r);
+
+            assert_eq!(xs.len(), count);
         }
     }
 
@@ -655,6 +814,50 @@ mod tests {
 
         for (point, normal) in scenarios {
             let c = ShapeKind::Cube;
+            let n = c.normal_at(&point);
+
+            assert_abs_diff_eq!(n, normal);
+        }
+    }
+
+    #[test]
+    fn normal_on_cylinder() {
+        let scenarios = [
+            (Tuple::point(1.0, 0.0, 0.0), Tuple::vector(1.0, 0.0, 0.0)),
+            (Tuple::point(0.0, 5.0, -1.0), Tuple::vector(0.0, 0.0, -1.0)),
+            (Tuple::point(0.0, -2.0, 1.0), Tuple::vector(0.0, 0.0, 1.0)),
+            (Tuple::point(-1.0, 1.0, 0.0), Tuple::vector(-1.0, 0.0, 0.0)),
+        ];
+
+        for (point, normal) in scenarios {
+            let c = ShapeKind::Cylinder {
+                minimum: f64::NEG_INFINITY,
+                maximum: f64::INFINITY,
+                closed: false,
+            };
+            let n = c.normal_at(&point);
+
+            assert_abs_diff_eq!(n, normal);
+        }
+    }
+
+    #[test]
+    fn normal_on_cylinder_end_caps() {
+        let scenarios = [
+            (Tuple::point(0.0, 1.0, 0.03), Tuple::vector(0.0, -1.0, 0.0)),
+            (Tuple::point(0.5, 1.0, 0.0), Tuple::vector(0.0, -1.0, 0.0)),
+            (Tuple::point(0.0, 1.0, 0.5), Tuple::vector(0.0, -1.0, 0.0)),
+            (Tuple::point(0.0, 2.0, 0.0), Tuple::vector(0.0, 1.0, 0.0)),
+            (Tuple::point(0.5, 2.0, 0.0), Tuple::vector(0.0, 1.0, 0.0)),
+            (Tuple::point(0.0, 2.0, 0.5), Tuple::vector(0.0, 1.0, 0.0)),
+        ];
+
+        for (point, normal) in scenarios {
+            let c = ShapeKind::Cylinder {
+                minimum: 1.0,
+                maximum: 2.0,
+                closed: true,
+            };
             let n = c.normal_at(&point);
 
             assert_abs_diff_eq!(n, normal);
