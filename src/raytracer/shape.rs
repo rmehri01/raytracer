@@ -43,6 +43,10 @@ impl Shape {
         Self::new(ShapeKind::Plane)
     }
 
+    pub fn new_cube() -> Self {
+        Self::new(ShapeKind::Cube)
+    }
+
     pub fn intersect(&self, ray: &Ray) -> Intersections {
         let local_ray = ray.transform(&self.transform.inverse());
         let ts = self.kind.intersect(&local_ray);
@@ -64,8 +68,13 @@ impl Shape {
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum ShapeKind {
+    /// A unit sphere with center at the origin.
     Sphere,
+    /// A perfectly flat surface that extends infinitely in x and z.
     Plane,
+    /// An axis-aligned bounding box that is centered at the origin and
+    /// extends from -1 to 1 along each axis.
+    Cube,
 }
 
 impl ShapeKind {
@@ -73,6 +82,7 @@ impl ShapeKind {
         match self {
             Self::Sphere => Self::sphere_intersect(ray),
             Self::Plane => Self::plane_intersect(ray),
+            Self::Cube => Self::cube_intersect(ray),
         }
     }
 
@@ -103,10 +113,40 @@ impl ShapeKind {
         }
     }
 
+    fn cube_intersect(ray: &Ray) -> Vec<f64> {
+        let (x_t_min, x_t_max) = Self::check_axis(ray.origin.x, ray.direction.x);
+        let (y_t_min, y_t_max) = Self::check_axis(ray.origin.y, ray.direction.y);
+        let (z_t_min, z_t_max) = Self::check_axis(ray.origin.z, ray.direction.z);
+
+        let t_min = x_t_min.max(y_t_min).max(z_t_min);
+        let t_max = x_t_max.min(y_t_max).min(z_t_max);
+
+        if t_min > t_max {
+            Vec::new()
+        } else {
+            vec![t_min, t_max]
+        }
+    }
+
+    fn check_axis(origin: f64, direction: f64) -> (f64, f64) {
+        let tmin_numerator = -1.0 - origin;
+        let tmax_numerator = 1.0 - origin;
+
+        let tmin = tmin_numerator / direction;
+        let tmax = tmax_numerator / direction;
+
+        if tmin > tmax {
+            (tmax, tmin)
+        } else {
+            (tmin, tmax)
+        }
+    }
+
     pub fn normal_at(&self, point: &Tuple) -> Tuple {
         match self {
             Self::Sphere => Self::sphere_normal_at(point),
             Self::Plane => Self::plane_normal_at(),
+            Self::Cube => Self::cube_normal_at(point),
         }
     }
 
@@ -116,6 +156,22 @@ impl ShapeKind {
 
     fn plane_normal_at() -> Tuple {
         Tuple::vector(0.0, 1.0, 0.0)
+    }
+
+    fn cube_normal_at(object_point: &Tuple) -> Tuple {
+        let max_c = object_point
+            .x
+            .abs()
+            .max(object_point.y.abs())
+            .max(object_point.z.abs());
+
+        if max_c == object_point.x.abs() {
+            Tuple::vector(object_point.x, 0.0, 0.0)
+        } else if max_c == object_point.y.abs() {
+            Tuple::vector(0.0, object_point.y, 0.0)
+        } else {
+            Tuple::vector(0.0, 0.0, object_point.z)
+        }
     }
 }
 
@@ -315,6 +371,95 @@ mod tests {
     }
 
     #[test]
+    fn ray_intersects_cube() {
+        let scenarios = [
+            (
+                Tuple::point(5.0, 0.5, 0.0),
+                Tuple::vector(-1.0, 0.0, 0.0),
+                4.0,
+                6.0,
+            ),
+            (
+                Tuple::point(-5.0, 0.5, 0.0),
+                Tuple::vector(1.0, 0.0, 0.0),
+                4.0,
+                6.0,
+            ),
+            (
+                Tuple::point(0.5, 5.0, 0.0),
+                Tuple::vector(0.0, -1.0, 0.0),
+                4.0,
+                6.0,
+            ),
+            (
+                Tuple::point(0.5, -5.0, 0.0),
+                Tuple::vector(0.0, 1.0, 0.0),
+                4.0,
+                6.0,
+            ),
+            (
+                Tuple::point(0.5, 0.0, 5.0),
+                Tuple::vector(0.0, 0.0, -1.0),
+                4.0,
+                6.0,
+            ),
+            (
+                Tuple::point(0.5, 0.0, -5.0),
+                Tuple::vector(0.0, 0.0, 1.0),
+                4.0,
+                6.0,
+            ),
+            (
+                Tuple::point(0.0, 0.5, 0.0),
+                Tuple::vector(0.0, 0.0, 1.0),
+                -1.0,
+                1.0,
+            ),
+        ];
+
+        for (origin, direction, t1, t2) in scenarios {
+            let c = ShapeKind::Cube;
+            let r = Ray::new(origin, direction);
+
+            let xs = c.intersect(&r);
+
+            assert_eq!(xs.len(), 2);
+            assert_abs_diff_eq!(xs[0], t1);
+            assert_abs_diff_eq!(xs[1], t2);
+        }
+    }
+
+    #[test]
+    fn ray_misses_cube() {
+        let scenarios = [
+            (
+                Tuple::point(-2.0, 0.0, 0.0),
+                Tuple::vector(0.2673, 0.5345, 0.8018),
+            ),
+            (
+                Tuple::point(0.0, -2.0, 0.0),
+                Tuple::vector(0.8018, 0.2673, 0.5345),
+            ),
+            (
+                Tuple::point(0.0, 0.0, -2.0),
+                Tuple::vector(0.5345, 0.8018, 0.2673),
+            ),
+            (Tuple::point(2.0, 0.0, 2.0), Tuple::vector(0.0, 0.0, -1.0)),
+            (Tuple::point(0.0, 2.0, 2.0), Tuple::vector(0.0, -1.0, 0.0)),
+            (Tuple::point(2.0, 2.0, 0.0), Tuple::vector(-1.0, 0.0, 0.0)),
+        ];
+
+        for (origin, direction) in scenarios {
+            let c = ShapeKind::Cube;
+            let r = Ray::new(origin, direction);
+
+            let xs = c.intersect(&r);
+
+            assert!(xs.is_empty());
+        }
+    }
+
+    #[test]
     fn normal_on_translated_sphere() {
         let mut shape = Shape::new_sphere();
         shape.transform = Matrix::translation(0.0, 1.0, 0.0);
@@ -403,5 +548,29 @@ mod tests {
         assert_abs_diff_eq!(n1, Tuple::vector(0.0, 1.0, 0.0));
         assert_abs_diff_eq!(n2, Tuple::vector(0.0, 1.0, 0.0));
         assert_abs_diff_eq!(n3, Tuple::vector(0.0, 1.0, 0.0));
+    }
+
+    #[test]
+    fn normal_on_surface_of_cube() {
+        let scenarios = [
+            (Tuple::point(1.0, 0.5, -0.8), Tuple::vector(1.0, 0.0, 0.0)),
+            (Tuple::point(-1.0, -0.2, 0.9), Tuple::vector(-1.0, 0.0, 0.0)),
+            (Tuple::point(-0.4, 1.0, -0.1), Tuple::vector(0.0, 1.0, 0.0)),
+            (Tuple::point(0.3, -1.0, -0.7), Tuple::vector(0.0, -1.0, 0.0)),
+            (Tuple::point(-0.6, 0.3, 1.0), Tuple::vector(0.0, 0.0, 1.0)),
+            (Tuple::point(0.4, 0.4, -1.0), Tuple::vector(0.0, 0.0, -1.0)),
+            (Tuple::point(1.0, 1.0, 1.0), Tuple::vector(1.0, 0.0, 0.0)),
+            (
+                Tuple::point(-1.0, -1.0, -1.0),
+                Tuple::vector(-1.0, 0.0, 0.0),
+            ),
+        ];
+
+        for (point, normal) in scenarios {
+            let c = ShapeKind::Cube;
+            let n = c.normal_at(&point);
+
+            assert_abs_diff_eq!(n, normal);
+        }
     }
 }
