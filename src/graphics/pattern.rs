@@ -70,16 +70,16 @@ enum PatternKind {
 impl PatternKind {
     fn pattern_at(&self, pattern_point: &Tuple) -> Color {
         match self {
-            Self::Stripe { a, b } => Self::stripe_at(*a, *b, pattern_point),
-            Self::Gradient { start, end } => Self::gradient_at(*start, *end, pattern_point),
-            Self::Ring { a, b } => Self::ring_at(*a, *b, pattern_point),
-            Self::Checker { a, b } => Self::checker_at(*a, *b, pattern_point),
+            Self::Stripe { a, b } => Self::stripe_at(pattern_point, *a, *b),
+            Self::Gradient { start, end } => Self::gradient_at(pattern_point, *start, *end),
+            Self::Ring { a, b } => Self::ring_at(pattern_point, *a, *b),
+            Self::Checker { a, b } => Self::checker_at(pattern_point, *a, *b),
             #[cfg(test)]
             Self::Test => Color::new(pattern_point.x, pattern_point.y, pattern_point.z),
         }
     }
 
-    fn stripe_at(a: Color, b: Color, point: &Tuple) -> Color {
+    fn stripe_at(point: &Tuple, a: Color, b: Color) -> Color {
         if point.x.floor() as i32 % 2 == 0 {
             a
         } else {
@@ -87,14 +87,14 @@ impl PatternKind {
         }
     }
 
-    fn gradient_at(start: Color, end: Color, point: &Tuple) -> Color {
+    fn gradient_at(point: &Tuple, start: Color, end: Color) -> Color {
         let distance = end - start;
         let fraction = point.x - point.x.floor();
 
         start + distance * fraction
     }
 
-    fn ring_at(a: Color, b: Color, point: &Tuple) -> Color {
+    fn ring_at(point: &Tuple, a: Color, b: Color) -> Color {
         let distance = (point.x * point.x + point.z * point.z).sqrt();
 
         if distance.floor() as i32 % 2 == 0 {
@@ -104,7 +104,7 @@ impl PatternKind {
         }
     }
 
-    fn checker_at(a: Color, b: Color, point: &Tuple) -> Color {
+    fn checker_at(point: &Tuple, a: Color, b: Color) -> Color {
         let sum_floors = point.x.floor() + point.y.floor() + point.z.floor();
 
         if sum_floors as i32 % 2 == 0 {
