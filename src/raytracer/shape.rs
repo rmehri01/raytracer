@@ -47,6 +47,10 @@ impl Shape {
         Self::new(ShapeKind::Cube)
     }
 
+    pub fn new_cylinnder() -> Self {
+        Self::new(ShapeKind::Cylinder)
+    }
+
     pub fn intersect(&self, ray: &Ray) -> Intersections {
         let local_ray = ray.transform(&self.transform.inverse());
         let ts = self.kind.intersect(&local_ray);
@@ -75,6 +79,9 @@ pub enum ShapeKind {
     /// An axis-aligned bounding box that is centered at the origin and
     /// extends from -1 to 1 along each axis.
     Cube,
+    /// A cylinder that is centered at the origin with radius 1 and extends
+    /// to infinity along the y axis.
+    Cylinder,
 }
 
 impl ShapeKind {
@@ -83,6 +90,7 @@ impl ShapeKind {
             Self::Sphere => Self::sphere_intersect(ray),
             Self::Plane => Self::plane_intersect(ray),
             Self::Cube => Self::cube_intersect(ray),
+            Self::Cylinder => Self::cylinder_intersect(ray),
         }
     }
 
@@ -128,6 +136,27 @@ impl ShapeKind {
         }
     }
 
+    fn cylinder_intersect(ray: &Ray) -> Vec<f64> {
+        let a = ray.direction.x.powi(2) + ray.direction.z.powi(2);
+
+        if a.abs_diff_eq(&0.0, Tuple::default_epsilon()) {
+            Vec::new()
+        } else {
+            let b = 2.0 * ray.origin.x * ray.direction.x + 2.0 * ray.origin.z * ray.direction.z;
+            let c = ray.origin.x.powi(2) + ray.origin.z.powi(2) - 1.0;
+            let discriminant = b.powi(2) - 4.0 * a * c;
+
+            if discriminant < 0.0 {
+                Vec::new()
+            } else {
+                let t1 = (-b - discriminant.sqrt()) / (2.0 * a);
+                let t2 = (-b + discriminant.sqrt()) / (2.0 * a);
+
+                vec![t1, t2]
+            }
+        }
+    }
+
     fn check_axis(origin: f64, direction: f64) -> (f64, f64) {
         let tmin_numerator = -1.0 - origin;
         let tmax_numerator = 1.0 - origin;
@@ -147,6 +176,7 @@ impl ShapeKind {
             Self::Sphere => Self::sphere_normal_at(point),
             Self::Plane => Self::plane_normal_at(),
             Self::Cube => Self::cube_normal_at(point),
+            Self::Cylinder => Self::cylinder_normal_at(point),
         }
     }
 
@@ -172,6 +202,10 @@ impl ShapeKind {
         } else {
             Tuple::vector(0.0, 0.0, object_point.z)
         }
+    }
+
+    fn cylinder_normal_at(object_point: &Tuple) -> Tuple {
+        unimplemented!()
     }
 }
 
@@ -456,6 +490,59 @@ mod tests {
             let xs = c.intersect(&r);
 
             assert!(xs.is_empty());
+        }
+    }
+
+    #[test]
+    fn ray_misses_cylinder() {
+        let scenarios = [
+            (Tuple::point(1.0, 0.0, 0.0), Tuple::vector(0.0, 1.0, 0.0)),
+            (Tuple::point(0.0, 0.0, 0.0), Tuple::vector(0.0, 1.0, 0.0)),
+            (Tuple::point(0.0, 0.0, -5.0), Tuple::vector(1.0, 1.0, 1.0)),
+        ];
+
+        for (origin, direction) in scenarios {
+            let c = ShapeKind::Cylinder;
+            let r = Ray::new(origin, direction);
+
+            let xs = c.intersect(&r);
+
+            assert!(xs.is_empty());
+        }
+    }
+
+    #[test]
+    fn ray_intersects_cylinder() {
+        let scenarios = [
+            (
+                Tuple::point(1.0, 0.0, -5.0),
+                Tuple::vector(0.0, 0.0, 1.0),
+                5.0,
+                5.0,
+            ),
+            (
+                Tuple::point(0.0, 0.0, -5.0),
+                Tuple::vector(0.0, 0.0, 1.0),
+                4.0,
+                6.0,
+            ),
+            (
+                Tuple::point(0.5, 0.0, -5.0),
+                Tuple::vector(0.1, 1.0, 1.0),
+                6.80798,
+                7.08872,
+            ),
+        ];
+
+        for (origin, direction, t1, t2) in scenarios {
+            let c = ShapeKind::Cylinder;
+            let r = Ray::new(origin, direction.normalize());
+
+            let xs = c.intersect(&r);
+
+            assert_eq!(xs.len(), 2);
+            assert_abs_diff_eq!(xs[0], t1, epsilon = Tuple::default_epsilon());
+            assert_abs_diff_eq!(xs[1], t2, epsilon = Tuple::default_epsilon());
         }
     }
 
