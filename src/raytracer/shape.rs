@@ -10,9 +10,8 @@ use super::{
     ray::Ray,
 };
 
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Shape {
-    // TODO: better way of setting/using this
     pub transform: Matrix<4>,
     pub material: Material,
     kind: ShapeKind,
@@ -32,11 +31,11 @@ impl Shape {
     }
 
     pub fn new_glass_sphere() -> Self {
-        let mut sphere = Self::new_sphere();
-        sphere.material.transparency = 1.0;
-        sphere.material.refractive_index = 1.5;
-
-        sphere
+        Self::new_sphere().with_material(Material {
+            transparency: 1.0,
+            refractive_index: 1.5,
+            ..Material::default()
+        })
     }
 
     pub fn new_plane() -> Self {
@@ -55,10 +54,24 @@ impl Shape {
         Self::new(ShapeKind::Cone(Conic::default()))
     }
 
+    pub fn new_group() -> Self {
+        Self::new(ShapeKind::Group(Vec::new()))
+    }
+
+    pub fn with_transform(mut self, transform: Matrix<4>) -> Self {
+        self.transform = transform;
+        self
+    }
+
+    pub fn with_material(mut self, material: Material) -> Self {
+        self.material = material;
+        self
+    }
+
     pub fn intersect(&self, ray: &Ray) -> Intersections {
         let local_ray = ray.transform(&self.transform.inverse());
         let ts = self.kind.intersect(&local_ray);
-        let intersections = ts.iter().map(|t| Intersection::new(*t, *self));
+        let intersections = ts.iter().map(|t| Intersection::new(*t, self));
 
         Intersections(BTreeSet::from_iter(intersections))
     }
@@ -74,7 +87,7 @@ impl Shape {
     }
 }
 
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum ShapeKind {
     /// A unit sphere with center at the origin.
     Sphere,
@@ -89,6 +102,8 @@ pub enum ShapeKind {
     /// A double-napped cone that is centered at the origin and extends
     /// from minimum to maximum exclusive along the y axis.
     Cone(Conic),
+    /// A collection of shapes that are transformed as a unit.
+    Group(Vec<Shape>),
 }
 
 impl ShapeKind {
@@ -99,6 +114,7 @@ impl ShapeKind {
             Self::Cube => Self::cube_intersect(ray),
             Self::Cylinder(conic) => Self::cylinder_intersect(ray, conic),
             Self::Cone(conic) => Self::cone_intersect(ray, conic),
+            Self::Group(shapes) => todo!(),
         }
     }
 
@@ -182,6 +198,7 @@ impl ShapeKind {
             Self::Cube => Self::cube_normal_at(point),
             Self::Cylinder(conic) => Self::cylinder_normal_at(point, conic),
             Self::Cone(conic) => Self::cone_normal_at(point, conic),
+            Self::Group(shapes) => todo!(),
         }
     }
 
@@ -351,8 +368,7 @@ mod tests {
 
     #[test]
     fn change_transformation() {
-        let mut shape = Shape::new_sphere();
-        shape.transform = Matrix::translation(2.0, 3.0, 4.0);
+        let shape = Shape::new_sphere().with_transform(Matrix::translation(2.0, 3.0, 4.0));
 
         assert_eq!(shape.transform, Matrix::translation(2.0, 3.0, 4.0));
     }
@@ -371,8 +387,7 @@ mod tests {
             ..Material::default()
         };
 
-        let mut shape = Shape::new_sphere();
-        shape.material = material;
+        let shape = Shape::new_sphere().with_material(material);
 
         assert_eq!(shape.material, material);
     }
@@ -389,8 +404,7 @@ mod tests {
     #[test]
     fn intersect_scaled_sphere_with_ray() {
         let r = Ray::new(Tuple::point(0.0, 0.0, -5.0), Tuple::vector(0.0, 0.0, 1.0));
-        let mut shape = Shape::new_sphere();
-        shape.transform = Matrix::scaling(2.0, 2.0, 2.0);
+        let shape = Shape::new_sphere().with_transform(Matrix::scaling(2.0, 2.0, 2.0));
 
         let xs = shape
             .intersect(&r)
@@ -407,8 +421,7 @@ mod tests {
     #[test]
     fn intersect_translated_sphere_with_ray() {
         let r = Ray::new(Tuple::point(0.0, 0.0, -5.0), Tuple::vector(0.0, 0.0, 1.0));
-        let mut shape = Shape::new_sphere();
-        shape.transform = Matrix::translation(5.0, 0.0, 0.0);
+        let shape = Shape::new_sphere().with_transform(Matrix::translation(5.0, 0.0, 0.0));
 
         assert!(shape.intersect(&r).0.is_empty());
     }
@@ -525,8 +538,8 @@ mod tests {
             .map(|i| i.shape)
             .collect::<Vec<_>>();
 
-        assert_eq!(shapes[0], shape);
-        assert_eq!(shapes[1], shape);
+        assert_eq!(shapes[0], &shape);
+        assert_eq!(shapes[1], &shape);
     }
 
     #[test]
@@ -832,9 +845,7 @@ mod tests {
 
     #[test]
     fn normal_on_translated_sphere() {
-        let mut shape = Shape::new_sphere();
-        shape.transform = Matrix::translation(0.0, 1.0, 0.0);
-
+        let shape = Shape::new_sphere().with_transform(Matrix::translation(0.0, 1.0, 0.0));
         let n = shape.normal_at(&Tuple::point(0.0, 1.70711, -FRAC_1_SQRT_2));
 
         assert_abs_diff_eq!(n, Tuple::vector(0.0, FRAC_1_SQRT_2, -FRAC_1_SQRT_2));
@@ -842,9 +853,8 @@ mod tests {
 
     #[test]
     fn normal_on_transformed_sphere() {
-        let mut shape = Shape::new_sphere();
-        shape.transform = Matrix::scaling(1.0, 0.5, 1.0) * Matrix::rotation_z(FRAC_PI_4);
-
+        let shape = Shape::new_sphere()
+            .with_transform(Matrix::scaling(1.0, 0.5, 1.0) * Matrix::rotation_z(FRAC_PI_4));
         let n = shape.normal_at(&Tuple::point(
             0.0,
             2.0_f64.sqrt() / 2.0,

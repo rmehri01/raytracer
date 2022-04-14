@@ -8,8 +8,7 @@ use super::{ray::Ray, world::World};
 pub struct Camera {
     hsize: usize,
     vsize: usize,
-    // TODO: better way of setting/using this
-    pub transform: Matrix<4>,
+    transform: Matrix<4>,
     half_width: f64,
     half_height: f64,
     pixel_size: f64,
@@ -39,6 +38,11 @@ impl Camera {
             half_height,
             pixel_size: (half_width * 2.0) / hsize as f64,
         }
+    }
+
+    pub fn with_transform(mut self, transform: Matrix<4>) -> Self {
+        self.transform = transform;
+        self
     }
 
     pub fn render(&self, world: World) -> Canvas {

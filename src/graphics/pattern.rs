@@ -7,7 +7,7 @@ use super::color::Color;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Pattern {
-    pub transform: Matrix<4>,
+    transform: Matrix<4>,
     kind: PatternKind,
 }
 
@@ -123,9 +123,7 @@ mod tests {
 
     #[test]
     fn pattern_with_shape_transformation() {
-        let mut shape = Shape::new_sphere();
-        shape.transform = Matrix::scaling(2.0, 2.0, 2.0);
-
+        let shape = Shape::new_sphere().with_transform(Matrix::scaling(2.0, 2.0, 2.0));
         let pattern = Pattern::new_test();
 
         assert_abs_diff_eq!(
@@ -147,9 +145,7 @@ mod tests {
 
     #[test]
     fn pattern_with_both_transformations() {
-        let mut shape = Shape::new_sphere();
-        shape.transform = Matrix::scaling(2.0, 2.0, 2.0);
-
+        let shape = Shape::new_sphere().with_transform(Matrix::scaling(2.0, 2.0, 2.0));
         let pattern = Pattern::new(Matrix::translation(0.5, 1.0, 1.5), PatternKind::Test);
 
         assert_abs_diff_eq!(
