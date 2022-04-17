@@ -19,7 +19,7 @@ pub struct Shape {
 }
 
 impl Shape {
-    pub fn new(kind: ShapeKind) -> Self {
+    fn new(kind: ShapeKind) -> Self {
         Self {
             transform: Matrix::identity(),
             material: Material::default(),
@@ -57,6 +57,20 @@ impl Shape {
 
     pub fn new_group(children: Vec<Self>) -> Self {
         Self::new(ShapeKind::Group(children))
+    }
+
+    pub fn new_triangle(p1: Tuple, p2: Tuple, p3: Tuple) -> Self {
+        let e1 = p2 - p1;
+        let e2 = p3 - p1;
+        let normal = e1.cross(&e2).normalize();
+        Self::new(ShapeKind::Single(SingleKind::Triangle {
+            p1,
+            p2,
+            p3,
+            e1,
+            e2,
+            normal,
+        }))
     }
 
     pub fn with_transform(mut self, transform: Matrix<4>) -> Self {
@@ -127,7 +141,7 @@ impl Shape {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub enum ShapeKind {
+enum ShapeKind {
     /// A single shape.
     Single(SingleKind),
     /// A collection of shapes that are transformed as a unit.
@@ -135,7 +149,7 @@ pub enum ShapeKind {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub enum SingleKind {
+enum SingleKind {
     /// A unit sphere with center at the origin.
     Sphere,
     /// A perfectly flat surface that extends infinitely in x and z.
@@ -149,6 +163,16 @@ pub enum SingleKind {
     /// A double-napped cone that is centered at the origin and extends
     /// from minimum to maximum exclusive along the y axis.
     Cone(Conic),
+    /// A triangle with vertices at p1, p2, and p3, along with two edge
+    /// vectors and a normal vector to optimize intersection calculations.
+    Triangle {
+        p1: Tuple,
+        p2: Tuple,
+        p3: Tuple,
+        e1: Tuple,
+        e2: Tuple,
+        normal: Tuple,
+    },
 }
 
 impl SingleKind {
@@ -159,6 +183,7 @@ impl SingleKind {
             Self::Cube => Self::cube_intersect(ray),
             Self::Cylinder(conic) => Self::cylinder_intersect(ray, conic),
             Self::Cone(conic) => Self::cone_intersect(ray, conic),
+            Self::Triangle { p1, e1, e2, .. } => Self::triangle_intersect(ray, p1, e1, e2),
         }
     }
 
@@ -235,6 +260,31 @@ impl SingleKind {
         conic.intersect(ray, a, b, c, f64::abs)
     }
 
+    fn triangle_intersect(ray: &Ray, p1: &Tuple, e1: &Tuple, e2: &Tuple) -> Vec<f64> {
+        let dir_cross_e2 = ray.direction.cross(e2);
+        let det = e1.dot(&dir_cross_e2);
+
+        let f = 1.0 / det;
+        let p1_to_origin = ray.origin - *p1;
+        let u = f * p1_to_origin.dot(&dir_cross_e2);
+
+        let origin_cross_e1 = p1_to_origin.cross(e1);
+        let v = f * ray.direction.dot(&origin_cross_e1);
+
+        if det.abs().abs_diff_eq(&0.0, Tuple::default_epsilon())
+            || u < 0.0
+            || u > 1.0
+            || v < 0.0
+            || (u + v) > 1.0
+        {
+            Vec::new()
+        } else {
+            let t = f * e2.dot(&origin_cross_e1);
+
+            vec![t]
+        }
+    }
+
     pub fn normal_at(&self, point: &Tuple) -> Tuple {
         match self {
             Self::Sphere => Self::sphere_normal_at(point),
@@ -242,6 +292,7 @@ impl SingleKind {
             Self::Cube => Self::cube_normal_at(point),
             Self::Cylinder(conic) => Self::cylinder_normal_at(point, conic),
             Self::Cone(conic) => Self::cone_normal_at(point, conic),
+            Self::Triangle { normal, .. } => *normal,
         }
     }
 
@@ -287,7 +338,6 @@ pub struct Conic {
     maximum: f64,
     closed: bool,
 }
-
 
 impl Conic {
     pub fn new(minimum: f64, maximum: f64, closed: bool) -> Self {
@@ -469,6 +519,33 @@ mod tests {
             assert_eq!(children[0], sphere);
         } else {
             panic!("expected a group");
+        }
+    }
+
+    #[test]
+    fn constructing_a_triangle() {
+        let p1 = Tuple::point(0.0, 1.0, 0.0);
+        let p2 = Tuple::point(-1.0, 0.0, 0.0);
+        let p3 = Tuple::point(1.0, 0.0, 0.0);
+        let triangle = Shape::new_triangle(p1, p2, p3);
+
+        if let ShapeKind::Single(SingleKind::Triangle {
+            p1: p1_t,
+            p2: p2_t,
+            p3: p3_t,
+            e1,
+            e2,
+            normal,
+        }) = triangle.kind
+        {
+            assert_eq!(p1, p1_t);
+            assert_eq!(p2, p2_t);
+            assert_eq!(p3, p3_t);
+            assert_eq!(e1, Tuple::vector(-1.0, -1.0, 0.0));
+            assert_eq!(e2, Tuple::vector(1.0, -1.0, 0.0));
+            assert_eq!(normal, Tuple::vector(0.0, 0.0, 1.0));
+        } else {
+            panic!("expected a triangle");
         }
     }
 
@@ -958,6 +1035,82 @@ mod tests {
     }
 
     #[test]
+    fn intersect_ray_parallel_to_triangle() {
+        let t = Shape::new_triangle(
+            Tuple::point(0.0, 1.0, 0.0),
+            Tuple::point(-1.0, 0.0, 0.0),
+            Tuple::point(1.0, 0.0, 0.0),
+        );
+        let r = Ray::new(Tuple::point(0.0, -1.0, -2.0), Tuple::vector(0.0, 1.0, 0.0));
+
+        let xs = t.intersect(&r, Vector::new());
+
+        assert!(xs.0.is_empty());
+    }
+
+    #[test]
+    fn ray_misses_p1_p3_edge() {
+        let t = Shape::new_triangle(
+            Tuple::point(0.0, 1.0, 0.0),
+            Tuple::point(-1.0, 0.0, 0.0),
+            Tuple::point(1.0, 0.0, 0.0),
+        );
+        let r = Ray::new(Tuple::point(1.0, 1.0, -2.0), Tuple::vector(0.0, 0.0, 1.0));
+
+        let xs = t.intersect(&r, Vector::new());
+
+        assert!(xs.0.is_empty());
+    }
+
+    #[test]
+    fn ray_misses_p1_p2_edge() {
+        let t = Shape::new_triangle(
+            Tuple::point(0.0, 1.0, 0.0),
+            Tuple::point(-1.0, 0.0, 0.0),
+            Tuple::point(1.0, 0.0, 0.0),
+        );
+        let r = Ray::new(Tuple::point(-1.0, 1.0, -2.0), Tuple::vector(0.0, 0.0, 1.0));
+
+        let xs = t.intersect(&r, Vector::new());
+
+        assert!(xs.0.is_empty());
+    }
+
+    #[test]
+    fn ray_misses_p2_p3_edge() {
+        let t = Shape::new_triangle(
+            Tuple::point(0.0, 1.0, 0.0),
+            Tuple::point(-1.0, 0.0, 0.0),
+            Tuple::point(1.0, 0.0, 0.0),
+        );
+        let r = Ray::new(Tuple::point(0.0, -1.0, -2.0), Tuple::vector(0.0, 0.0, 1.0));
+
+        let xs = t.intersect(&r, Vector::new());
+
+        assert!(xs.0.is_empty());
+    }
+
+    #[test]
+    fn ray_strikes_triangle() {
+        let t = Shape::new_triangle(
+            Tuple::point(0.0, 1.0, 0.0),
+            Tuple::point(-1.0, 0.0, 0.0),
+            Tuple::point(1.0, 0.0, 0.0),
+        );
+        let r = Ray::new(Tuple::point(0.0, 0.5, -2.0), Tuple::vector(0.0, 0.0, 1.0));
+
+        let xs = t
+            .intersect(&r, Vector::new())
+            .0
+            .iter()
+            .map(|i| i.t)
+            .collect::<Vec<_>>();
+
+        assert_eq!(xs.len(), 1);
+        assert_eq!(xs[0], 2.0);
+    }
+
+    #[test]
     fn normal_on_translated_sphere() {
         let shape = Shape::new_sphere().with_transform(Matrix::translation(0.0, 1.0, 0.0));
         let n = shape.normal_at(&Tuple::point(0.0, 1.70711, -FRAC_1_SQRT_2), &Vector::new());
@@ -1135,6 +1288,28 @@ mod tests {
         );
 
         assert_abs_diff_eq!(n, Tuple::vector(0.2857, 0.4286, -0.8571));
+    }
+
+    #[test]
+    fn normal_on_triangle() {
+        let t = Shape::new_triangle(
+            Tuple::point(0.0, 1.0, 0.0),
+            Tuple::point(-1.0, 0.0, 0.0),
+            Tuple::point(1.0, 0.0, 0.0),
+        );
+
+        assert_eq!(
+            t.normal_at(&Tuple::point(0.0, 0.5, 0.0), &Vector::new()),
+            Tuple::vector(0.0, 0.0, 1.0)
+        );
+        assert_eq!(
+            t.normal_at(&Tuple::point(-0.5, 0.75, 0.0), &Vector::new()),
+            Tuple::vector(0.0, 0.0, 1.0)
+        );
+        assert_eq!(
+            t.normal_at(&Tuple::point(0.5, 0.25, 0.0), &Vector::new()),
+            Tuple::vector(0.0, 0.0, 1.0)
+        );
     }
 
     #[test]
