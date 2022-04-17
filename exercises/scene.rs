@@ -8,6 +8,10 @@ use raytracer::{
     },
 };
 
+fn main() {
+    render_scene("images/scene.ppm");
+}
+
 fn render_scene(path: &str) {
     let floor_material = Material {
         color: Color::new(1.0, 0.9, 0.9),
@@ -79,8 +83,4 @@ fn render_scene(path: &str) {
     ));
 
     camera.render(world).write_ppm(path);
-}
-
-fn main() {
-    render_scene("images/scene.ppm");
 }

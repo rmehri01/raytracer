@@ -5,7 +5,11 @@ use raytracer::{
     raytracer::{ray::Ray, shape::Shape},
 };
 
-pub fn render_circle(path: &str) {
+fn main() {
+    render_circle("images/circle.ppm");
+}
+
+fn render_circle(path: &str) {
     let side_len = 500;
     let mut canvas = Canvas::new(side_len, side_len);
 
@@ -36,8 +40,4 @@ pub fn render_circle(path: &str) {
     }
 
     canvas.write_ppm(path);
-}
-
-fn main() {
-    render_circle("images/circle.ppm");
 }

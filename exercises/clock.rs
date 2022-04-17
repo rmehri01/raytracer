@@ -5,7 +5,11 @@ use raytracer::{
     graphics::{canvas::Canvas, color::Color},
 };
 
-pub fn plot_clock(side_len: usize, path: &str) {
+fn main() {
+    plot_clock(400, "images/clock.ppm");
+}
+
+fn plot_clock(side_len: usize, path: &str) {
     let mut canvas = Canvas::new(side_len, side_len);
 
     let twelve = Tuple::point(0.0, 0.0, 1.0);
@@ -22,8 +26,4 @@ pub fn plot_clock(side_len: usize, path: &str) {
     }
 
     canvas.write_ppm(path);
-}
-
-fn main() {
-    plot_clock(400, "images/clock.ppm");
 }

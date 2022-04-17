@@ -47,12 +47,12 @@ impl Shape {
         Self::new(ShapeKind::Single(SingleKind::Cube))
     }
 
-    pub fn new_cylinder() -> Self {
-        Self::new(ShapeKind::Single(SingleKind::Cylinder(Conic::default())))
+    pub fn new_cylinder(conic: Conic) -> Self {
+        Self::new(ShapeKind::Single(SingleKind::Cylinder(conic)))
     }
 
-    pub fn new_cone() -> Self {
-        Self::new(ShapeKind::Single(SingleKind::Cone(Conic::default())))
+    pub fn new_cone(conic: Conic) -> Self {
+        Self::new(ShapeKind::Single(SingleKind::Cone(conic)))
     }
 
     pub fn new_group(children: Vec<Self>) -> Self {
@@ -288,8 +288,9 @@ pub struct Conic {
     closed: bool,
 }
 
+
 impl Conic {
-    fn new(minimum: f64, maximum: f64, closed: bool) -> Self {
+    pub fn new(minimum: f64, maximum: f64, closed: bool) -> Self {
         Self {
             minimum,
             maximum,
