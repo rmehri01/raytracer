@@ -1,7 +1,4 @@
-use crate::{
-    core::{matrix::Matrix, tuple::Tuple},
-    raytracer::shape::Shape,
-};
+use crate::core::{matrix::Matrix, tuple::Tuple};
 
 use super::color::Color;
 
@@ -37,9 +34,8 @@ impl Pattern {
         Self::new(Matrix::identity(), PatternKind::Test)
     }
 
-    pub fn pattern_at_shape(&self, shape: &Shape, world_point: &Tuple) -> Color {
-        let object_point = shape.transform.inverse() * *world_point;
-        let pattern_point = self.transform.inverse() * object_point;
+    pub fn pattern_at_object_point(&self, object_point: &Tuple) -> Color {
+        let pattern_point = self.transform.inverse() * *object_point;
 
         self.kind.pattern_at(&pattern_point)
     }
@@ -118,6 +114,9 @@ impl PatternKind {
 #[cfg(test)]
 mod tests {
     use approx::assert_abs_diff_eq;
+    use im::Vector;
+
+    use crate::raytracer::shape::Shape;
 
     use super::*;
 
@@ -126,8 +125,10 @@ mod tests {
         let shape = Shape::new_sphere().with_transform(Matrix::scaling(2.0, 2.0, 2.0));
         let pattern = Pattern::new_test();
 
+        let object_point = shape.world_to_object(&Tuple::point(2.0, 3.0, 4.0), &Vector::new());
+
         assert_abs_diff_eq!(
-            pattern.pattern_at_shape(&shape, &Tuple::point(2.0, 3.0, 4.0)),
+            pattern.pattern_at_object_point(&object_point),
             Color::new(1.0, 1.5, 2.0)
         );
     }
@@ -137,8 +138,10 @@ mod tests {
         let shape = Shape::new_sphere();
         let pattern = Pattern::new(Matrix::scaling(2.0, 2.0, 2.0), PatternKind::Test);
 
+        let object_point = shape.world_to_object(&Tuple::point(2.0, 3.0, 4.0), &Vector::new());
+
         assert_abs_diff_eq!(
-            pattern.pattern_at_shape(&shape, &Tuple::point(2.0, 3.0, 4.0)),
+            pattern.pattern_at_object_point(&object_point),
             Color::new(1.0, 1.5, 2.0)
         );
     }
@@ -148,8 +151,10 @@ mod tests {
         let shape = Shape::new_sphere().with_transform(Matrix::scaling(2.0, 2.0, 2.0));
         let pattern = Pattern::new(Matrix::translation(0.5, 1.0, 1.5), PatternKind::Test);
 
+        let object_point = shape.world_to_object(&Tuple::point(2.5, 3.0, 3.5), &Vector::new());
+
         assert_abs_diff_eq!(
-            pattern.pattern_at_shape(&shape, &Tuple::point(2.5, 3.0, 3.5)),
+            pattern.pattern_at_object_point(&object_point),
             Color::new(0.75, 0.5, 0.25)
         );
     }

@@ -1,5 +1,7 @@
 use std::collections::BTreeSet;
 
+use im::Vector;
+
 use crate::{
     core::{matrix::Matrix, tuple::Tuple},
     graphics::color::Color,
@@ -45,7 +47,7 @@ impl World {
         let intersects = self
             .shapes
             .iter()
-            .flat_map(|shape| shape.intersect(ray).0)
+            .flat_map(|shape| shape.intersect(ray, Vector::new()).0)
             .collect::<BTreeSet<_>>();
 
         Intersections(intersects)
@@ -54,9 +56,9 @@ impl World {
     fn shade_hit(&self, comps: Computations, remaining_recursions: u8) -> Color {
         let is_shadowed = self.is_shadowed(&comps.over_point);
         let surface = comps.shape.material.lighting(
-            comps.shape,
-            &self.light.expect("world should have light"),
+            &comps.shape.world_to_object(&comps.over_point, &comps.trail),
             &comps.over_point,
+            &self.light.expect("world should have light"),
             &comps.eyev,
             &comps.normalv,
             is_shadowed,
@@ -192,7 +194,7 @@ mod tests {
         let world = World::default();
         let r = Ray::new(Tuple::point(0.0, 0.0, -5.0), Tuple::vector(0.0, 0.0, 1.0));
         let shape = &world.shapes[0];
-        let i = Intersection::new(4.0, shape);
+        let i = Intersection::new(4.0, shape, Vector::new());
         let comps = i.prepare_computations(&r, &Intersections::new([i.clone()]));
 
         let color = world.shade_hit(comps, 5);
@@ -209,7 +211,7 @@ mod tests {
 
         let r = Ray::new(Tuple::point(0.0, 0.0, 0.0), Tuple::vector(0.0, 0.0, 1.0));
         let shape = &world.shapes[1];
-        let i = Intersection::new(0.5, shape);
+        let i = Intersection::new(0.5, shape, Vector::new());
         let comps = i.prepare_computations(&r, &Intersections::new([i.clone()]));
 
         let color = world.shade_hit(comps, 5);
@@ -293,7 +295,7 @@ mod tests {
         };
 
         let r = Ray::new(Tuple::point(0.0, 0.0, 5.0), Tuple::vector(0.0, 0.0, 1.0));
-        let i = Intersection::new(4.0, &s2);
+        let i = Intersection::new(4.0, &s2, Vector::new());
         let comps = i.prepare_computations(&r, &Intersections::new([i.clone()]));
 
         assert_abs_diff_eq!(w.shade_hit(comps, 5), Color::new(0.1, 0.1, 0.1));
@@ -305,7 +307,7 @@ mod tests {
         w.shapes[1].material.ambient = 1.0;
 
         let r = Ray::new(Tuple::point(0.0, 0.0, 0.0), Tuple::vector(0.0, 0.0, 1.0));
-        let i = Intersection::new(1.0, &w.shapes[1]);
+        let i = Intersection::new(1.0, &w.shapes[1], Vector::new());
 
         let comps = i.prepare_computations(&r, &Intersections::new([i.clone()]));
 
@@ -328,7 +330,7 @@ mod tests {
             Tuple::point(0.0, 0.0, -3.0),
             Tuple::vector(0.0, -(2.0_f64.sqrt()) / 2.0, 2.0_f64.sqrt() / 2.0),
         );
-        let i = Intersection::new(2.0_f64.sqrt(), &shape);
+        let i = Intersection::new(2.0_f64.sqrt(), &shape, Vector::new());
 
         let comps = i.prepare_computations(&r, &Intersections::new([i.clone()]));
 
@@ -354,7 +356,7 @@ mod tests {
             Tuple::point(0.0, 0.0, -3.0),
             Tuple::vector(0.0, -(2.0_f64.sqrt()) / 2.0, 2.0_f64.sqrt() / 2.0),
         );
-        let i = Intersection::new(2.0_f64.sqrt(), &shape);
+        let i = Intersection::new(2.0_f64.sqrt(), &shape, Vector::new());
 
         let comps = i.prepare_computations(&r, &Intersections::new([i.clone()]));
 
@@ -402,7 +404,7 @@ mod tests {
             Tuple::point(0.0, 0.0, -3.0),
             Tuple::vector(0.0, -(2.0_f64.sqrt()) / 2.0, 2.0_f64.sqrt() / 2.0),
         );
-        let i = Intersection::new(2.0_f64.sqrt(), &shape);
+        let i = Intersection::new(2.0_f64.sqrt(), &shape, Vector::new());
 
         let comps = i.prepare_computations(&r, &Intersections::new([i.clone()]));
 
@@ -415,7 +417,10 @@ mod tests {
         let shape = &w.shapes[0];
 
         let r = Ray::new(Tuple::point(0.0, 0.0, -5.0), Tuple::vector(0.0, 0.0, 1.0));
-        let xs = Intersections::new([Intersection::new(4.0, shape), Intersection::new(6.0, shape)]);
+        let xs = Intersections::new([
+            Intersection::new(4.0, shape, Vector::new()),
+            Intersection::new(6.0, shape, Vector::new()),
+        ]);
 
         let comps = xs.0.iter().next().unwrap().prepare_computations(&r, &xs);
 
@@ -431,7 +436,10 @@ mod tests {
         let shape = &w.shapes[0];
 
         let r = Ray::new(Tuple::point(0.0, 0.0, -5.0), Tuple::vector(0.0, 0.0, 1.0));
-        let xs = Intersections::new([Intersection::new(4.0, shape), Intersection::new(6.0, shape)]);
+        let xs = Intersections::new([
+            Intersection::new(4.0, shape, Vector::new()),
+            Intersection::new(6.0, shape, Vector::new()),
+        ]);
 
         let comps = xs.0.iter().next().unwrap().prepare_computations(&r, &xs);
 
@@ -451,8 +459,8 @@ mod tests {
             Tuple::vector(0.0, 1.0, 0.0),
         );
         let xs = Intersections::new([
-            Intersection::new(-(2.0_f64.sqrt()) / 2.0, shape),
-            Intersection::new(2.0_f64.sqrt() / 2.0, shape),
+            Intersection::new(-(2.0_f64.sqrt()) / 2.0, shape, Vector::new()),
+            Intersection::new(2.0_f64.sqrt() / 2.0, shape, Vector::new()),
         ]);
 
         let comps = xs.0.iter().nth(1).unwrap().prepare_computations(&r, &xs);
@@ -470,10 +478,10 @@ mod tests {
 
         let r = Ray::new(Tuple::point(0.0, 0.0, 0.1), Tuple::vector(0.0, 1.0, 0.0));
         let xs = Intersections::new([
-            Intersection::new(-0.9899, &w.shapes[0]),
-            Intersection::new(-0.4899, &w.shapes[1]),
-            Intersection::new(0.4899, &w.shapes[1]),
-            Intersection::new(0.9899, &w.shapes[0]),
+            Intersection::new(-0.9899, &w.shapes[0], Vector::new()),
+            Intersection::new(-0.4899, &w.shapes[1], Vector::new()),
+            Intersection::new(0.4899, &w.shapes[1], Vector::new()),
+            Intersection::new(0.9899, &w.shapes[0], Vector::new()),
         ]);
 
         let comps = xs.0.iter().nth(2).unwrap().prepare_computations(&r, &xs);
@@ -510,7 +518,7 @@ mod tests {
             Tuple::point(0.0, 0.0, -3.0),
             Tuple::vector(0.0, -(2.0_f64.sqrt()) / 2.0, 2.0_f64.sqrt() / 2.0),
         );
-        let xs = Intersections::new([Intersection::new(2.0_f64.sqrt(), &floor)]);
+        let xs = Intersections::new([Intersection::new(2.0_f64.sqrt(), &floor, Vector::new())]);
 
         let comps = xs.0.iter().next().unwrap().prepare_computations(&r, &xs);
 
@@ -544,7 +552,7 @@ mod tests {
             Tuple::point(0.0, 0.0, -3.0),
             Tuple::vector(0.0, -(2.0_f64.sqrt()) / 2.0, 2.0_f64.sqrt() / 2.0),
         );
-        let xs = Intersections::new([Intersection::new(2.0_f64.sqrt(), &floor)]);
+        let xs = Intersections::new([Intersection::new(2.0_f64.sqrt(), &floor, Vector::new())]);
 
         let comps = xs.0.iter().next().unwrap().prepare_computations(&r, &xs);
 

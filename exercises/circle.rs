@@ -1,3 +1,4 @@
+use im::Vector;
 use raytracer::{
     core::tuple::Tuple,
     graphics::{canvas::Canvas, color::Color},
@@ -26,7 +27,7 @@ pub fn render_circle(path: &str) {
             let position = Tuple::point(world_x, world_y, wall_z);
 
             let r = Ray::new(ray_origin, (position - ray_origin).normalize());
-            let xs = sphere.intersect(&r);
+            let xs = sphere.intersect(&r, Vector::new());
 
             if xs.hit().is_some() {
                 canvas.write_pixel(x, y, color);

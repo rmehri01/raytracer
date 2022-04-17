@@ -1,3 +1,4 @@
+use im::Vector;
 use raytracer::{
     core::tuple::Tuple,
     graphics::{canvas::Canvas, color::Color},
@@ -32,16 +33,21 @@ pub fn render_shaded_sphere(path: &str) {
             let position = Tuple::point(world_x, world_y, wall_z);
 
             let r = Ray::new(ray_origin, (position - ray_origin).normalize());
-            let xs = sphere.intersect(&r);
+            let xs = sphere.intersect(&r, Vector::new());
 
             if let Some(hit) = xs.hit() {
                 let point = r.position(hit.t);
-                let normal = sphere.normal_at(&point);
+                let normal = sphere.normal_at(&point, &Vector::new());
                 let eye = -r.direction;
-                let color = hit
-                    .shape
-                    .material
-                    .lighting(&sphere, &light, &point, &eye, &normal, false);
+                let object_point = sphere.world_to_object(&point, &Vector::new());
+                let color = hit.shape.material.lighting(
+                    &object_point,
+                    &point,
+                    &light,
+                    &eye,
+                    &normal,
+                    false,
+                );
                 canvas.write_pixel(x, y, color);
             }
         }

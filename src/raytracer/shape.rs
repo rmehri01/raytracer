@@ -1,6 +1,7 @@
 use std::collections::BTreeSet;
 
 use approx::AbsDiffEq;
+use im::Vector;
 
 use crate::core::{matrix::Matrix, tuple::Tuple};
 
@@ -68,37 +69,60 @@ impl Shape {
         self
     }
 
-    pub fn intersect(&self, ray: &Ray) -> Intersections {
+    pub fn intersect(&self, ray: &Ray, mut trail: Vector<Matrix<4>>) -> Intersections {
         let local_ray = ray.transform(&self.transform.inverse());
 
         match &self.kind {
             ShapeKind::Single(single) => {
                 let ts = single.intersect(&local_ray);
-                let intersections = ts.iter().map(|t| Intersection::new(*t, self));
+                let intersections = ts
+                    .iter()
+                    .map(|t| Intersection::new(*t, self, trail.clone()));
 
                 Intersections(BTreeSet::from_iter(intersections))
             }
             ShapeKind::Group(children) => {
+                trail.push_front(self.transform);
                 let intersections = children
                     .iter()
-                    .flat_map(|child| child.intersect(&local_ray).0);
+                    .flat_map(|child| child.intersect(&local_ray, trail.clone()).0);
 
                 Intersections(BTreeSet::from_iter(intersections))
             }
         }
     }
 
-    pub fn normal_at(&self, point: &Tuple) -> Tuple {
-        let local_point = self.transform.inverse() * *point;
-        let local_normal = match &self.kind {
-            ShapeKind::Single(single) => single.normal_at(&local_point),
-            ShapeKind::Group(_) => unreachable!("groups should not have normal vectors"),
-        };
+    pub fn normal_at(&self, point: &Tuple, trail: &Vector<Matrix<4>>) -> Tuple {
+        if let ShapeKind::Single(single) = &self.kind {
+            let local_point = self.world_to_object(point, trail);
+            let local_normal = single.normal_at(&local_point);
 
-        let mut world_normal = self.transform.inverse().transpose() * local_normal;
-        world_normal.w = 0.0;
+            self.normal_to_world(&local_normal, trail)
+        } else {
+            panic!("groups should not have normal vectors");
+        }
+    }
 
-        world_normal.normalize()
+    // TODO: should mutate vector to avoid duplication?
+    pub fn world_to_object(&self, world_point: &Tuple, trail: &Vector<Matrix<4>>) -> Tuple {
+        let trail_point = trail
+            .iter()
+            .rev()
+            .fold(*world_point, |acc, mat| mat.inverse() * acc);
+
+        self.transform.inverse() * trail_point
+    }
+
+    fn normal_to_world(&self, normal: &Tuple, trail: &Vector<Matrix<4>>) -> Tuple {
+        let mut normal = self.transform.inverse().transpose() * *normal;
+        normal.w = 0.0;
+        let normal = normal.normalize();
+
+        trail.iter().fold(normal, |acc, mat| {
+            let mut normal = mat.inverse().transpose() * acc;
+            normal.w = 0.0;
+            normal.normalize()
+        })
     }
 }
 
@@ -372,9 +396,10 @@ impl AbsDiffEq for Conic {
 
 #[cfg(test)]
 mod tests {
-    use std::f64::consts::{FRAC_1_SQRT_2, FRAC_PI_4};
+    use std::f64::consts::{FRAC_1_SQRT_2, FRAC_PI_2, FRAC_PI_4};
 
     use approx::assert_abs_diff_eq;
+    use im::vector;
 
     use super::*;
 
@@ -452,7 +477,7 @@ mod tests {
         let shape = Shape::new_sphere().with_transform(Matrix::scaling(2.0, 2.0, 2.0));
 
         let xs = shape
-            .intersect(&r)
+            .intersect(&r, Vector::new())
             .0
             .iter()
             .map(|i| i.t)
@@ -468,7 +493,7 @@ mod tests {
         let r = Ray::new(Tuple::point(0.0, 0.0, -5.0), Tuple::vector(0.0, 0.0, 1.0));
         let shape = Shape::new_sphere().with_transform(Matrix::translation(5.0, 0.0, 0.0));
 
-        assert!(shape.intersect(&r).0.is_empty());
+        assert!(shape.intersect(&r, Vector::new()).0.is_empty());
     }
 
     #[test]
@@ -577,7 +602,7 @@ mod tests {
         let shape = Shape::new_sphere();
 
         let shapes = shape
-            .intersect(&r)
+            .intersect(&r, Vector::new())
             .0
             .iter()
             .map(|i| i.shape)
@@ -893,7 +918,7 @@ mod tests {
         let group = Shape::new_group(Vec::new());
 
         let r = Ray::new(Tuple::point(0.0, 0.0, 0.0), Tuple::vector(0.0, 0.0, 1.0));
-        let xs = group.intersect(&r);
+        let xs = group.intersect(&r, Vector::new());
 
         assert!(xs.0.is_empty());
     }
@@ -907,7 +932,7 @@ mod tests {
 
         let r = Ray::new(Tuple::point(0.0, 0.0, -5.0), Tuple::vector(0.0, 0.0, 1.0));
         let xs = group
-            .intersect(&r)
+            .intersect(&r, Vector::new())
             .0
             .iter()
             .map(|i| i.shape)
@@ -926,7 +951,7 @@ mod tests {
         let group = Shape::new_group(vec![s]).with_transform(Matrix::scaling(2.0, 2.0, 2.0));
 
         let r = Ray::new(Tuple::point(10.0, 0.0, -10.0), Tuple::vector(0.0, 0.0, 1.0));
-        let xs = group.intersect(&r);
+        let xs = group.intersect(&r, Vector::new());
 
         assert_eq!(xs.0.len(), 2);
     }
@@ -934,7 +959,7 @@ mod tests {
     #[test]
     fn normal_on_translated_sphere() {
         let shape = Shape::new_sphere().with_transform(Matrix::translation(0.0, 1.0, 0.0));
-        let n = shape.normal_at(&Tuple::point(0.0, 1.70711, -FRAC_1_SQRT_2));
+        let n = shape.normal_at(&Tuple::point(0.0, 1.70711, -FRAC_1_SQRT_2), &Vector::new());
 
         assert_abs_diff_eq!(n, Tuple::vector(0.0, FRAC_1_SQRT_2, -FRAC_1_SQRT_2));
     }
@@ -943,11 +968,10 @@ mod tests {
     fn normal_on_transformed_sphere() {
         let shape = Shape::new_sphere()
             .with_transform(Matrix::scaling(1.0, 0.5, 1.0) * Matrix::rotation_z(FRAC_PI_4));
-        let n = shape.normal_at(&Tuple::point(
-            0.0,
-            2.0_f64.sqrt() / 2.0,
-            -(2.0_f64.sqrt()) / 2.0,
-        ));
+        let n = shape.normal_at(
+            &Tuple::point(0.0, 2.0_f64.sqrt() / 2.0, -(2.0_f64.sqrt()) / 2.0),
+            &Vector::new(),
+        );
 
         assert_abs_diff_eq!(n, Tuple::vector(0.0, 0.97014, -0.24254));
     }
@@ -1096,5 +1120,52 @@ mod tests {
 
             assert_abs_diff_eq!(n, normal);
         }
+    }
+
+    #[test]
+    fn normal_on_child_object() {
+        let s = Shape::new_sphere().with_transform(Matrix::translation(5.0, 0.0, 0.0));
+        let g2 = Shape::new_group(vec![s.clone()]).with_transform(Matrix::scaling(1.0, 2.0, 3.0));
+        let g1 = Shape::new_group(vec![g2.clone()]).with_transform(Matrix::rotation_y(FRAC_PI_2));
+
+        let n = s.normal_at(
+            &Tuple::point(1.7321, 1.1547, -5.5774),
+            &vector![g2.transform, g1.transform],
+        );
+
+        assert_abs_diff_eq!(n, Tuple::vector(0.2857, 0.4286, -0.8571));
+    }
+
+    #[test]
+    fn convert_point_world_to_object() {
+        let s = Shape::new_sphere().with_transform(Matrix::translation(5.0, 0.0, 0.0));
+        let g2 = Shape::new_group(vec![s.clone()]).with_transform(Matrix::scaling(2.0, 2.0, 2.0));
+        let g1 = Shape::new_group(vec![g2.clone()]).with_transform(Matrix::rotation_y(FRAC_PI_2));
+
+        assert_eq!(
+            s.world_to_object(
+                &Tuple::point(-2.0, 0.0, -10.0),
+                &vector![g2.transform, g1.transform]
+            ),
+            Tuple::point(0.0, 0.0, -1.0)
+        );
+    }
+
+    #[test]
+    fn convert_normal_object_to_world() {
+        let s = Shape::new_sphere().with_transform(Matrix::translation(5.0, 0.0, 0.0));
+        let g2 = Shape::new_group(vec![s.clone()]).with_transform(Matrix::scaling(1.0, 2.0, 3.0));
+        let g1 = Shape::new_group(vec![g2.clone()]).with_transform(Matrix::rotation_y(FRAC_PI_2));
+
+        let n = s.normal_to_world(
+            &Tuple::vector(
+                3.0_f64.sqrt() / 3.0,
+                3.0_f64.sqrt() / 3.0,
+                3.0_f64.sqrt() / 3.0,
+            ),
+            &vector![g2.transform, g1.transform],
+        );
+
+        assert_eq!(n, Tuple::vector(0.2857, 0.4286, -0.8571));
     }
 }
