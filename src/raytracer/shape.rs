@@ -27,7 +27,7 @@ impl Shape {
     }
 
     pub fn new_sphere() -> Self {
-        Self::new(ShapeKind::Sphere)
+        Self::new(ShapeKind::Single(SingleKind::Sphere))
     }
 
     pub fn new_glass_sphere() -> Self {
@@ -39,23 +39,23 @@ impl Shape {
     }
 
     pub fn new_plane() -> Self {
-        Self::new(ShapeKind::Plane)
+        Self::new(ShapeKind::Single(SingleKind::Plane))
     }
 
     pub fn new_cube() -> Self {
-        Self::new(ShapeKind::Cube)
+        Self::new(ShapeKind::Single(SingleKind::Cube))
     }
 
     pub fn new_cylinder() -> Self {
-        Self::new(ShapeKind::Cylinder(Conic::default()))
+        Self::new(ShapeKind::Single(SingleKind::Cylinder(Conic::default())))
     }
 
     pub fn new_cone() -> Self {
-        Self::new(ShapeKind::Cone(Conic::default()))
+        Self::new(ShapeKind::Single(SingleKind::Cone(Conic::default())))
     }
 
-    pub fn new_group() -> Self {
-        Self::new(ShapeKind::Group(Vec::new()))
+    pub fn new_group(children: Vec<Self>) -> Self {
+        Self::new(ShapeKind::Group(children))
     }
 
     pub fn with_transform(mut self, transform: Matrix<4>) -> Self {
@@ -70,15 +70,30 @@ impl Shape {
 
     pub fn intersect(&self, ray: &Ray) -> Intersections {
         let local_ray = ray.transform(&self.transform.inverse());
-        let ts = self.kind.intersect(&local_ray);
-        let intersections = ts.iter().map(|t| Intersection::new(*t, self));
 
-        Intersections(BTreeSet::from_iter(intersections))
+        match &self.kind {
+            ShapeKind::Single(single) => {
+                let ts = single.intersect(&local_ray);
+                let intersections = ts.iter().map(|t| Intersection::new(*t, self));
+
+                Intersections(BTreeSet::from_iter(intersections))
+            }
+            ShapeKind::Group(children) => {
+                let intersections = children
+                    .iter()
+                    .flat_map(|child| child.intersect(&local_ray).0);
+
+                Intersections(BTreeSet::from_iter(intersections))
+            }
+        }
     }
 
     pub fn normal_at(&self, point: &Tuple) -> Tuple {
         let local_point = self.transform.inverse() * *point;
-        let local_normal = self.kind.normal_at(&local_point);
+        let local_normal = match &self.kind {
+            ShapeKind::Single(single) => single.normal_at(&local_point),
+            ShapeKind::Group(_) => unreachable!("groups should not have normal vectors"),
+        };
 
         let mut world_normal = self.transform.inverse().transpose() * local_normal;
         world_normal.w = 0.0;
@@ -89,6 +104,14 @@ impl Shape {
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum ShapeKind {
+    /// A single shape.
+    Single(SingleKind),
+    /// A collection of shapes that are transformed as a unit.
+    Group(Vec<Shape>),
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum SingleKind {
     /// A unit sphere with center at the origin.
     Sphere,
     /// A perfectly flat surface that extends infinitely in x and z.
@@ -102,11 +125,9 @@ pub enum ShapeKind {
     /// A double-napped cone that is centered at the origin and extends
     /// from minimum to maximum exclusive along the y axis.
     Cone(Conic),
-    /// A collection of shapes that are transformed as a unit.
-    Group(Vec<Shape>),
 }
 
-impl ShapeKind {
+impl SingleKind {
     pub fn intersect(&self, ray: &Ray) -> Vec<f64> {
         match self {
             Self::Sphere => Self::sphere_intersect(ray),
@@ -114,7 +135,6 @@ impl ShapeKind {
             Self::Cube => Self::cube_intersect(ray),
             Self::Cylinder(conic) => Self::cylinder_intersect(ray, conic),
             Self::Cone(conic) => Self::cone_intersect(ray, conic),
-            Self::Group(shapes) => todo!(),
         }
     }
 
@@ -198,7 +218,6 @@ impl ShapeKind {
             Self::Cube => Self::cube_normal_at(point),
             Self::Cylinder(conic) => Self::cylinder_normal_at(point, conic),
             Self::Cone(conic) => Self::cone_normal_at(point, conic),
-            Self::Group(shapes) => todo!(),
         }
     }
 
@@ -402,6 +421,32 @@ mod tests {
     }
 
     #[test]
+    fn create_group() {
+        let group = Shape::new_group(Vec::new());
+
+        assert_eq!(group.transform, Matrix::identity());
+        if let ShapeKind::Group(children) = group.kind {
+            assert!(children.is_empty());
+        } else {
+            panic!("expected a group");
+        }
+    }
+
+    #[test]
+    fn create_group_with_children() {
+        let sphere = Shape::new_sphere();
+        let group = Shape::new_group(vec![sphere.clone()]);
+
+        assert_eq!(group.transform, Matrix::identity());
+        if let ShapeKind::Group(children) = group.kind {
+            assert_eq!(children.len(), 1);
+            assert_eq!(children[0], sphere);
+        } else {
+            panic!("expected a group");
+        }
+    }
+
+    #[test]
     fn intersect_scaled_sphere_with_ray() {
         let r = Ray::new(Tuple::point(0.0, 0.0, -5.0), Tuple::vector(0.0, 0.0, 1.0));
         let shape = Shape::new_sphere().with_transform(Matrix::scaling(2.0, 2.0, 2.0));
@@ -429,7 +474,7 @@ mod tests {
     #[test]
     fn ray_intersects_sphere() {
         let r = Ray::new(Tuple::point(0.0, 0.0, -5.0), Tuple::vector(0.0, 0.0, 1.0));
-        let s = ShapeKind::Sphere;
+        let s = SingleKind::Sphere;
 
         let xs = s.intersect(&r);
 
@@ -441,7 +486,7 @@ mod tests {
     #[test]
     fn ray_tangent_to_sphere() {
         let r = Ray::new(Tuple::point(0.0, 1.0, -5.0), Tuple::vector(0.0, 0.0, 1.0));
-        let s = ShapeKind::Sphere;
+        let s = SingleKind::Sphere;
 
         let xs = s.intersect(&r);
 
@@ -453,7 +498,7 @@ mod tests {
     #[test]
     fn ray_misses_sphere() {
         let r = Ray::new(Tuple::point(0.0, 2.0, -5.0), Tuple::vector(0.0, 0.0, 1.0));
-        let s = ShapeKind::Sphere;
+        let s = SingleKind::Sphere;
 
         let intersects = s.intersect(&r);
 
@@ -463,7 +508,7 @@ mod tests {
     #[test]
     fn ray_originates_inside_sphere() {
         let r = Ray::new(Tuple::point(0.0, 0.0, 0.0), Tuple::vector(0.0, 0.0, 1.0));
-        let s = ShapeKind::Sphere;
+        let s = SingleKind::Sphere;
 
         let xs = s.intersect(&r);
 
@@ -475,7 +520,7 @@ mod tests {
     #[test]
     fn sphere_behind_ray() {
         let r = Ray::new(Tuple::point(0.0, 0.0, 5.0), Tuple::vector(0.0, 0.0, 1.0));
-        let s = ShapeKind::Sphere;
+        let s = SingleKind::Sphere;
 
         let xs = s.intersect(&r);
 
@@ -486,7 +531,7 @@ mod tests {
 
     #[test]
     fn intersecting_a_ray_parallel_to_the_plane() {
-        let plane = ShapeKind::Plane;
+        let plane = SingleKind::Plane;
         let r = Ray::new(Tuple::point(0.0, 10.0, 0.0), Tuple::vector(0.0, 0.0, 1.0));
 
         let xs = plane.intersect(&r);
@@ -496,7 +541,7 @@ mod tests {
 
     #[test]
     fn intersecting_a_coplanar_ray() {
-        let plane = ShapeKind::Plane;
+        let plane = SingleKind::Plane;
         let r = Ray::new(Tuple::point(0.0, 0.0, 0.0), Tuple::vector(0.0, 0.0, 1.0));
 
         let xs = plane.intersect(&r);
@@ -506,7 +551,7 @@ mod tests {
 
     #[test]
     fn ray_intersecting_from_above() {
-        let plane = ShapeKind::Plane;
+        let plane = SingleKind::Plane;
         let r = Ray::new(Tuple::point(0.0, 1.0, 0.0), Tuple::vector(0.0, -1.0, 0.0));
 
         let xs = plane.intersect(&r);
@@ -517,7 +562,7 @@ mod tests {
 
     #[test]
     fn ray_intersecting_from_below() {
-        let plane = ShapeKind::Plane;
+        let plane = SingleKind::Plane;
         let r = Ray::new(Tuple::point(0.0, -1.0, 0.0), Tuple::vector(0.0, 1.0, 0.0));
 
         let xs = plane.intersect(&r);
@@ -590,7 +635,7 @@ mod tests {
         ];
 
         for (origin, direction, t0, t1) in scenarios {
-            let c = ShapeKind::Cube;
+            let c = SingleKind::Cube;
             let r = Ray::new(origin, direction);
 
             let xs = c.intersect(&r);
@@ -622,7 +667,7 @@ mod tests {
         ];
 
         for (origin, direction) in scenarios {
-            let c = ShapeKind::Cube;
+            let c = SingleKind::Cube;
             let r = Ray::new(origin, direction);
 
             let xs = c.intersect(&r);
@@ -640,7 +685,7 @@ mod tests {
         ];
 
         for (origin, direction) in scenarios {
-            let c = ShapeKind::Cylinder(Conic::default());
+            let c = SingleKind::Cylinder(Conic::default());
             let r = Ray::new(origin, direction);
 
             let xs = c.intersect(&r);
@@ -673,7 +718,7 @@ mod tests {
         ];
 
         for (origin, direction, t0, t1) in scenarios {
-            let c = ShapeKind::Cylinder(Conic::default());
+            let c = SingleKind::Cylinder(Conic::default());
             let r = Ray::new(origin, direction.normalize());
 
             let xs = c.intersect(&r);
@@ -716,7 +761,7 @@ mod tests {
         ];
 
         for (point, direction, count) in scenarios {
-            let cyl = ShapeKind::Cylinder(Conic::new(1.0, 2.0, false));
+            let cyl = SingleKind::Cylinder(Conic::new(1.0, 2.0, false));
 
             let r = Ray::new(point, direction.normalize());
             let xs = cyl.intersect(&r);
@@ -756,7 +801,7 @@ mod tests {
         ];
 
         for (point, direction, count) in scenarios {
-            let cyl = ShapeKind::Cylinder(Conic::new(1.0, 2.0, true));
+            let cyl = SingleKind::Cylinder(Conic::new(1.0, 2.0, true));
 
             let r = Ray::new(point, direction.normalize());
             let xs = cyl.intersect(&r);
@@ -789,7 +834,7 @@ mod tests {
         ];
 
         for (origin, direction, t0, t1) in scenarios {
-            let shape = ShapeKind::Cone(Conic::default());
+            let shape = SingleKind::Cone(Conic::default());
 
             let r = Ray::new(origin, direction.normalize());
             let xs = shape.intersect(&r);
@@ -802,7 +847,7 @@ mod tests {
 
     #[test]
     fn intersect_cone_with_ray_parallel_to_one_half() {
-        let shape = ShapeKind::Cone(Conic::default());
+        let shape = SingleKind::Cone(Conic::default());
 
         let direction = Tuple::vector(0.0, 1.0, 1.0).normalize();
         let r = Ray::new(Tuple::point(0.0, 0.0, -1.0), direction);
@@ -834,13 +879,56 @@ mod tests {
         ];
 
         for (origin, direction, count) in scenarios {
-            let shape = ShapeKind::Cone(Conic::new(-0.5, 0.5, true));
+            let shape = SingleKind::Cone(Conic::new(-0.5, 0.5, true));
 
             let r = Ray::new(origin, direction.normalize());
             let xs = shape.intersect(&r);
 
             assert_eq!(xs.len(), count);
         }
+    }
+
+    #[test]
+    fn intersect_ray_with_empty_group() {
+        let group = Shape::new_group(Vec::new());
+
+        let r = Ray::new(Tuple::point(0.0, 0.0, 0.0), Tuple::vector(0.0, 0.0, 1.0));
+        let xs = group.intersect(&r);
+
+        assert!(xs.0.is_empty());
+    }
+
+    #[test]
+    fn intersect_ray_with_group_of_shapes() {
+        let s1 = Shape::new_sphere();
+        let s2 = Shape::new_sphere().with_transform(Matrix::translation(0.0, 0.0, -3.0));
+        let s3 = Shape::new_sphere().with_transform(Matrix::translation(5.0, 0.0, 0.0));
+        let group = Shape::new_group(vec![s1.clone(), s2.clone(), s3]);
+
+        let r = Ray::new(Tuple::point(0.0, 0.0, -5.0), Tuple::vector(0.0, 0.0, 1.0));
+        let xs = group
+            .intersect(&r)
+            .0
+            .iter()
+            .map(|i| i.shape)
+            .collect::<Vec<_>>();
+
+        assert_eq!(xs.len(), 4);
+        assert_eq!(xs[0], &s2);
+        assert_eq!(xs[1], &s2);
+        assert_eq!(xs[2], &s1);
+        assert_eq!(xs[3], &s1);
+    }
+
+    #[test]
+    fn intersect_ray_with_transformed_group() {
+        let s = Shape::new_sphere().with_transform(Matrix::translation(5.0, 0.0, 0.0));
+        let group = Shape::new_group(vec![s]).with_transform(Matrix::scaling(2.0, 2.0, 2.0));
+
+        let r = Ray::new(Tuple::point(10.0, 0.0, -10.0), Tuple::vector(0.0, 0.0, 1.0));
+        let xs = group.intersect(&r);
+
+        assert_eq!(xs.0.len(), 2);
     }
 
     #[test]
@@ -866,7 +954,7 @@ mod tests {
 
     #[test]
     fn sphere_normal_x_axis() {
-        let s = ShapeKind::Sphere;
+        let s = SingleKind::Sphere;
         let n = s.normal_at(&Tuple::point(1.0, 0.0, 0.0));
 
         assert_abs_diff_eq!(n, Tuple::vector(1.0, 0.0, 0.0));
@@ -874,7 +962,7 @@ mod tests {
 
     #[test]
     fn sphere_normal_y_axis() {
-        let s = ShapeKind::Sphere;
+        let s = SingleKind::Sphere;
         let n = s.normal_at(&Tuple::point(0.0, 1.0, 0.0));
 
         assert_abs_diff_eq!(n, Tuple::vector(0.0, 1.0, 0.0));
@@ -882,7 +970,7 @@ mod tests {
 
     #[test]
     fn sphere_normal_z_axis() {
-        let s = ShapeKind::Sphere;
+        let s = SingleKind::Sphere;
         let n = s.normal_at(&Tuple::point(0.0, 0.0, 1.0));
 
         assert_abs_diff_eq!(n, Tuple::vector(0.0, 0.0, 1.0));
@@ -890,7 +978,7 @@ mod tests {
 
     #[test]
     fn sphere_normal_non_axial_point() {
-        let s = ShapeKind::Sphere;
+        let s = SingleKind::Sphere;
         let n = s.normal_at(&Tuple::point(
             3.0_f64.sqrt() / 3.0,
             3.0_f64.sqrt() / 3.0,
@@ -909,7 +997,7 @@ mod tests {
 
     #[test]
     fn normal_is_normalized() {
-        let s = ShapeKind::Sphere;
+        let s = SingleKind::Sphere;
         let n = s.normal_at(&Tuple::point(
             3.0_f64.sqrt() / 3.0,
             3.0_f64.sqrt() / 3.0,
@@ -921,7 +1009,7 @@ mod tests {
 
     #[test]
     fn normal_of_plane_is_constant() {
-        let plane = ShapeKind::Plane;
+        let plane = SingleKind::Plane;
         let n1 = plane.normal_at(&Tuple::point(0.0, 0.0, 0.0));
         let n2 = plane.normal_at(&Tuple::point(10.0, 0.0, -10.0));
         let n3 = plane.normal_at(&Tuple::point(-5.0, 0.0, 150.0));
@@ -948,7 +1036,7 @@ mod tests {
         ];
 
         for (point, normal) in scenarios {
-            let c = ShapeKind::Cube;
+            let c = SingleKind::Cube;
             let n = c.normal_at(&point);
 
             assert_abs_diff_eq!(n, normal);
@@ -965,7 +1053,7 @@ mod tests {
         ];
 
         for (point, normal) in scenarios {
-            let c = ShapeKind::Cylinder(Conic::default());
+            let c = SingleKind::Cylinder(Conic::default());
             let n = c.normal_at(&point);
 
             assert_abs_diff_eq!(n, normal);
@@ -984,7 +1072,7 @@ mod tests {
         ];
 
         for (point, normal) in scenarios {
-            let c = ShapeKind::Cylinder(Conic::new(1.0, 2.0, true));
+            let c = SingleKind::Cylinder(Conic::new(1.0, 2.0, true));
             let n = c.normal_at(&point);
 
             assert_abs_diff_eq!(n, normal);
@@ -1003,7 +1091,7 @@ mod tests {
         ];
 
         for (point, normal) in scenarios {
-            let c = ShapeKind::Cone(Conic::default());
+            let c = SingleKind::Cone(Conic::default());
             let n = c.normal_at(&point);
 
             assert_abs_diff_eq!(n, normal);
