@@ -6,6 +6,7 @@ use im::Vector;
 use crate::core::{matrix::Matrix, tuple::Tuple};
 
 use super::{
+    bounds::Bounds,
     intersection::{Intersection, Intersections},
     material::Material,
     ray::Ray,
@@ -97,11 +98,26 @@ impl Shape {
             }
             ShapeKind::Group(children) => {
                 trail.push_front(self.transform);
-                let intersections = children
-                    .iter()
-                    .flat_map(|child| child.intersect(&local_ray, trail.clone()).0);
+                if self.bounds().intersects(&local_ray) {
+                    let intersections = children
+                        .iter()
+                        .flat_map(|child| child.intersect(&local_ray, trail.clone()).0);
 
-                Intersections(BTreeSet::from_iter(intersections))
+                    Intersections(BTreeSet::from_iter(intersections))
+                } else {
+                    Intersections(BTreeSet::new())
+                }
+            }
+        }
+    }
+
+    fn bounds(&self) -> Bounds {
+        match &self.kind {
+            ShapeKind::Single(single) => single.bounds(),
+            ShapeKind::Group(children) => {
+                children.iter().fold(Bounds::default(), |bounds, child| {
+                    bounds.transform(&child.transform)
+                })
             }
         }
     }
@@ -330,6 +346,30 @@ impl SingleKind {
 
         conic.normal_at(object_point, y)
     }
+
+    fn bounds(&self) -> Bounds {
+        match self {
+            Self::Sphere => {
+                Bounds::new(Tuple::point(-1.0, -1.0, -1.0), Tuple::point(1.0, 1.0, 1.0))
+            }
+            Self::Plane => Bounds::new(
+                Tuple::point(f64::NEG_INFINITY, 0.0, f64::NEG_INFINITY),
+                Tuple::point(f64::INFINITY, 0.0, f64::INFINITY),
+            ),
+            Self::Cube => Bounds::new(Tuple::point(-1.0, -1.0, -1.0), Tuple::point(1.0, 1.0, 1.0)),
+            Self::Cylinder(conic) => conic.bounds(),
+            Self::Cone(conic) => conic.bounds(),
+            Self::Triangle { p1, p2, p3, .. } => {
+                let mut bounds = Bounds::default();
+
+                bounds.add_point(p1);
+                bounds.add_point(p2);
+                bounds.add_point(p3);
+
+                bounds
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -412,6 +452,13 @@ impl Conic {
         let z = ray.origin.z + t * ray.direction.z;
 
         (x.powi(2) + z.powi(2)) <= radius.powi(2)
+    }
+
+    fn bounds(&self) -> Bounds {
+        Bounds::new(
+            Tuple::point(-1.0, self.minimum, -1.0),
+            Tuple::point(1.0, self.maximum, 1.0),
+        )
     }
 }
 

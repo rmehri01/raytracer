@@ -16,6 +16,7 @@ pub mod io {
 }
 
 pub mod raytracer {
+    pub mod bounds;
     pub mod camera;
     pub mod intersection;
     pub mod material;
