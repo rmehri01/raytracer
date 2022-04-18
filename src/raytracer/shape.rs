@@ -379,9 +379,9 @@ impl SingleKind {
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Triangular {
-    p1: Tuple,
-    p2: Tuple,
-    p3: Tuple,
+    pub p1: Tuple,
+    pub p2: Tuple,
+    pub p3: Tuple,
     e1: Tuple,
     e2: Tuple,
 }
