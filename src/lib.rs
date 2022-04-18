@@ -11,6 +11,10 @@ pub mod graphics {
     pub mod pattern;
 }
 
+pub mod io {
+    pub mod obj;
+}
+
 pub mod raytracer {
     pub mod camera;
     pub mod intersection;

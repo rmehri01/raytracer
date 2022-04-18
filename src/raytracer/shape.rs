@@ -15,7 +15,7 @@ use super::{
 pub struct Shape {
     pub transform: Matrix<4>,
     pub material: Material,
-    kind: ShapeKind,
+    pub kind: ShapeKind,
 }
 
 impl Shape {
@@ -141,7 +141,7 @@ impl Shape {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-enum ShapeKind {
+pub enum ShapeKind {
     /// A single shape.
     Single(SingleKind),
     /// A collection of shapes that are transformed as a unit.
@@ -149,7 +149,7 @@ enum ShapeKind {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-enum SingleKind {
+pub enum SingleKind {
     /// A unit sphere with center at the origin.
     Sphere,
     /// A perfectly flat surface that extends infinitely in x and z.
