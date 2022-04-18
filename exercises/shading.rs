@@ -2,7 +2,10 @@ use im::Vector;
 use raytracer::{
     core::tuple::Tuple,
     graphics::{canvas::Canvas, color::Color},
-    raytracer::{material::Material, point_light::PointLight, ray::Ray, shape::Shape},
+    raytracer::{
+        intersection::Intersection, material::Material, point_light::PointLight, ray::Ray,
+        shape::Shape,
+    },
 };
 
 fn main() {
@@ -41,7 +44,11 @@ fn render_shaded_sphere(path: &str) {
 
             if let Some(hit) = xs.hit() {
                 let point = r.position(hit.t);
-                let normal = sphere.normal_at(&point, &Vector::new());
+                let normal = sphere.normal_at(
+                    &point,
+                    &Intersection::new(0.0, &sphere, Vector::new()),
+                    &Vector::new(),
+                );
                 let eye = -r.direction;
                 let object_point = sphere.world_to_object(&point, &Vector::new());
                 let color = hit.shape.material.lighting(

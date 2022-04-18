@@ -11,12 +11,37 @@ use super::{ray::Ray, shape::Shape};
 pub struct Intersection<'shape> {
     pub t: f64,
     pub shape: &'shape Shape,
+    // TODO: maybe another type for triangle intersection
+    pub u: f64,
+    pub v: f64,
     trail: Vector<Matrix<4>>,
 }
 
 impl<'shape> Intersection<'shape> {
     pub fn new(t: f64, shape: &'shape Shape, trail: Vector<Matrix<4>>) -> Self {
-        Self { t, shape, trail }
+        Self {
+            t,
+            shape,
+            trail,
+            u: 0.0,
+            v: 0.0,
+        }
+    }
+
+    pub fn new_with_uv(
+        t: f64,
+        shape: &'shape Shape,
+        trail: Vector<Matrix<4>>,
+        u: f64,
+        v: f64,
+    ) -> Self {
+        Self {
+            t,
+            shape,
+            trail,
+            u,
+            v,
+        }
     }
 
     pub fn prepare_computations(&self, ray: &Ray, xs: &Intersections<'shape>) -> Computations {
@@ -52,7 +77,7 @@ impl<'shape> Intersection<'shape> {
         let point = ray.position(self.t);
         let eyev = -ray.direction;
 
-        let normalv = self.shape.normal_at(&point, &self.trail);
+        let normalv = self.shape.normal_at(&point, self, &self.trail);
         let inside = normalv.dot(&eyev) < 0.0;
         let normalv = if inside { -normalv } else { normalv };
 
@@ -418,5 +443,23 @@ mod tests {
         let comps = xs.0.iter().next().unwrap().prepare_computations(&r, &xs);
 
         assert_abs_diff_eq!(comps.schlick(), 0.48873, epsilon = Tuple::default_epsilon());
+    }
+
+    #[test]
+    fn prepare_normal_on_smooth_triangle() {
+        let p1 = Tuple::point(0.0, 1.0, 0.0);
+        let p2 = Tuple::point(-1.0, 0.0, 0.0);
+        let p3 = Tuple::point(1.0, 0.0, 0.0);
+        let n1 = Tuple::vector(0.0, 1.0, 0.0);
+        let n2 = Tuple::vector(-1.0, 0.0, 0.0);
+        let n3 = Tuple::vector(1.0, 0.0, 0.0);
+
+        let tri = Shape::new_smooth_triangle(p1, p2, p3, n1, n2, n3);
+        let i = Intersection::new_with_uv(1.0, &tri, Vector::new(), 0.45, 0.25);
+        let r = Ray::new(Tuple::point(-0.2, 0.3, -2.0), Tuple::vector(0.0, 0.0, 1.0));
+        let xs = Intersections::new([i.clone()]);
+
+        let comps = i.prepare_computations(&r, &xs);
+        assert_eq!(comps.normalv, Tuple::vector(-0.5547, 0.83205, 0.0));
     }
 }

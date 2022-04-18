@@ -61,17 +61,30 @@ impl Shape {
     }
 
     pub fn new_triangle(p1: Tuple, p2: Tuple, p3: Tuple) -> Self {
-        let e1 = p2 - p1;
-        let e2 = p3 - p1;
-        let normal = e1.cross(&e2).normalize();
+        let triangular = Triangular::new(p1, p2, p3);
+        let normal = triangular.e1.cross(&triangular.e2).normalize();
         Self::new(ShapeKind::Single(SingleKind::Triangle {
-            p1,
-            p2,
-            p3,
-            e1,
-            e2,
+            triangular,
             normal,
         }))
+    }
+
+    pub fn new_smooth_triangle(
+        p1: Tuple,
+        p2: Tuple,
+        p3: Tuple,
+        n1: Tuple,
+        n2: Tuple,
+        n3: Tuple,
+    ) -> Self {
+        let triangular = Triangular::new(p1, p2, p3);
+
+        Self::new(ShapeKind::SmoothTriangle {
+            triangular,
+            n1,
+            n2,
+            n3,
+        })
     }
 
     pub fn with_transform(mut self, transform: Matrix<4>) -> Self {
@@ -108,6 +121,15 @@ impl Shape {
                     Intersections(BTreeSet::new())
                 }
             }
+            ShapeKind::SmoothTriangle { triangular, .. } => {
+                // TODO: kind of duplicated with single case
+                let (ts, u, v) = triangular.intersect_uv(&local_ray);
+                let intersections = ts
+                    .iter()
+                    .map(|t| Intersection::new_with_uv(*t, self, trail.clone(), u, v));
+
+                Intersections(BTreeSet::from_iter(intersections))
+            }
         }
     }
 
@@ -119,17 +141,27 @@ impl Shape {
                     bounds.transform(&child.transform)
                 })
             }
+            ShapeKind::SmoothTriangle { triangular, .. } => triangular.bounds(),
         }
     }
 
-    pub fn normal_at(&self, point: &Tuple, trail: &Vector<Matrix<4>>) -> Tuple {
-        if let ShapeKind::Single(single) = &self.kind {
-            let local_point = self.world_to_object(point, trail);
-            let local_normal = single.normal_at(&local_point);
+    // TODO: hit only used for smooth triangles
+    pub fn normal_at(&self, point: &Tuple, hit: &Intersection, trail: &Vector<Matrix<4>>) -> Tuple {
+        match &self.kind {
+            ShapeKind::Single(single) => {
+                let local_point = self.world_to_object(point, trail);
+                let local_normal = single.normal_at(&local_point);
 
-            self.normal_to_world(&local_normal, trail)
-        } else {
-            panic!("groups should not have normal vectors");
+                self.normal_to_world(&local_normal, trail)
+            }
+            // TODO: duplicated with Single
+            &ShapeKind::SmoothTriangle { n1, n2, n3, .. } => self.normal_to_world(
+                &(n2 * hit.u + n3 * hit.v + n1 * (1.0 - hit.u - hit.v)),
+                trail,
+            ),
+            ShapeKind::Group(_) => {
+                panic!("groups should not have normal vectors");
+            }
         }
     }
 
@@ -160,8 +192,18 @@ impl Shape {
 pub enum ShapeKind {
     /// A single shape.
     Single(SingleKind),
+    // TODO: might move group and smooth triangle up so that they can return different types
     /// A collection of shapes that are transformed as a unit.
     Group(Vec<Shape>),
+    /// A triangle with vertices at p1, p2, and p3 and a normal at each of
+    /// the vertices. Uses normal interpolation to calculate the normal at
+    /// any point on the triangle.
+    SmoothTriangle {
+        triangular: Triangular,
+        n1: Tuple,
+        n2: Tuple,
+        n3: Tuple,
+    },
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -182,11 +224,7 @@ pub enum SingleKind {
     /// A triangle with vertices at p1, p2, and p3, along with two edge
     /// vectors and a normal vector to optimize intersection calculations.
     Triangle {
-        p1: Tuple,
-        p2: Tuple,
-        p3: Tuple,
-        e1: Tuple,
-        e2: Tuple,
+        triangular: Triangular,
         normal: Tuple,
     },
 }
@@ -199,7 +237,7 @@ impl SingleKind {
             Self::Cube => Self::cube_intersect(ray),
             Self::Cylinder(conic) => Self::cylinder_intersect(ray, conic),
             Self::Cone(conic) => Self::cone_intersect(ray, conic),
-            Self::Triangle { p1, e1, e2, .. } => Self::triangle_intersect(ray, p1, e1, e2),
+            Self::Triangle { triangular, .. } => triangular.intersect(ray),
         }
     }
 
@@ -276,31 +314,6 @@ impl SingleKind {
         conic.intersect(ray, a, b, c, f64::abs)
     }
 
-    fn triangle_intersect(ray: &Ray, p1: &Tuple, e1: &Tuple, e2: &Tuple) -> Vec<f64> {
-        let dir_cross_e2 = ray.direction.cross(e2);
-        let det = e1.dot(&dir_cross_e2);
-
-        let f = 1.0 / det;
-        let p1_to_origin = ray.origin - *p1;
-        let u = f * p1_to_origin.dot(&dir_cross_e2);
-
-        let origin_cross_e1 = p1_to_origin.cross(e1);
-        let v = f * ray.direction.dot(&origin_cross_e1);
-
-        if det.abs().abs_diff_eq(&0.0, Tuple::default_epsilon())
-            || u < 0.0
-            || u > 1.0
-            || v < 0.0
-            || (u + v) > 1.0
-        {
-            Vec::new()
-        } else {
-            let t = f * e2.dot(&origin_cross_e1);
-
-            vec![t]
-        }
-    }
-
     pub fn normal_at(&self, point: &Tuple) -> Tuple {
         match self {
             Self::Sphere => Self::sphere_normal_at(point),
@@ -359,16 +372,68 @@ impl SingleKind {
             Self::Cube => Bounds::new(Tuple::point(-1.0, -1.0, -1.0), Tuple::point(1.0, 1.0, 1.0)),
             Self::Cylinder(conic) => conic.bounds(),
             Self::Cone(conic) => conic.bounds(),
-            Self::Triangle { p1, p2, p3, .. } => {
-                let mut bounds = Bounds::default();
-
-                bounds.add_point(p1);
-                bounds.add_point(p2);
-                bounds.add_point(p3);
-
-                bounds
-            }
+            Self::Triangle { triangular, .. } => triangular.bounds(),
         }
+    }
+}
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub struct Triangular {
+    p1: Tuple,
+    p2: Tuple,
+    p3: Tuple,
+    e1: Tuple,
+    e2: Tuple,
+}
+
+impl Triangular {
+    pub fn new(p1: Tuple, p2: Tuple, p3: Tuple) -> Self {
+        let e1 = p2 - p1;
+        let e2 = p3 - p1;
+
+        Self { p1, p2, p3, e1, e2 }
+    }
+
+    fn intersect(&self, ray: &Ray) -> Vec<f64> {
+        let (ts, _, _) = self.intersect_uv(ray);
+        ts
+    }
+
+    fn intersect_uv(&self, ray: &Ray) -> (Vec<f64>, f64, f64) {
+        let dir_cross_e2 = ray.direction.cross(&self.e2);
+        let det = self.e1.dot(&dir_cross_e2);
+
+        let f = 1.0 / det;
+        let p1_to_origin = ray.origin - self.p1;
+        let u = f * p1_to_origin.dot(&dir_cross_e2);
+
+        let origin_cross_e1 = p1_to_origin.cross(&self.e1);
+        let v = f * ray.direction.dot(&origin_cross_e1);
+
+        let ts = if det.abs().abs_diff_eq(&0.0, Tuple::default_epsilon())
+            || u < 0.0
+            || u > 1.0
+            || v < 0.0
+            || (u + v) > 1.0
+        {
+            Vec::new()
+        } else {
+            let t = f * self.e2.dot(&origin_cross_e1);
+
+            vec![t]
+        };
+
+        (ts, u, v)
+    }
+
+    fn bounds(&self) -> Bounds {
+        let mut bounds = Bounds::default();
+
+        bounds.add_point(&self.p1);
+        bounds.add_point(&self.p2);
+        bounds.add_point(&self.p3);
+
+        bounds
     }
 }
 
@@ -576,20 +641,12 @@ mod tests {
         let p3 = Tuple::point(1.0, 0.0, 0.0);
         let triangle = Shape::new_triangle(p1, p2, p3);
 
-        if let ShapeKind::Single(SingleKind::Triangle {
-            p1: p1_t,
-            p2: p2_t,
-            p3: p3_t,
-            e1,
-            e2,
-            normal,
-        }) = triangle.kind
-        {
-            assert_eq!(p1, p1_t);
-            assert_eq!(p2, p2_t);
-            assert_eq!(p3, p3_t);
-            assert_eq!(e1, Tuple::vector(-1.0, -1.0, 0.0));
-            assert_eq!(e2, Tuple::vector(1.0, -1.0, 0.0));
+        if let ShapeKind::Single(SingleKind::Triangle { triangular, normal }) = triangle.kind {
+            assert_eq!(p1, triangular.p1);
+            assert_eq!(p2, triangular.p2);
+            assert_eq!(p3, triangular.p3);
+            assert_eq!(triangular.e1, Tuple::vector(-1.0, -1.0, 0.0));
+            assert_eq!(triangular.e2, Tuple::vector(1.0, -1.0, 0.0));
             assert_eq!(normal, Tuple::vector(0.0, 0.0, 1.0));
         } else {
             panic!("expected a triangle");
@@ -1158,9 +1215,32 @@ mod tests {
     }
 
     #[test]
+    fn intersection_with_smooth_triangle_stores_uv() {
+        let p1 = Tuple::point(0.0, 1.0, 0.0);
+        let p2 = Tuple::point(-1.0, 0.0, 0.0);
+        let p3 = Tuple::point(1.0, 0.0, 0.0);
+        let n1 = Tuple::vector(0.0, 1.0, 0.0);
+        let n2 = Tuple::vector(-1.0, 0.0, 0.0);
+        let n3 = Tuple::vector(1.0, 0.0, 0.0);
+
+        let tri = Shape::new_smooth_triangle(p1, p2, p3, n1, n2, n3);
+        let r = Ray::new(Tuple::point(-0.2, 0.3, -2.0), Tuple::vector(0.0, 0.0, 1.0));
+        let intersections = tri.intersect(&r, Vector::new());
+        let xs = intersections.0.iter().collect::<Vec<_>>();
+
+        assert_eq!(xs.len(), 1);
+        assert_abs_diff_eq!(xs[0].u, 0.45);
+        assert_abs_diff_eq!(xs[0].v, 0.25);
+    }
+
+    #[test]
     fn normal_on_translated_sphere() {
         let shape = Shape::new_sphere().with_transform(Matrix::translation(0.0, 1.0, 0.0));
-        let n = shape.normal_at(&Tuple::point(0.0, 1.70711, -FRAC_1_SQRT_2), &Vector::new());
+        let n = shape.normal_at(
+            &Tuple::point(0.0, 1.70711, -FRAC_1_SQRT_2),
+            &Intersection::new(0.0, &shape, Vector::new()),
+            &Vector::new(),
+        );
 
         assert_abs_diff_eq!(n, Tuple::vector(0.0, FRAC_1_SQRT_2, -FRAC_1_SQRT_2));
     }
@@ -1171,6 +1251,7 @@ mod tests {
             .with_transform(Matrix::scaling(1.0, 0.5, 1.0) * Matrix::rotation_z(FRAC_PI_4));
         let n = shape.normal_at(
             &Tuple::point(0.0, 2.0_f64.sqrt() / 2.0, -(2.0_f64.sqrt()) / 2.0),
+            &Intersection::new(0.0, &shape, Vector::new()),
             &Vector::new(),
         );
 
@@ -1331,6 +1412,7 @@ mod tests {
 
         let n = s.normal_at(
             &Tuple::point(1.7321, 1.1547, -5.5774),
+            &Intersection::new(0.0, &s, Vector::new()),
             &vector![g2.transform, g1.transform],
         );
 
@@ -1346,17 +1428,45 @@ mod tests {
         );
 
         assert_eq!(
-            t.normal_at(&Tuple::point(0.0, 0.5, 0.0), &Vector::new()),
+            t.normal_at(
+                &Tuple::point(0.0, 0.5, 0.0),
+                &Intersection::new(0.0, &t, Vector::new()),
+                &Vector::new()
+            ),
             Tuple::vector(0.0, 0.0, 1.0)
         );
         assert_eq!(
-            t.normal_at(&Tuple::point(-0.5, 0.75, 0.0), &Vector::new()),
+            t.normal_at(
+                &Tuple::point(-0.5, 0.75, 0.0),
+                &Intersection::new(0.0, &t, Vector::new()),
+                &Vector::new()
+            ),
             Tuple::vector(0.0, 0.0, 1.0)
         );
         assert_eq!(
-            t.normal_at(&Tuple::point(0.5, 0.25, 0.0), &Vector::new()),
+            t.normal_at(
+                &Tuple::point(0.5, 0.25, 0.0),
+                &Intersection::new(0.0, &t, Vector::new()),
+                &Vector::new()
+            ),
             Tuple::vector(0.0, 0.0, 1.0)
         );
+    }
+
+    #[test]
+    fn smooth_triangle_uses_uv_to_interpolate_normal() {
+        let p1 = Tuple::point(0.0, 1.0, 0.0);
+        let p2 = Tuple::point(-1.0, 0.0, 0.0);
+        let p3 = Tuple::point(1.0, 0.0, 0.0);
+        let n1 = Tuple::vector(0.0, 1.0, 0.0);
+        let n2 = Tuple::vector(-1.0, 0.0, 0.0);
+        let n3 = Tuple::vector(1.0, 0.0, 0.0);
+
+        let tri = Shape::new_smooth_triangle(p1, p2, p3, n1, n2, n3);
+        let i = Intersection::new_with_uv(1.0, &tri, Vector::new(), 0.45, 0.25);
+        let n = tri.normal_at(&Tuple::point(0.0, 0.0, 0.0), &i, &Vector::new());
+
+        assert_eq!(n, Tuple::vector(-0.5547, 0.83205, 0.0));
     }
 
     #[test]
