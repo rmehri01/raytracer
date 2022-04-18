@@ -6,6 +6,7 @@ edition = "2021"
 [profile.release]
 lto = true
 panic = "abort"
+# debug = true
 
 [dependencies]
 approx = "0.5.1"
@@ -39,4 +40,8 @@ path = "exercises/scene.rs"
 [[bin]]
 name = "shading"
 path = "exercises/shading.rs"
+
+[[bin]]
+name = "teapot"
+path = "exercises/teapot.rs"
 
