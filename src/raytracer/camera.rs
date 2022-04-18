@@ -9,6 +9,7 @@ pub struct Camera {
     hsize: usize,
     vsize: usize,
     transform: Matrix<4>,
+    transform_inversed: Matrix<4>,
     half_width: f64,
     half_height: f64,
     pixel_size: f64,
@@ -34,6 +35,7 @@ impl Camera {
             hsize,
             vsize,
             transform: Matrix::identity(),
+            transform_inversed: Matrix::identity(),
             half_width,
             half_height,
             pixel_size: (half_width * 2.0) / hsize as f64,
@@ -42,6 +44,7 @@ impl Camera {
 
     pub fn with_transform(mut self, transform: Matrix<4>) -> Self {
         self.transform = transform;
+        self.transform_inversed = transform.inverse();
         self
     }
 
@@ -66,8 +69,8 @@ impl Camera {
         let world_x = self.half_width - x_offset;
         let world_y = self.half_height - y_offset;
 
-        let pixel = self.transform.inverse() * Tuple::point(world_x, world_y, -1.0);
-        let origin = self.transform.inverse() * Tuple::point(0.0, 0.0, 0.0);
+        let pixel = self.transform_inversed * Tuple::point(world_x, world_y, -1.0);
+        let origin = self.transform_inversed * Tuple::point(0.0, 0.0, 0.0);
         let direction = (pixel - origin).normalize();
 
         Ray::new(origin, direction)
@@ -129,9 +132,8 @@ mod tests {
 
     #[test]
     fn ray_when_camera_is_transformed() {
-        let mut c = Camera::new(201, 101, FRAC_PI_2);
-        c.transform = Matrix::rotation_y(FRAC_PI_4) * Matrix::translation(0.0, -2.0, 5.0);
-
+        let c = Camera::new(201, 101, FRAC_PI_2)
+            .with_transform(Matrix::rotation_y(FRAC_PI_4) * Matrix::translation(0.0, -2.0, 5.0));
         let r = c.ray_for_pixel(100, 50);
 
         assert_abs_diff_eq!(r.origin, Tuple::point(0.0, 2.0, -5.0));
@@ -144,14 +146,12 @@ mod tests {
     #[test]
     fn render_world_with_camera() {
         let w = World::default();
-        let mut c = Camera::new(11, 11, FRAC_PI_2);
 
         let from = Tuple::point(0.0, 0.0, -5.0);
         let to = Tuple::point(0.0, 0.0, 0.0);
         let up = Tuple::vector(0.0, 1.0, 0.0);
 
-        c.transform = Matrix::view_transform(from, to, up);
-
+        let c = Camera::new(11, 11, FRAC_PI_2).with_transform(Matrix::view_transform(from, to, up));
         let image = c.render(w);
 
         assert_abs_diff_eq!(image.pixel_at(5, 5), Color::new(0.38066, 0.47583, 0.2855));

@@ -5,37 +5,48 @@ use super::color::Color;
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Pattern {
     transform: Matrix<4>,
+    transform_inversed: Matrix<4>,
     kind: PatternKind,
 }
 
 impl Pattern {
-    fn new(transform: Matrix<4>, kind: PatternKind) -> Self {
-        Self { transform, kind }
+    fn new(kind: PatternKind) -> Self {
+        Self {
+            transform: Matrix::identity(),
+            transform_inversed: Matrix::identity(),
+            kind,
+        }
     }
 
     pub fn new_stripe(a: Color, b: Color) -> Self {
-        Self::new(Matrix::identity(), PatternKind::Stripe { a, b })
+        Self::new(PatternKind::Stripe { a, b })
     }
 
     pub fn new_gradient(start: Color, end: Color) -> Self {
-        Self::new(Matrix::identity(), PatternKind::Gradient { start, end })
+        Self::new(PatternKind::Gradient { start, end })
     }
 
     pub fn new_ring(a: Color, b: Color) -> Self {
-        Self::new(Matrix::identity(), PatternKind::Ring { a, b })
+        Self::new(PatternKind::Ring { a, b })
     }
 
     pub fn new_checker(a: Color, b: Color) -> Self {
-        Self::new(Matrix::identity(), PatternKind::Checker { a, b })
+        Self::new(PatternKind::Checker { a, b })
     }
 
     #[cfg(test)]
     pub fn new_test() -> Self {
-        Self::new(Matrix::identity(), PatternKind::Test)
+        Self::new(PatternKind::Test)
+    }
+
+    pub fn with_transform(mut self, transform: Matrix<4>) -> Self {
+        self.transform = transform;
+        self.transform_inversed = transform.inverse();
+        self
     }
 
     pub fn pattern_at_object_point(&self, object_point: &Tuple) -> Color {
-        let pattern_point = self.transform.inverse() * *object_point;
+        let pattern_point = self.transform_inversed * *object_point;
 
         self.kind.pattern_at(&pattern_point)
     }
@@ -136,7 +147,8 @@ mod tests {
     #[test]
     fn pattern_with_pattern_transformation() {
         let shape = Shape::new_sphere();
-        let pattern = Pattern::new(Matrix::scaling(2.0, 2.0, 2.0), PatternKind::Test);
+        let pattern =
+            Pattern::new(PatternKind::Test).with_transform(Matrix::scaling(2.0, 2.0, 2.0));
 
         let object_point = shape.world_to_object(&Tuple::point(2.0, 3.0, 4.0), &Vector::new());
 
@@ -149,7 +161,8 @@ mod tests {
     #[test]
     fn pattern_with_both_transformations() {
         let shape = Shape::new_sphere().with_transform(Matrix::scaling(2.0, 2.0, 2.0));
-        let pattern = Pattern::new(Matrix::translation(0.5, 1.0, 1.5), PatternKind::Test);
+        let pattern =
+            Pattern::new(PatternKind::Test).with_transform(Matrix::translation(0.5, 1.0, 1.5));
 
         let object_point = shape.world_to_object(&Tuple::point(2.5, 3.0, 3.5), &Vector::new());
 

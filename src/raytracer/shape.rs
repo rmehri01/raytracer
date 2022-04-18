@@ -15,6 +15,7 @@ use super::{
 #[derive(Debug, PartialEq, Clone)]
 pub struct Shape {
     pub transform: Matrix<4>,
+    transform_inversed: Matrix<4>,
     pub material: Material,
     pub kind: ShapeKind,
 }
@@ -23,6 +24,7 @@ impl Shape {
     fn new(kind: ShapeKind) -> Self {
         Self {
             transform: Matrix::identity(),
+            transform_inversed: Matrix::identity(),
             material: Material::default(),
             kind,
         }
@@ -89,6 +91,7 @@ impl Shape {
 
     pub fn with_transform(mut self, transform: Matrix<4>) -> Self {
         self.transform = transform;
+        self.transform_inversed = transform.inverse();
         self
     }
 
@@ -98,7 +101,7 @@ impl Shape {
     }
 
     pub fn intersect(&self, ray: &Ray, mut trail: Vector<Matrix<4>>) -> Intersections {
-        let local_ray = ray.transform(&self.transform.inverse());
+        let local_ray = ray.transform(&self.transform_inversed);
 
         match &self.kind {
             ShapeKind::Single(single) => {
@@ -172,11 +175,11 @@ impl Shape {
             .rev()
             .fold(*world_point, |acc, mat| mat.inverse() * acc);
 
-        self.transform.inverse() * trail_point
+        self.transform_inversed * trail_point
     }
 
     fn normal_to_world(&self, normal: &Tuple, trail: &Vector<Matrix<4>>) -> Tuple {
-        let mut normal = self.transform.inverse().transpose() * *normal;
+        let mut normal = self.transform_inversed.transpose() * *normal;
         normal.w = 0.0;
         let normal = normal.normalize();
 
