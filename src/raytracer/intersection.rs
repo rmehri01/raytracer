@@ -142,6 +142,7 @@ impl<'shape> UlpsEq for Intersection<'shape> {
 }
 
 // TODO: need to keep duplicates?
+#[derive(Debug, Clone)]
 pub struct Intersections<'shape>(pub BTreeSet<Intersection<'shape>>);
 
 impl<'shape> Intersections<'shape> {

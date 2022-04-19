@@ -89,6 +89,14 @@ impl Shape {
         })
     }
 
+    pub fn new_csg(operation: Operation, left: Self, right: Self) -> Self {
+        Self::new(ShapeKind::CSG {
+            operation,
+            left: Box::new(left),
+            right: Box::new(right),
+        })
+    }
+
     pub fn with_transform(mut self, transform: Matrix<4>) -> Self {
         self.transform = transform;
         self.transform_inversed = transform.inverse();
@@ -133,6 +141,18 @@ impl Shape {
 
                 Intersections(BTreeSet::from_iter(intersections))
             }
+            ShapeKind::CSG {
+                operation,
+                left,
+                right,
+            } => {
+                // TODO: could be cleaner?
+                let mut left_intersections = left.intersect(&local_ray, trail.clone()).0;
+                let mut right_intersections = right.intersect(&local_ray, trail.clone()).0;
+                left_intersections.append(&mut right_intersections);
+
+                operation.filter_intersections(left, Intersections(left_intersections))
+            }
         }
     }
 
@@ -145,6 +165,9 @@ impl Shape {
                 })
             }
             ShapeKind::SmoothTriangle { triangular, .. } => triangular.bounds(),
+            ShapeKind::CSG { left, right, .. } => Bounds::default()
+                .transform(&left.transform)
+                .transform(&right.transform),
         }
     }
 
@@ -162,9 +185,8 @@ impl Shape {
                 &(n2 * hit.u + n3 * hit.v + n1 * (1.0 - hit.u - hit.v)),
                 trail,
             ),
-            ShapeKind::Group(_) => {
-                panic!("groups should not have normal vectors");
-            }
+            ShapeKind::Group(_) => panic!("groups should not have normal vectors"),
+            ShapeKind::CSG { .. } => panic!("csg objects should not have normal vectors"),
         }
     }
 
@@ -189,6 +211,14 @@ impl Shape {
             normal.normalize()
         })
     }
+
+    fn includes(&self, other: &Self) -> bool {
+        match &self.kind {
+            ShapeKind::Group(children) => children.iter().any(|child| child.includes(other)),
+            ShapeKind::CSG { left, right, .. } => left.includes(other) || right.includes(other),
+            _ => self == other,
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -207,6 +237,67 @@ pub enum ShapeKind {
         n2: Tuple,
         n3: Tuple,
     },
+    /// A constructive solid geometry shape that is composed of an operation
+    /// and two operand shapes.
+    // TODO: subtype of group?
+    CSG {
+        operation: Operation,
+        // TODO: reference instead?
+        left: Box<Shape>,
+        right: Box<Shape>,
+    },
+}
+
+/// The possible CSG operations.
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub enum Operation {
+    Union,
+    Intersection,
+    Difference,
+}
+
+impl Operation {
+    // TODO: use filter instead of mutation
+    fn filter_intersections<'shape>(
+        &self,
+        left: &Shape,
+        intersections: Intersections<'shape>,
+    ) -> Intersections<'shape> {
+        let mut in_l = false;
+        let mut in_r = false;
+
+        let mut result = BTreeSet::new();
+
+        for i in intersections.0 {
+            // TODO: rename shape to object
+            let l_hit = left.includes(i.shape);
+
+            if self.intersection_allowed(l_hit, in_l, in_r) {
+                result.insert(i);
+            }
+
+            if l_hit {
+                in_l = !in_l;
+            } else {
+                in_r = !in_r;
+            }
+        }
+
+        Intersections(result)
+    }
+
+    /// Determines which intersections should be preserved.
+    ///
+    /// * `l_hit`: True if the left shape was hit, and false if the right shape was hit.
+    /// * `in_l`: True if the hit occurs inside the left shape.
+    /// * `in_r`: True if the hit occurs inside the right shape.
+    fn intersection_allowed(&self, l_hit: bool, in_l: bool, in_r: bool) -> bool {
+        match self {
+            Self::Union => (l_hit && !in_r) || (!l_hit && !in_l),
+            Self::Intersection => (l_hit && in_r) || (!l_hit && in_l),
+            Self::Difference => (l_hit && !in_r) || (!l_hit && in_l),
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -1503,5 +1594,96 @@ mod tests {
         );
 
         assert_eq!(n, Tuple::vector(0.2857, 0.4286, -0.8571));
+    }
+
+    #[test]
+    fn evaluate_rule_for_csg_operation() {
+        let scenarios = [
+            (Operation::Union, true, true, true, false),
+            (Operation::Union, true, true, false, true),
+            (Operation::Union, true, false, true, false),
+            (Operation::Union, true, false, false, true),
+            (Operation::Union, false, true, true, false),
+            (Operation::Union, false, true, false, false),
+            (Operation::Union, false, false, true, true),
+            (Operation::Union, false, false, false, true),
+            (Operation::Intersection, true, true, true, true),
+            (Operation::Intersection, true, true, false, false),
+            (Operation::Intersection, true, false, true, true),
+            (Operation::Intersection, true, false, false, false),
+            (Operation::Intersection, false, true, true, true),
+            (Operation::Intersection, false, true, false, true),
+            (Operation::Intersection, false, false, true, false),
+            (Operation::Intersection, false, false, false, false),
+            (Operation::Difference, true, true, true, false),
+            (Operation::Difference, true, true, false, true),
+            (Operation::Difference, true, false, true, false),
+            (Operation::Difference, true, false, false, true),
+            (Operation::Difference, false, true, true, true),
+            (Operation::Difference, false, true, false, true),
+            (Operation::Difference, false, false, true, false),
+            (Operation::Difference, false, false, false, false),
+        ];
+
+        for (op, l_hit, in_l, in_r, result) in scenarios {
+            assert_eq!(op.intersection_allowed(l_hit, in_l, in_r), result);
+        }
+    }
+
+    #[test]
+    fn filtering_intersections() {
+        let scenarios = [
+            (Operation::Union, 0, 3),
+            (Operation::Intersection, 1, 2),
+            (Operation::Difference, 0, 1),
+        ];
+
+        for (operation, x0, x1) in scenarios {
+            let s1 = Shape::new_sphere();
+            let s2 = Shape::new_cube();
+            let xs = Intersections::new([
+                Intersection::new(1.0, &s1, Vector::new()),
+                Intersection::new(2.0, &s2, Vector::new()),
+                Intersection::new(3.0, &s1, Vector::new()),
+                Intersection::new(4.0, &s2, Vector::new()),
+            ]);
+
+            let result = operation
+                .filter_intersections(&s1, xs.clone())
+                .0
+                .iter()
+                .map(|i| i.t)
+                .collect::<Vec<_>>();
+
+            assert_eq!(result.len(), 2);
+            assert_eq!(result[0], xs.0.iter().nth(x0).unwrap().t);
+            assert_eq!(result[1], xs.0.iter().nth(x1).unwrap().t);
+        }
+    }
+
+    #[test]
+    fn ray_misses_csg_object() {
+        let c = Shape::new_csg(Operation::Union, Shape::new_sphere(), Shape::new_cube());
+        let r = Ray::new(Tuple::point(0.0, 2.0, -5.0), Tuple::vector(0.0, 0.0, 1.0));
+        let xs = c.intersect(&r, Vector::new());
+
+        assert!(xs.0.is_empty());
+    }
+
+    #[test]
+    fn ray_hits_csg_object() {
+        let s1 = Shape::new_sphere();
+        let s2 = Shape::new_sphere().with_transform(Matrix::translation(0.0, 0.0, 0.5));
+
+        let c = Shape::new_csg(Operation::Union, s1.clone(), s2.clone());
+        let r = Ray::new(Tuple::point(0.0, 0.0, -5.0), Tuple::vector(0.0, 0.0, 1.0));
+        let intersections = c.intersect(&r, Vector::new());
+        let xs = intersections.0.iter().collect::<Vec<_>>();
+
+        assert_eq!(xs.len(), 2);
+        assert_eq!(xs[0].t, 4.0);
+        assert_eq!(*xs[0].shape, s1);
+        assert_eq!(xs[1].t, 6.5);
+        assert_eq!(*xs[1].shape, s2);
     }
 }
