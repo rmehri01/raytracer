@@ -102,7 +102,7 @@ impl PatternKind {
     }
 
     fn ring_at(point: &Tuple, a: Color, b: Color) -> Color {
-        let distance = (point.x * point.x + point.z * point.z).sqrt();
+        let distance = (point.x.powi(2) + point.z.powi(2)).sqrt();
 
         if distance.floor() as i32 % 2 == 0 {
             a

@@ -269,8 +269,7 @@ impl Operation {
         let mut result = BTreeSet::new();
 
         for i in intersections.0 {
-            // TODO: rename shape to object
-            let l_hit = left.includes(i.shape);
+            let l_hit = left.includes(i.object);
 
             if self.intersection_allowed(l_hit, in_l, in_r) {
                 result.insert(i);
@@ -342,7 +341,7 @@ impl SingleKind {
         let b = 2.0 * sphere_to_ray.dot(&ray.direction);
         let c = sphere_to_ray.dot(&sphere_to_ray) - 1.0;
 
-        let discriminant = b * b - 4.0 * a * c;
+        let discriminant = b.powi(2) - 4.0 * a * c;
 
         if discriminant < 0.0 {
             Vec::new()
@@ -881,7 +880,7 @@ mod tests {
             .intersect(&r, Vector::new())
             .0
             .iter()
-            .map(|i| i.shape)
+            .map(|i| i.object)
             .collect::<Vec<_>>();
 
         assert_eq!(shapes[0], &shape);
@@ -1211,7 +1210,7 @@ mod tests {
             .intersect(&r, Vector::new())
             .0
             .iter()
-            .map(|i| i.shape)
+            .map(|i| i.object)
             .collect::<Vec<_>>();
 
         assert_eq!(xs.len(), 4);
@@ -1682,8 +1681,8 @@ mod tests {
 
         assert_eq!(xs.len(), 2);
         assert_eq!(xs[0].t, 4.0);
-        assert_eq!(*xs[0].shape, s1);
+        assert_eq!(*xs[0].object, s1);
         assert_eq!(xs[1].t, 6.5);
-        assert_eq!(*xs[1].shape, s2);
+        assert_eq!(*xs[1].object, s2);
     }
 }

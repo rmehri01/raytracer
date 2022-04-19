@@ -10,7 +10,7 @@ use super::{ray::Ray, shape::Shape};
 #[derive(Debug, Clone)]
 pub struct Intersection<'shape> {
     pub t: f64,
-    pub shape: &'shape Shape,
+    pub object: &'shape Shape,
     // TODO: maybe another type for triangle intersection
     pub u: f64,
     pub v: f64,
@@ -18,10 +18,10 @@ pub struct Intersection<'shape> {
 }
 
 impl<'shape> Intersection<'shape> {
-    pub fn new(t: f64, shape: &'shape Shape, trail: Vector<Matrix<4>>) -> Self {
+    pub fn new(t: f64, object: &'shape Shape, trail: Vector<Matrix<4>>) -> Self {
         Self {
             t,
-            shape,
+            object,
             trail,
             u: 0.0,
             v: 0.0,
@@ -30,14 +30,14 @@ impl<'shape> Intersection<'shape> {
 
     pub fn new_with_uv(
         t: f64,
-        shape: &'shape Shape,
+        object: &'shape Shape,
         trail: Vector<Matrix<4>>,
         u: f64,
         v: f64,
     ) -> Self {
         Self {
             t,
-            shape,
+            object,
             trail,
             u,
             v,
@@ -59,11 +59,11 @@ impl<'shape> Intersection<'shape> {
                     .map(|shape| shape.material.refractive_index);
             }
 
-            match containers.iter().position(|shape| *shape == i.shape) {
+            match containers.iter().position(|shape| *shape == i.object) {
                 Some(shape_idx) => {
                     containers.remove(shape_idx);
                 }
-                None => containers.push(i.shape),
+                None => containers.push(i.object),
             }
 
             if i == self {
@@ -75,22 +75,22 @@ impl<'shape> Intersection<'shape> {
         }
 
         let point = ray.position(self.t);
-        let eyev = -ray.direction;
+        let eye_v = -ray.direction;
 
-        let normalv = self.shape.normal_at(&point, self, &self.trail);
-        let inside = normalv.dot(&eyev) < 0.0;
-        let normalv = if inside { -normalv } else { normalv };
+        let normal_v = self.object.normal_at(&point, self, &self.trail);
+        let inside = normal_v.dot(&eye_v) < 0.0;
+        let normal_v = if inside { -normal_v } else { normal_v };
 
         Computations {
             t: self.t,
-            shape: self.shape,
+            shape: self.object,
             trail: self.trail.clone(),
             point,
-            over_point: point + normalv * Tuple::default_epsilon(),
-            under_point: point - normalv * Tuple::default_epsilon(),
-            eyev,
-            normalv,
-            reflectv: ray.direction.reflect(&normalv),
+            over_point: point + normal_v * Tuple::default_epsilon(),
+            under_point: point - normal_v * Tuple::default_epsilon(),
+            eye_v,
+            normal_v,
+            reflect_v: ray.direction.reflect(&normal_v),
             inside,
             n1: n1.unwrap_or(1.0),
             n2: n2.unwrap_or(1.0),
@@ -163,9 +163,9 @@ pub struct Computations<'shape> {
     pub point: Tuple,
     pub over_point: Tuple,
     pub under_point: Tuple,
-    pub eyev: Tuple,
-    pub normalv: Tuple,
-    pub reflectv: Tuple,
+    pub eye_v: Tuple,
+    pub normal_v: Tuple,
+    pub reflect_v: Tuple,
     pub inside: bool,
     pub n1: f64,
     pub n2: f64,
@@ -176,7 +176,7 @@ impl Computations<'_> {
     /// Computes the reflectance, which is a number between 0 and 1
     /// representing the fraction of light reflected.
     pub fn schlick(&self) -> f64 {
-        let mut cos = self.eyev.dot(&self.normalv);
+        let mut cos = self.eye_v.dot(&self.normal_v);
 
         if self.n1 > self.n2 {
             let n = self.n1 / self.n2;
@@ -210,7 +210,7 @@ mod tests {
         let intersection = Intersection::new(3.5, &shape, Vector::new());
 
         assert_relative_eq!(intersection.t, 3.5);
-        assert_eq!(intersection.shape, &shape);
+        assert_eq!(intersection.object, &shape);
     }
 
     #[test]
@@ -272,10 +272,10 @@ mod tests {
         let comps = i.prepare_computations(&r, &Intersections::new([i.clone()]));
 
         assert_abs_diff_eq!(comps.t, i.t);
-        assert_eq!(comps.shape, i.shape);
+        assert_eq!(comps.shape, i.object);
         assert_abs_diff_eq!(comps.point, Tuple::point(0.0, 0.0, -1.0));
-        assert_abs_diff_eq!(comps.eyev, Tuple::vector(0.0, 0.0, -1.0));
-        assert_abs_diff_eq!(comps.normalv, Tuple::vector(0.0, 0.0, -1.0));
+        assert_abs_diff_eq!(comps.eye_v, Tuple::vector(0.0, 0.0, -1.0));
+        assert_abs_diff_eq!(comps.normal_v, Tuple::vector(0.0, 0.0, -1.0));
     }
 
     #[test]
@@ -290,7 +290,7 @@ mod tests {
         let comps = i.prepare_computations(&r, &Intersections::new([i.clone()]));
 
         assert_abs_diff_eq!(
-            comps.reflectv,
+            comps.reflect_v,
             Tuple::vector(0.0, 2.0_f64.sqrt() / 2.0, 2.0_f64.sqrt() / 2.0)
         );
     }
@@ -315,9 +315,9 @@ mod tests {
         let comps = i.prepare_computations(&r, &Intersections::new([i.clone()]));
 
         assert_abs_diff_eq!(comps.point, Tuple::point(0.0, 0.0, 1.0));
-        assert_abs_diff_eq!(comps.eyev, Tuple::vector(0.0, 0.0, -1.0));
+        assert_abs_diff_eq!(comps.eye_v, Tuple::vector(0.0, 0.0, -1.0));
         assert!(comps.inside);
-        assert_abs_diff_eq!(comps.normalv, Tuple::vector(0.0, 0.0, -1.0));
+        assert_abs_diff_eq!(comps.normal_v, Tuple::vector(0.0, 0.0, -1.0));
     }
 
     #[test]
@@ -461,6 +461,6 @@ mod tests {
         let xs = Intersections::new([i.clone()]);
 
         let comps = i.prepare_computations(&r, &xs);
-        assert_eq!(comps.normalv, Tuple::vector(-0.5547, 0.83205, 0.0));
+        assert_eq!(comps.normal_v, Tuple::vector(-0.5547, 0.83205, 0.0));
     }
 }

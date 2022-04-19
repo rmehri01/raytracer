@@ -58,8 +58,8 @@ impl World {
             &comps.shape.world_to_object(&comps.over_point, &comps.trail),
             &comps.over_point,
             &self.light.expect("world should have light"),
-            &comps.eyev,
-            &comps.normalv,
+            &comps.eye_v,
+            &comps.normal_v,
             is_shadowed,
         );
 
@@ -93,7 +93,7 @@ impl World {
         if comps.shape.material.reflective == 0.0 || remaining_recursions == 0 {
             Color::BLACK
         } else {
-            let reflect_ray = Ray::new(comps.over_point, comps.reflectv);
+            let reflect_ray = Ray::new(comps.over_point, comps.reflect_v);
             let color = self.color_at(&reflect_ray, remaining_recursions - 1);
 
             color * comps.shape.material.reflective
@@ -102,14 +102,14 @@ impl World {
 
     fn refracted_color(&self, comps: &Computations, remaining_recursions: u8) -> Color {
         let n_ratio = comps.n1 / comps.n2;
-        let cos_i = comps.eyev.dot(&comps.normalv);
+        let cos_i = comps.eye_v.dot(&comps.normal_v);
         let sin2_t = n_ratio.powi(2) * (1.0 - cos_i.powi(2));
 
         if comps.shape.material.transparency == 0.0 || remaining_recursions == 0 || sin2_t > 1.0 {
             Color::BLACK
         } else {
             let cos_t = (1.0 - sin2_t).sqrt();
-            let direction = comps.normalv * (n_ratio * cos_i - cos_t) - comps.eyev * n_ratio;
+            let direction = comps.normal_v * (n_ratio * cos_i - cos_t) - comps.eye_v * n_ratio;
             let refract_ray = Ray::new(comps.under_point, direction);
 
             self.color_at(&refract_ray, remaining_recursions - 1)
