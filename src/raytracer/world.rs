@@ -47,10 +47,9 @@ impl World {
         let intersects = self
             .shapes
             .iter()
-            .flat_map(|shape| shape.intersect(ray, Vector::new()).0)
-            .collect::<BTreeSet<_>>();
+            .flat_map(|shape| shape.intersect(ray, Vector::new()).0);
 
-        Intersections(intersects)
+        Intersections(BTreeSet::from_iter(intersects))
     }
 
     fn shade_hit(&self, comps: Computations, remaining_recursions: u8) -> Color {
