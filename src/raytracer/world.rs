@@ -1,5 +1,3 @@
-use std::collections::BTreeSet;
-
 use im::Vector;
 
 use crate::{
@@ -37,7 +35,7 @@ impl World {
         match hit {
             Some(hit) => {
                 let comps = hit.prepare_computations(ray, &intersections);
-                self.shade_hit(comps, remaining_recursions)
+                self.shade_hit(&comps, remaining_recursions)
             }
             None => Color::BLACK,
         }
@@ -47,12 +45,13 @@ impl World {
         let intersects = self
             .shapes
             .iter()
-            .flat_map(|shape| shape.intersect(ray, Vector::new()).0);
+            .flat_map(|shape| shape.intersect(ray, Vector::new()).0)
+            .collect();
 
-        Intersections(BTreeSet::from_iter(intersects))
+        Intersections(intersects)
     }
 
-    fn shade_hit(&self, comps: Computations, remaining_recursions: u8) -> Color {
+    fn shade_hit(&self, comps: &Computations, remaining_recursions: u8) -> Color {
         let is_shadowed = self.is_shadowed(&comps.over_point);
         let surface = comps.shape.material.lighting(
             &comps.shape.world_to_object(&comps.over_point, &comps.trail),
@@ -63,8 +62,8 @@ impl World {
             is_shadowed,
         );
 
-        let reflected = self.reflected_color(&comps, remaining_recursions);
-        let refracted = self.refracted_color(&comps, remaining_recursions);
+        let reflected = self.reflected_color(comps, remaining_recursions);
+        let refracted = self.refracted_color(comps, remaining_recursions);
 
         let material = comps.shape.material;
         if material.reflective > 0.0 && material.transparency > 0.0 {
@@ -83,10 +82,7 @@ impl World {
         let r = Ray::new(*point, direction);
         let intersections = self.intersect(&r);
 
-        intersections
-            .hit()
-            .map(|hit| hit.t < distance)
-            .unwrap_or(false)
+        intersections.hit().map_or(false, |hit| hit.t < distance)
     }
 
     fn reflected_color(&self, comps: &Computations, remaining_recursions: u8) -> Color {
@@ -196,7 +192,7 @@ mod tests {
         let i = Intersection::new(4.0, shape, Vector::new());
         let comps = i.prepare_computations(&r, &Intersections::new([i.clone()]));
 
-        let color = world.shade_hit(comps, 5);
+        let color = world.shade_hit(&comps, 5);
 
         assert_abs_diff_eq!(color, Color::new(0.38066, 0.47583, 0.2855));
     }
@@ -213,7 +209,7 @@ mod tests {
         let i = Intersection::new(0.5, shape, Vector::new());
         let comps = i.prepare_computations(&r, &Intersections::new([i.clone()]));
 
-        let color = world.shade_hit(comps, 5);
+        let color = world.shade_hit(&comps, 5);
 
         assert_abs_diff_eq!(color, Color::new(0.90498, 0.90498, 0.90498));
     }
@@ -297,7 +293,7 @@ mod tests {
         let i = Intersection::new(4.0, &s2, Vector::new());
         let comps = i.prepare_computations(&r, &Intersections::new([i.clone()]));
 
-        assert_abs_diff_eq!(w.shade_hit(comps, 5), Color::new(0.1, 0.1, 0.1));
+        assert_abs_diff_eq!(w.shade_hit(&comps, 5), Color::new(0.1, 0.1, 0.1));
     }
 
     #[test]
@@ -359,7 +355,10 @@ mod tests {
 
         let comps = i.prepare_computations(&r, &Intersections::new([i.clone()]));
 
-        assert_abs_diff_eq!(w.shade_hit(comps, 5), Color::new(0.87677, 0.92436, 0.82918));
+        assert_abs_diff_eq!(
+            w.shade_hit(&comps, 5),
+            Color::new(0.87677, 0.92436, 0.82918)
+        );
     }
 
     #[test]
@@ -521,7 +520,10 @@ mod tests {
 
         let comps = xs.0.iter().next().unwrap().prepare_computations(&r, &xs);
 
-        assert_eq!(w.shade_hit(comps, 5), Color::new(0.93642, 0.68642, 0.68642));
+        assert_eq!(
+            w.shade_hit(&comps, 5),
+            Color::new(0.93642, 0.68642, 0.68642)
+        );
     }
 
     #[test]
@@ -555,6 +557,9 @@ mod tests {
 
         let comps = xs.0.iter().next().unwrap().prepare_computations(&r, &xs);
 
-        assert_eq!(w.shade_hit(comps, 5), Color::new(0.93391, 0.69643, 0.69243));
+        assert_eq!(
+            w.shade_hit(&comps, 5),
+            Color::new(0.93391, 0.69643, 0.69243)
+        );
     }
 }

@@ -6,8 +6,8 @@ use crate::{
 use super::{ray::Ray, world::World};
 
 pub struct Camera {
-    hsize: usize,
-    vsize: usize,
+    h_size: usize,
+    v_size: usize,
     transform: Matrix<4>,
     transform_inversed: Matrix<4>,
     half_width: f64,
@@ -16,29 +16,24 @@ pub struct Camera {
 }
 
 impl Camera {
-    pub fn new(hsize: usize, vsize: usize, field_of_view: f64) -> Self {
+    pub fn new(h_size: usize, v_size: usize, field_of_view: f64) -> Self {
         let half_view = (field_of_view / 2.0).tan();
-        let aspect = hsize as f64 / vsize as f64;
+        let aspect = h_size as f64 / v_size as f64;
 
-        let half_width;
-        let half_height;
-
-        if aspect >= 1.0 {
-            half_width = half_view;
-            half_height = half_view / aspect;
+        let (half_width, half_height) = if aspect >= 1.0 {
+            (half_view, half_view / aspect)
         } else {
-            half_width = half_view * aspect;
-            half_height = half_view;
-        }
+            (half_view * aspect, half_view)
+        };
 
         Self {
-            hsize,
-            vsize,
+            h_size,
+            v_size,
             transform: Matrix::identity(),
             transform_inversed: Matrix::identity(),
             half_width,
             half_height,
-            pixel_size: (half_width * 2.0) / hsize as f64,
+            pixel_size: (half_width * 2.0) / h_size as f64,
         }
     }
 
@@ -48,11 +43,11 @@ impl Camera {
         self
     }
 
-    pub fn render(&self, world: World) -> Canvas {
-        let mut canvas = Canvas::new(self.hsize, self.vsize);
+    pub fn render(&self, world: &World) -> Canvas {
+        let mut canvas = Canvas::new(self.h_size, self.v_size);
 
-        for y in 0..self.vsize {
-            for x in 0..self.hsize {
+        for y in 0..self.v_size {
+            for x in 0..self.h_size {
                 let ray = self.ray_for_pixel(x, y);
                 let color = world.color_at(&ray, 5);
                 canvas.write_pixel(x, y, color);
@@ -91,8 +86,8 @@ mod tests {
     fn test_camera() {
         let c = Camera::new(160, 120, FRAC_PI_2);
 
-        assert_eq!(c.hsize, 160);
-        assert_eq!(c.vsize, 120);
+        assert_eq!(c.h_size, 160);
+        assert_eq!(c.v_size, 120);
         assert_eq!(c.transform, Matrix::identity());
     }
 
@@ -152,7 +147,7 @@ mod tests {
         let up = Tuple::vector(0.0, 1.0, 0.0);
 
         let c = Camera::new(11, 11, FRAC_PI_2).with_transform(Matrix::view_transform(from, to, up));
-        let image = c.render(w);
+        let image = c.render(&w);
 
         assert_abs_diff_eq!(image.pixel_at(5, 5), Color::new(0.38066, 0.47583, 0.2855));
     }

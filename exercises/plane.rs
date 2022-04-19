@@ -62,5 +62,5 @@ fn render_plane_scene(path: &str) {
         Tuple::vector(0.0, 1.0, 0.0),
     ));
 
-    camera.render(world).write_ppm(path);
+    camera.render(&world).write_ppm(path);
 }

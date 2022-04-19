@@ -116,18 +116,20 @@ impl Shape {
                 let ts = single.intersect(&local_ray);
                 let intersections = ts
                     .iter()
-                    .map(|t| Intersection::new(*t, self, trail.clone()));
+                    .map(|t| Intersection::new(*t, self, trail.clone()))
+                    .collect();
 
-                Intersections(BTreeSet::from_iter(intersections))
+                Intersections(intersections)
             }
             ShapeKind::Group(children) => {
                 trail.push_front(self.transform);
                 if self.bounds().intersects(&local_ray) {
                     let intersections = children
                         .iter()
-                        .flat_map(|child| child.intersect(&local_ray, trail.clone()).0);
+                        .flat_map(|child| child.intersect(&local_ray, trail.clone()).0)
+                        .collect();
 
-                    Intersections(BTreeSet::from_iter(intersections))
+                    Intersections(intersections)
                 } else {
                     Intersections(BTreeSet::new())
                 }
@@ -137,9 +139,10 @@ impl Shape {
                 let (ts, u, v) = triangular.intersect_uv(&local_ray);
                 let intersections = ts
                     .iter()
-                    .map(|t| Intersection::new_with_uv(*t, self, trail.clone(), u, v));
+                    .map(|t| Intersection::new_with_uv(*t, self, trail.clone(), u, v))
+                    .collect();
 
-                Intersections(BTreeSet::from_iter(intersections))
+                Intersections(intersections)
             }
             ShapeKind::CSG {
                 operation,
@@ -259,7 +262,7 @@ pub enum Operation {
 impl Operation {
     // TODO: use filter instead of mutation
     fn filter_intersections<'shape>(
-        &self,
+        self,
         left: &Shape,
         intersections: Intersections<'shape>,
     ) -> Intersections<'shape> {
@@ -290,7 +293,7 @@ impl Operation {
     /// * `l_hit`: True if the left shape was hit, and false if the right shape was hit.
     /// * `in_l`: True if the hit occurs inside the left shape.
     /// * `in_r`: True if the hit occurs inside the right shape.
-    fn intersection_allowed(&self, l_hit: bool, in_l: bool, in_r: bool) -> bool {
+    fn intersection_allowed(self, l_hit: bool, in_l: bool, in_r: bool) -> bool {
         match self {
             Self::Union => (l_hit && !in_r) || (!l_hit && !in_l),
             Self::Intersection => (l_hit && in_r) || (!l_hit && in_l),
@@ -433,9 +436,9 @@ impl SingleKind {
             .max(object_point.y.abs())
             .max(object_point.z.abs());
 
-        if max_c == object_point.x.abs() {
+        if max_c.abs_diff_eq(&object_point.x.abs(), Tuple::default_epsilon()) {
             Tuple::vector(object_point.x, 0.0, 0.0)
-        } else if max_c == object_point.y.abs() {
+        } else if max_c.abs_diff_eq(&object_point.y.abs(), Tuple::default_epsilon()) {
             Tuple::vector(0.0, object_point.y, 0.0)
         } else {
             Tuple::vector(0.0, 0.0, object_point.z)
@@ -447,7 +450,7 @@ impl SingleKind {
     }
 
     fn cone_normal_at(object_point: &Tuple, conic: &Conic) -> Tuple {
-        let y = (object_point.x.powi(2) + object_point.z.powi(2)).sqrt();
+        let y = object_point.x.hypot(object_point.z);
         let y = if object_point.y > 0.0 { -y } else { y };
 
         conic.normal_at(object_point, y)
@@ -463,8 +466,7 @@ impl SingleKind {
                 Tuple::point(f64::INFINITY, 0.0, f64::INFINITY),
             ),
             Self::Cube => Bounds::new(Tuple::point(-1.0, -1.0, -1.0), Tuple::point(1.0, 1.0, 1.0)),
-            Self::Cylinder(conic) => conic.bounds(),
-            Self::Cone(conic) => conic.bounds(),
+            Self::Cylinder(conic) | Self::Cone(conic) => conic.bounds(),
             Self::Triangle { triangular, .. } => triangular.bounds(),
         }
     }
@@ -697,8 +699,8 @@ mod tests {
         let shape = Shape::new_glass_sphere();
 
         assert_eq!(shape.transform, Matrix::identity());
-        assert_eq!(shape.material.transparency, 1.0);
-        assert_eq!(shape.material.refractive_index, 1.5);
+        assert_abs_diff_eq!(shape.material.transparency, 1.0);
+        assert_abs_diff_eq!(shape.material.refractive_index, 1.5);
     }
 
     #[test]
@@ -1304,7 +1306,7 @@ mod tests {
             .collect::<Vec<_>>();
 
         assert_eq!(xs.len(), 1);
-        assert_eq!(xs[0], 2.0);
+        assert_abs_diff_eq!(xs[0], 2.0);
     }
 
     #[test]
@@ -1655,8 +1657,8 @@ mod tests {
                 .collect::<Vec<_>>();
 
             assert_eq!(result.len(), 2);
-            assert_eq!(result[0], xs.0.iter().nth(x0).unwrap().t);
-            assert_eq!(result[1], xs.0.iter().nth(x1).unwrap().t);
+            assert_abs_diff_eq!(result[0], xs.0.iter().nth(x0).unwrap().t);
+            assert_abs_diff_eq!(result[1], xs.0.iter().nth(x1).unwrap().t);
         }
     }
 
@@ -1680,9 +1682,9 @@ mod tests {
         let xs = intersections.0.iter().collect::<Vec<_>>();
 
         assert_eq!(xs.len(), 2);
-        assert_eq!(xs[0].t, 4.0);
+        assert_abs_diff_eq!(xs[0].t, 4.0);
         assert_eq!(*xs[0].object, s1);
-        assert_eq!(xs[1].t, 6.5);
+        assert_abs_diff_eq!(xs[1].t, 6.5);
         assert_eq!(*xs[1].object, s2);
     }
 }

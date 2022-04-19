@@ -37,7 +37,7 @@ impl Bounds {
             self.maximum,
         ];
 
-        for corner in corners.iter() {
+        for corner in &corners {
             let transformed_point = *transform * *corner;
             bounds.add_point(&transformed_point);
         }
@@ -73,16 +73,16 @@ impl Bounds {
     }
 
     fn check_axis(origin: f64, direction: f64, min: f64, max: f64) -> (f64, f64) {
-        let tmin_numerator = min - origin;
-        let tmax_numerator = max - origin;
+        let t_min_numerator = min - origin;
+        let t_max_numerator = max - origin;
 
-        let tmin = tmin_numerator / direction;
-        let tmax = tmax_numerator / direction;
+        let t_min = t_min_numerator / direction;
+        let t_max = t_max_numerator / direction;
 
-        if tmin > tmax {
-            (tmax, tmin)
+        if t_min > t_max {
+            (t_max, t_min)
         } else {
-            (tmin, tmax)
+            (t_min, t_max)
         }
     }
 }

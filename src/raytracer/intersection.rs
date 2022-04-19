@@ -38,9 +38,9 @@ impl<'shape> Intersection<'shape> {
         Self {
             t,
             object,
-            trail,
             u,
             v,
+            trail,
         }
     }
 
@@ -52,7 +52,7 @@ impl<'shape> Intersection<'shape> {
         let mut n1 = None;
         let mut n2 = None;
 
-        for i in xs.0.iter() {
+        for i in &xs.0 {
             if i == self {
                 n1 = containers
                     .last()

@@ -136,9 +136,7 @@ impl Matrix<4> {
 
     pub fn inverse(&self) -> Self {
         let determinant = self.determinant();
-        if determinant == 0.0 {
-            panic!("matrix is not invertible");
-        }
+        assert!(!(determinant == 0.0), "matrix is not invertible");
 
         let mut m = Self::zero();
 

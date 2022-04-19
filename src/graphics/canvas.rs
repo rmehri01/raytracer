@@ -80,10 +80,10 @@ impl Canvas {
     }
 
     fn scale_to_ppm_data(color_scale: f64) -> u8 {
-        let scaled_data = color_scale * Self::PPM_MAX_COLOR_VALUE as f64;
+        let scaled_data = color_scale * f64::from(Self::PPM_MAX_COLOR_VALUE);
 
         scaled_data
-            .clamp(0.0, Self::PPM_MAX_COLOR_VALUE as f64)
+            .clamp(0.0, f64::from(Self::PPM_MAX_COLOR_VALUE))
             .round() as u8
     }
 }
@@ -100,7 +100,7 @@ mod tests {
 
         assert_eq!(canvas.width, 10);
         assert_eq!(canvas.height, 20);
-        for pixel in canvas.pixels.iter() {
+        for pixel in canvas.pixels {
             assert_relative_eq!(pixel.red, 0.0);
             assert_relative_eq!(pixel.blue, 0.0);
             assert_relative_eq!(pixel.green, 0.0);

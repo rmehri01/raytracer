@@ -45,7 +45,7 @@ fn render_hexagon(path: &str) {
         Tuple::vector(0.0, 1.0, 0.0),
     ));
 
-    camera.render(world).write_ppm(path);
+    camera.render(&world).write_ppm(path);
 }
 
 fn hexagon() -> Shape {
