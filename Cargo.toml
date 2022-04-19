@@ -22,6 +22,10 @@ name = "clock"
 path = "exercises/clock.rs"
 
 [[bin]]
+name = "csg"
+path = "exercises/csg.rs"
+
+[[bin]]
 name = "hexagon"
 path = "exercises/hexagon.rs"
 
