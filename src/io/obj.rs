@@ -4,7 +4,10 @@ use std::{
     num::{ParseFloatError, ParseIntError},
 };
 
-use crate::{core::tuple::Tuple, raytracer::shape::Shape};
+use crate::{
+    core::{point::Point, vector::Vector},
+    raytracer::shape::Shape,
+};
 
 pub fn parse_file(path: &str) -> io::Result<Shape> {
     let obj_string = fs::read_to_string(path)?;
@@ -57,26 +60,26 @@ fn parse_string(obj_string: &str) -> Shape {
     Shape::new_group(triangles)
 }
 
-fn parse_vertex(v1: &str, v2: &str, v3: &str) -> Result<Tuple, ParseFloatError> {
+fn parse_vertex(v1: &str, v2: &str, v3: &str) -> Result<Point, ParseFloatError> {
     let v1 = v1.parse::<f64>()?;
     let v2 = v2.parse::<f64>()?;
     let v3 = v3.parse::<f64>()?;
 
-    Ok(Tuple::point(v1, v2, v3))
+    Ok(Point::new(v1, v2, v3))
 }
 
-fn parse_normal(v1: &str, v2: &str, v3: &str) -> Result<Tuple, ParseFloatError> {
+fn parse_normal(v1: &str, v2: &str, v3: &str) -> Result<Vector, ParseFloatError> {
     let v1 = v1.parse::<f64>()?;
     let v2 = v2.parse::<f64>()?;
     let v3 = v3.parse::<f64>()?;
 
-    Ok(Tuple::vector(v1, v2, v3))
+    Ok(Vector::new(v1, v2, v3))
 }
 
 fn fan_triangulation(
     vs: &[&str],
-    vertices: &[Tuple],
-    normals: &[Tuple],
+    vertices: &[Point],
+    normals: &[Vector],
 ) -> Result<Vec<Shape>, ParseIntError> {
     (2..vs.len())
         .map(|i| parse_triangle(vs[0], vs[i - 1], vs[i], vertices, normals))
@@ -87,8 +90,8 @@ fn parse_triangle(
     v1: &str,
     v2: &str,
     v3: &str,
-    vertices: &[Tuple],
-    normals: &[Tuple],
+    vertices: &[Point],
+    normals: &[Vector],
 ) -> Result<Shape, ParseIntError> {
     let (v1, n1) = parse_vertex_ref(v1, vertices, normals)?;
     let (v2, n2) = parse_vertex_ref(v2, vertices, normals)?;
@@ -104,9 +107,9 @@ fn parse_triangle(
 
 fn parse_vertex_ref(
     v: &str,
-    vertices: &[Tuple],
-    normals: &[Tuple],
-) -> Result<(Tuple, Option<Tuple>), ParseIntError> {
+    vertices: &[Point],
+    normals: &[Vector],
+) -> Result<(Point, Option<Vector>), ParseIntError> {
     match v.split('/').collect::<Vec<&str>>()[..] {
         [v, _, n] => {
             let v = v.parse::<usize>()? - 1;
@@ -153,7 +156,7 @@ mod tests {
 
         let result = parse_vertex(v1, v2, v3);
 
-        assert_eq!(result.unwrap(), Tuple::point(1.0, 2.0, 3.0));
+        assert_eq!(result.unwrap(), Point::new(1.0, 2.0, 3.0));
     }
 
     #[test]
@@ -170,17 +173,17 @@ mod tests {
             assert_eq!(
                 group[0],
                 Shape::new_triangle(
-                    Tuple::point(-1.0, 1.0, 0.0),
-                    Tuple::point(-1.0, 0.0, 0.0),
-                    Tuple::point(1.0, 0.0, 0.0),
+                    Point::new(-1.0, 1.0, 0.0),
+                    Point::new(-1.0, 0.0, 0.0),
+                    Point::new(1.0, 0.0, 0.0),
                 )
             );
             assert_eq!(
                 group[1],
                 Shape::new_triangle(
-                    Tuple::point(-1.0, 1.0, 0.0),
-                    Tuple::point(1.0, 0.0, 0.0),
-                    Tuple::point(1.0, 1.0, 0.0),
+                    Point::new(-1.0, 1.0, 0.0),
+                    Point::new(1.0, 0.0, 0.0),
+                    Point::new(1.0, 1.0, 0.0),
                 )
             );
         } else {
@@ -207,25 +210,25 @@ mod tests {
             assert_eq!(
                 group[0],
                 Shape::new_triangle(
-                    Tuple::point(-1.0, 1.0, 0.0),
-                    Tuple::point(-1.0, 0.0, 0.0),
-                    Tuple::point(1.0, 0.0, 0.0),
+                    Point::new(-1.0, 1.0, 0.0),
+                    Point::new(-1.0, 0.0, 0.0),
+                    Point::new(1.0, 0.0, 0.0),
                 )
             );
             assert_eq!(
                 group[1],
                 Shape::new_triangle(
-                    Tuple::point(-1.0, 1.0, 0.0),
-                    Tuple::point(1.0, 0.0, 0.0),
-                    Tuple::point(1.0, 1.0, 0.0),
+                    Point::new(-1.0, 1.0, 0.0),
+                    Point::new(1.0, 0.0, 0.0),
+                    Point::new(1.0, 1.0, 0.0),
                 )
             );
             assert_eq!(
                 group[2],
                 Shape::new_triangle(
-                    Tuple::point(-1.0, 1.0, 0.0),
-                    Tuple::point(1.0, 1.0, 0.0),
-                    Tuple::point(0.0, 2.0, 0.0),
+                    Point::new(-1.0, 1.0, 0.0),
+                    Point::new(1.0, 1.0, 0.0),
+                    Point::new(0.0, 2.0, 0.0),
                 )
             );
         } else {
@@ -252,17 +255,17 @@ mod tests {
         if let ShapeKind::Group(group) = shape.kind {
             assert_eq!(group.len(), 2);
             let t1 = Shape::new_triangle(
-                Tuple::point(-1.0, 1.0, 0.0),
-                Tuple::point(-1.0, 0.0, 0.0),
-                Tuple::point(1.0, 0.0, 0.0),
+                Point::new(-1.0, 1.0, 0.0),
+                Point::new(-1.0, 0.0, 0.0),
+                Point::new(1.0, 0.0, 0.0),
             );
             let g1 = Shape::new_group(vec![t1]);
             assert!(group.contains(&g1));
 
             let t2 = Shape::new_triangle(
-                Tuple::point(-1.0, 1.0, 0.0),
-                Tuple::point(1.0, 0.0, 0.0),
-                Tuple::point(1.0, 1.0, 0.0),
+                Point::new(-1.0, 1.0, 0.0),
+                Point::new(1.0, 0.0, 0.0),
+                Point::new(1.0, 1.0, 0.0),
             );
             let g2 = Shape::new_group(vec![t2]);
             assert!(group.contains(&g2));
@@ -296,12 +299,12 @@ mod tests {
                 n3,
             } = t1.kind
             {
-                assert_eq!(triangular.p1, Tuple::point(0.0, 1.0, 0.0));
-                assert_eq!(triangular.p2, Tuple::point(-1.0, 0.0, 0.0));
-                assert_eq!(triangular.p3, Tuple::point(1.0, 0.0, 0.0));
-                assert_eq!(n1, Tuple::vector(0.0, 1.0, 0.0));
-                assert_eq!(n2, Tuple::vector(-1.0, 0.0, 0.0));
-                assert_eq!(n3, Tuple::vector(1.0, 0.0, 0.0));
+                assert_eq!(triangular.p1, Point::new(0.0, 1.0, 0.0));
+                assert_eq!(triangular.p2, Point::new(-1.0, 0.0, 0.0));
+                assert_eq!(triangular.p3, Point::new(1.0, 0.0, 0.0));
+                assert_eq!(n1, Vector::new(0.0, 1.0, 0.0));
+                assert_eq!(n2, Vector::new(-1.0, 0.0, 0.0));
+                assert_eq!(n3, Vector::new(1.0, 0.0, 0.0));
             } else {
                 panic!("expected a smooth triangle");
             }

@@ -1,9 +1,8 @@
 use std::collections::BTreeSet;
 
 use approx::AbsDiffEq;
-use im::Vector;
 
-use crate::core::{matrix::Matrix, tuple::Tuple};
+use crate::core::{matrix::Matrix, point::Point, vector::Vector};
 
 use super::{
     bounds::Bounds,
@@ -62,7 +61,7 @@ impl Shape {
         Self::new(ShapeKind::Group(children))
     }
 
-    pub fn new_triangle(p1: Tuple, p2: Tuple, p3: Tuple) -> Self {
+    pub fn new_triangle(p1: Point, p2: Point, p3: Point) -> Self {
         let triangular = Triangular::new(p1, p2, p3);
         let normal = triangular.e1.cross(&triangular.e2).normalize();
         Self::new(ShapeKind::Single(SingleKind::Triangle {
@@ -72,12 +71,12 @@ impl Shape {
     }
 
     pub fn new_smooth_triangle(
-        p1: Tuple,
-        p2: Tuple,
-        p3: Tuple,
-        n1: Tuple,
-        n2: Tuple,
-        n3: Tuple,
+        p1: Point,
+        p2: Point,
+        p3: Point,
+        n1: Vector,
+        n2: Vector,
+        n3: Vector,
     ) -> Self {
         let triangular = Triangular::new(p1, p2, p3);
 
@@ -108,7 +107,7 @@ impl Shape {
         self
     }
 
-    pub fn intersect(&self, ray: &Ray, mut trail: Vector<Matrix<4>>) -> Intersections {
+    pub fn intersect(&self, ray: &Ray, mut trail: im::Vector<Matrix<4>>) -> Intersections {
         let local_ray = ray.transform(&self.transform_inversed);
 
         match &self.kind {
@@ -175,7 +174,12 @@ impl Shape {
     }
 
     // TODO: hit only used for smooth triangles
-    pub fn normal_at(&self, point: &Tuple, hit: &Intersection, trail: &Vector<Matrix<4>>) -> Tuple {
+    pub fn normal_at(
+        &self,
+        point: &Point,
+        hit: &Intersection,
+        trail: &im::Vector<Matrix<4>>,
+    ) -> Vector {
         match &self.kind {
             ShapeKind::Single(single) => {
                 let local_point = self.world_to_object(point, trail);
@@ -194,7 +198,7 @@ impl Shape {
     }
 
     // TODO: should mutate vector to avoid duplication?
-    pub fn world_to_object(&self, world_point: &Tuple, trail: &Vector<Matrix<4>>) -> Tuple {
+    pub fn world_to_object(&self, world_point: &Point, trail: &im::Vector<Matrix<4>>) -> Point {
         let trail_point = trail
             .iter()
             .rev()
@@ -203,14 +207,12 @@ impl Shape {
         self.transform_inversed * trail_point
     }
 
-    fn normal_to_world(&self, normal: &Tuple, trail: &Vector<Matrix<4>>) -> Tuple {
-        let mut normal = self.transform_inversed.transpose() * *normal;
-        normal.w = 0.0;
+    fn normal_to_world(&self, normal: &Vector, trail: &im::Vector<Matrix<4>>) -> Vector {
+        let normal = self.transform_inversed.transpose() * *normal;
         let normal = normal.normalize();
 
         trail.iter().fold(normal, |acc, mat| {
-            let mut normal = mat.inverse().transpose() * acc;
-            normal.w = 0.0;
+            let normal = mat.inverse().transpose() * acc;
             normal.normalize()
         })
     }
@@ -236,9 +238,9 @@ pub enum ShapeKind {
     /// any point on the triangle.
     SmoothTriangle {
         triangular: Triangular,
-        n1: Tuple,
-        n2: Tuple,
-        n3: Tuple,
+        n1: Vector,
+        n2: Vector,
+        n3: Vector,
     },
     /// A constructive solid geometry shape that is composed of an operation
     /// and two operand shapes.
@@ -320,7 +322,7 @@ pub enum SingleKind {
     /// vectors and a normal vector to optimize intersection calculations.
     Triangle {
         triangular: Triangular,
-        normal: Tuple,
+        normal: Vector,
     },
 }
 
@@ -337,7 +339,7 @@ impl SingleKind {
     }
 
     fn sphere_intersect(ray: &Ray) -> Vec<f64> {
-        let sphere_to_ray = ray.origin - Tuple::point(0.0, 0.0, 0.0);
+        let sphere_to_ray = ray.origin - Point::new(0.0, 0.0, 0.0);
 
         let a = ray.direction.dot(&ray.direction);
         let b = 2.0 * sphere_to_ray.dot(&ray.direction);
@@ -356,7 +358,7 @@ impl SingleKind {
     }
 
     fn plane_intersect(ray: &Ray) -> Vec<f64> {
-        if ray.direction.y.abs() < Tuple::default_epsilon() {
+        if ray.direction.y.abs() < Vector::default_epsilon() {
             Vec::new()
         } else {
             vec![-ray.origin.y / ray.direction.y]
@@ -409,7 +411,7 @@ impl SingleKind {
         conic.intersect(ray, a, b, c, f64::abs)
     }
 
-    pub fn normal_at(&self, point: &Tuple) -> Tuple {
+    pub fn normal_at(&self, point: &Point) -> Vector {
         match self {
             Self::Sphere => Self::sphere_normal_at(point),
             Self::Plane => Self::plane_normal_at(),
@@ -420,35 +422,35 @@ impl SingleKind {
         }
     }
 
-    fn sphere_normal_at(object_point: &Tuple) -> Tuple {
-        *object_point - Tuple::point(0.0, 0.0, 0.0)
+    fn sphere_normal_at(object_point: &Point) -> Vector {
+        *object_point - Point::new(0.0, 0.0, 0.0)
     }
 
-    fn plane_normal_at() -> Tuple {
-        Tuple::vector(0.0, 1.0, 0.0)
+    fn plane_normal_at() -> Vector {
+        Vector::new(0.0, 1.0, 0.0)
     }
 
-    fn cube_normal_at(object_point: &Tuple) -> Tuple {
+    fn cube_normal_at(object_point: &Point) -> Vector {
         let max_c = object_point
             .x
             .abs()
             .max(object_point.y.abs())
             .max(object_point.z.abs());
 
-        if max_c.abs_diff_eq(&object_point.x.abs(), Tuple::default_epsilon()) {
-            Tuple::vector(object_point.x, 0.0, 0.0)
-        } else if max_c.abs_diff_eq(&object_point.y.abs(), Tuple::default_epsilon()) {
-            Tuple::vector(0.0, object_point.y, 0.0)
+        if max_c.abs_diff_eq(&object_point.x.abs(), Point::default_epsilon()) {
+            Vector::new(object_point.x, 0.0, 0.0)
+        } else if max_c.abs_diff_eq(&object_point.y.abs(), Point::default_epsilon()) {
+            Vector::new(0.0, object_point.y, 0.0)
         } else {
-            Tuple::vector(0.0, 0.0, object_point.z)
+            Vector::new(0.0, 0.0, object_point.z)
         }
     }
 
-    fn cylinder_normal_at(object_point: &Tuple, conic: &Conic) -> Tuple {
+    fn cylinder_normal_at(object_point: &Point, conic: &Conic) -> Vector {
         conic.normal_at(object_point, 0.0)
     }
 
-    fn cone_normal_at(object_point: &Tuple, conic: &Conic) -> Tuple {
+    fn cone_normal_at(object_point: &Point, conic: &Conic) -> Vector {
         let y = object_point.x.hypot(object_point.z);
         let y = if object_point.y > 0.0 { -y } else { y };
 
@@ -457,14 +459,13 @@ impl SingleKind {
 
     fn bounds(&self) -> Bounds {
         match self {
-            Self::Sphere => {
-                Bounds::new(Tuple::point(-1.0, -1.0, -1.0), Tuple::point(1.0, 1.0, 1.0))
+            Self::Cube | Self::Sphere => {
+                Bounds::new(Point::new(-1.0, -1.0, -1.0), Point::new(1.0, 1.0, 1.0))
             }
             Self::Plane => Bounds::new(
-                Tuple::point(f64::NEG_INFINITY, 0.0, f64::NEG_INFINITY),
-                Tuple::point(f64::INFINITY, 0.0, f64::INFINITY),
+                Point::new(f64::NEG_INFINITY, 0.0, f64::NEG_INFINITY),
+                Point::new(f64::INFINITY, 0.0, f64::INFINITY),
             ),
-            Self::Cube => Bounds::new(Tuple::point(-1.0, -1.0, -1.0), Tuple::point(1.0, 1.0, 1.0)),
             Self::Cylinder(conic) | Self::Cone(conic) => conic.bounds(),
             Self::Triangle { triangular, .. } => triangular.bounds(),
         }
@@ -473,15 +474,15 @@ impl SingleKind {
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Triangular {
-    pub p1: Tuple,
-    pub p2: Tuple,
-    pub p3: Tuple,
-    e1: Tuple,
-    e2: Tuple,
+    pub p1: Point,
+    pub p2: Point,
+    pub p3: Point,
+    e1: Vector,
+    e2: Vector,
 }
 
 impl Triangular {
-    pub fn new(p1: Tuple, p2: Tuple, p3: Tuple) -> Self {
+    pub fn new(p1: Point, p2: Point, p3: Point) -> Self {
         let e1 = p2 - p1;
         let e2 = p3 - p1;
 
@@ -504,7 +505,7 @@ impl Triangular {
         let origin_cross_e1 = p1_to_origin.cross(&self.e1);
         let v = f * ray.direction.dot(&origin_cross_e1);
 
-        let ts = if det.abs().abs_diff_eq(&0.0, Tuple::default_epsilon())
+        let ts = if det.abs().abs_diff_eq(&0.0, Point::default_epsilon())
             || u < 0.0
             || u > 1.0
             || v < 0.0
@@ -547,15 +548,15 @@ impl Conic {
         }
     }
 
-    fn normal_at(&self, object_point: &Tuple, y: f64) -> Tuple {
+    fn normal_at(&self, object_point: &Point, y: f64) -> Vector {
         let dist = object_point.x.powi(2) + object_point.z.powi(2);
 
-        if dist < 1.0 && object_point.y >= self.maximum - Tuple::default_epsilon() {
-            Tuple::vector(0.0, 1.0, 0.0)
-        } else if dist < 1.0 && object_point.y <= self.minimum + Tuple::default_epsilon() {
-            Tuple::vector(0.0, -1.0, 0.0)
+        if dist < 1.0 && object_point.y >= self.maximum - Point::default_epsilon() {
+            Vector::new(0.0, 1.0, 0.0)
+        } else if dist < 1.0 && object_point.y <= self.minimum + Point::default_epsilon() {
+            Vector::new(0.0, -1.0, 0.0)
         } else {
-            Tuple::vector(object_point.x, y, object_point.z)
+            Vector::new(object_point.x, y, object_point.z)
         }
     }
 
@@ -564,8 +565,8 @@ impl Conic {
         let mut xs = self.intersect_caps(ray, radius_at);
 
         if discriminant >= 0.0 {
-            if a.abs_diff_eq(&0.0, Tuple::default_epsilon()) {
-                if !b.abs_diff_eq(&0.0, Tuple::default_epsilon()) {
+            if a.abs_diff_eq(&0.0, Point::default_epsilon()) {
+                if !b.abs_diff_eq(&0.0, Point::default_epsilon()) {
                     let t = -c / (2.0 * b);
                     xs.push(t);
                 }
@@ -591,7 +592,7 @@ impl Conic {
     fn intersect_caps(&self, ray: &Ray, radius_at: fn(f64) -> f64) -> Vec<f64> {
         let mut xs = Vec::new();
 
-        if self.closed && !ray.direction.y.abs_diff_eq(&0.0, Tuple::default_epsilon()) {
+        if self.closed && !ray.direction.y.abs_diff_eq(&0.0, Vector::default_epsilon()) {
             let t = (self.minimum - ray.origin.y) / ray.direction.y;
             if Self::check_cap(ray, t, radius_at(self.minimum)) {
                 xs.push(t);
@@ -615,8 +616,8 @@ impl Conic {
 
     fn bounds(&self) -> Bounds {
         Bounds::new(
-            Tuple::point(-1.0, self.minimum, -1.0),
-            Tuple::point(1.0, self.maximum, 1.0),
+            Point::new(-1.0, self.minimum, -1.0),
+            Point::new(1.0, self.maximum, 1.0),
         )
     }
 }
@@ -656,7 +657,6 @@ mod tests {
     use std::f64::consts::{FRAC_1_SQRT_2, FRAC_PI_2, FRAC_PI_4};
 
     use approx::assert_abs_diff_eq;
-    use im::vector;
 
     use super::*;
 
@@ -730,18 +730,18 @@ mod tests {
 
     #[test]
     fn constructing_a_triangle() {
-        let p1 = Tuple::point(0.0, 1.0, 0.0);
-        let p2 = Tuple::point(-1.0, 0.0, 0.0);
-        let p3 = Tuple::point(1.0, 0.0, 0.0);
+        let p1 = Point::new(0.0, 1.0, 0.0);
+        let p2 = Point::new(-1.0, 0.0, 0.0);
+        let p3 = Point::new(1.0, 0.0, 0.0);
         let triangle = Shape::new_triangle(p1, p2, p3);
 
         if let ShapeKind::Single(SingleKind::Triangle { triangular, normal }) = triangle.kind {
             assert_eq!(p1, triangular.p1);
             assert_eq!(p2, triangular.p2);
             assert_eq!(p3, triangular.p3);
-            assert_eq!(triangular.e1, Tuple::vector(-1.0, -1.0, 0.0));
-            assert_eq!(triangular.e2, Tuple::vector(1.0, -1.0, 0.0));
-            assert_eq!(normal, Tuple::vector(0.0, 0.0, 1.0));
+            assert_eq!(triangular.e1, Vector::new(-1.0, -1.0, 0.0));
+            assert_eq!(triangular.e2, Vector::new(1.0, -1.0, 0.0));
+            assert_eq!(normal, Vector::new(0.0, 0.0, 1.0));
         } else {
             panic!("expected a triangle");
         }
@@ -749,11 +749,11 @@ mod tests {
 
     #[test]
     fn intersect_scaled_sphere_with_ray() {
-        let r = Ray::new(Tuple::point(0.0, 0.0, -5.0), Tuple::vector(0.0, 0.0, 1.0));
+        let r = Ray::new(Point::new(0.0, 0.0, -5.0), Vector::new(0.0, 0.0, 1.0));
         let shape = Shape::new_sphere().with_transform(Matrix::scaling(2.0, 2.0, 2.0));
 
         let xs = shape
-            .intersect(&r, Vector::new())
+            .intersect(&r, im::Vector::new())
             .0
             .iter()
             .map(|i| i.t)
@@ -766,15 +766,15 @@ mod tests {
 
     #[test]
     fn intersect_translated_sphere_with_ray() {
-        let r = Ray::new(Tuple::point(0.0, 0.0, -5.0), Tuple::vector(0.0, 0.0, 1.0));
+        let r = Ray::new(Point::new(0.0, 0.0, -5.0), Vector::new(0.0, 0.0, 1.0));
         let shape = Shape::new_sphere().with_transform(Matrix::translation(5.0, 0.0, 0.0));
 
-        assert!(shape.intersect(&r, Vector::new()).0.is_empty());
+        assert!(shape.intersect(&r, im::Vector::new()).0.is_empty());
     }
 
     #[test]
     fn ray_intersects_sphere() {
-        let r = Ray::new(Tuple::point(0.0, 0.0, -5.0), Tuple::vector(0.0, 0.0, 1.0));
+        let r = Ray::new(Point::new(0.0, 0.0, -5.0), Vector::new(0.0, 0.0, 1.0));
         let s = SingleKind::Sphere;
 
         let xs = s.intersect(&r);
@@ -786,7 +786,7 @@ mod tests {
 
     #[test]
     fn ray_tangent_to_sphere() {
-        let r = Ray::new(Tuple::point(0.0, 1.0, -5.0), Tuple::vector(0.0, 0.0, 1.0));
+        let r = Ray::new(Point::new(0.0, 1.0, -5.0), Vector::new(0.0, 0.0, 1.0));
         let s = SingleKind::Sphere;
 
         let xs = s.intersect(&r);
@@ -798,7 +798,7 @@ mod tests {
 
     #[test]
     fn ray_misses_sphere() {
-        let r = Ray::new(Tuple::point(0.0, 2.0, -5.0), Tuple::vector(0.0, 0.0, 1.0));
+        let r = Ray::new(Point::new(0.0, 2.0, -5.0), Vector::new(0.0, 0.0, 1.0));
         let s = SingleKind::Sphere;
 
         let intersects = s.intersect(&r);
@@ -808,7 +808,7 @@ mod tests {
 
     #[test]
     fn ray_originates_inside_sphere() {
-        let r = Ray::new(Tuple::point(0.0, 0.0, 0.0), Tuple::vector(0.0, 0.0, 1.0));
+        let r = Ray::new(Point::new(0.0, 0.0, 0.0), Vector::new(0.0, 0.0, 1.0));
         let s = SingleKind::Sphere;
 
         let xs = s.intersect(&r);
@@ -820,7 +820,7 @@ mod tests {
 
     #[test]
     fn sphere_behind_ray() {
-        let r = Ray::new(Tuple::point(0.0, 0.0, 5.0), Tuple::vector(0.0, 0.0, 1.0));
+        let r = Ray::new(Point::new(0.0, 0.0, 5.0), Vector::new(0.0, 0.0, 1.0));
         let s = SingleKind::Sphere;
 
         let xs = s.intersect(&r);
@@ -833,7 +833,7 @@ mod tests {
     #[test]
     fn intersecting_a_ray_parallel_to_the_plane() {
         let plane = SingleKind::Plane;
-        let r = Ray::new(Tuple::point(0.0, 10.0, 0.0), Tuple::vector(0.0, 0.0, 1.0));
+        let r = Ray::new(Point::new(0.0, 10.0, 0.0), Vector::new(0.0, 0.0, 1.0));
 
         let xs = plane.intersect(&r);
 
@@ -843,7 +843,7 @@ mod tests {
     #[test]
     fn intersecting_a_coplanar_ray() {
         let plane = SingleKind::Plane;
-        let r = Ray::new(Tuple::point(0.0, 0.0, 0.0), Tuple::vector(0.0, 0.0, 1.0));
+        let r = Ray::new(Point::new(0.0, 0.0, 0.0), Vector::new(0.0, 0.0, 1.0));
 
         let xs = plane.intersect(&r);
 
@@ -853,7 +853,7 @@ mod tests {
     #[test]
     fn ray_intersecting_from_above() {
         let plane = SingleKind::Plane;
-        let r = Ray::new(Tuple::point(0.0, 1.0, 0.0), Tuple::vector(0.0, -1.0, 0.0));
+        let r = Ray::new(Point::new(0.0, 1.0, 0.0), Vector::new(0.0, -1.0, 0.0));
 
         let xs = plane.intersect(&r);
 
@@ -864,7 +864,7 @@ mod tests {
     #[test]
     fn ray_intersecting_from_below() {
         let plane = SingleKind::Plane;
-        let r = Ray::new(Tuple::point(0.0, -1.0, 0.0), Tuple::vector(0.0, 1.0, 0.0));
+        let r = Ray::new(Point::new(0.0, -1.0, 0.0), Vector::new(0.0, 1.0, 0.0));
 
         let xs = plane.intersect(&r);
 
@@ -874,11 +874,11 @@ mod tests {
 
     #[test]
     fn intersect_sets_shape() {
-        let r = Ray::new(Tuple::point(0.0, 0.0, -5.0), Tuple::vector(0.0, 0.0, 1.0));
+        let r = Ray::new(Point::new(0.0, 0.0, -5.0), Vector::new(0.0, 0.0, 1.0));
         let shape = Shape::new_sphere();
 
         let shapes = shape
-            .intersect(&r, Vector::new())
+            .intersect(&r, im::Vector::new())
             .0
             .iter()
             .map(|i| i.object)
@@ -892,44 +892,44 @@ mod tests {
     fn ray_intersects_cube() {
         let scenarios = [
             (
-                Tuple::point(5.0, 0.5, 0.0),
-                Tuple::vector(-1.0, 0.0, 0.0),
+                Point::new(5.0, 0.5, 0.0),
+                Vector::new(-1.0, 0.0, 0.0),
                 4.0,
                 6.0,
             ),
             (
-                Tuple::point(-5.0, 0.5, 0.0),
-                Tuple::vector(1.0, 0.0, 0.0),
+                Point::new(-5.0, 0.5, 0.0),
+                Vector::new(1.0, 0.0, 0.0),
                 4.0,
                 6.0,
             ),
             (
-                Tuple::point(0.5, 5.0, 0.0),
-                Tuple::vector(0.0, -1.0, 0.0),
+                Point::new(0.5, 5.0, 0.0),
+                Vector::new(0.0, -1.0, 0.0),
                 4.0,
                 6.0,
             ),
             (
-                Tuple::point(0.5, -5.0, 0.0),
-                Tuple::vector(0.0, 1.0, 0.0),
+                Point::new(0.5, -5.0, 0.0),
+                Vector::new(0.0, 1.0, 0.0),
                 4.0,
                 6.0,
             ),
             (
-                Tuple::point(0.5, 0.0, 5.0),
-                Tuple::vector(0.0, 0.0, -1.0),
+                Point::new(0.5, 0.0, 5.0),
+                Vector::new(0.0, 0.0, -1.0),
                 4.0,
                 6.0,
             ),
             (
-                Tuple::point(0.5, 0.0, -5.0),
-                Tuple::vector(0.0, 0.0, 1.0),
+                Point::new(0.5, 0.0, -5.0),
+                Vector::new(0.0, 0.0, 1.0),
                 4.0,
                 6.0,
             ),
             (
-                Tuple::point(0.0, 0.5, 0.0),
-                Tuple::vector(0.0, 0.0, 1.0),
+                Point::new(0.0, 0.5, 0.0),
+                Vector::new(0.0, 0.0, 1.0),
                 -1.0,
                 1.0,
             ),
@@ -951,20 +951,20 @@ mod tests {
     fn ray_misses_cube() {
         let scenarios = [
             (
-                Tuple::point(-2.0, 0.0, 0.0),
-                Tuple::vector(0.2673, 0.5345, 0.8018),
+                Point::new(-2.0, 0.0, 0.0),
+                Vector::new(0.2673, 0.5345, 0.8018),
             ),
             (
-                Tuple::point(0.0, -2.0, 0.0),
-                Tuple::vector(0.8018, 0.2673, 0.5345),
+                Point::new(0.0, -2.0, 0.0),
+                Vector::new(0.8018, 0.2673, 0.5345),
             ),
             (
-                Tuple::point(0.0, 0.0, -2.0),
-                Tuple::vector(0.5345, 0.8018, 0.2673),
+                Point::new(0.0, 0.0, -2.0),
+                Vector::new(0.5345, 0.8018, 0.2673),
             ),
-            (Tuple::point(2.0, 0.0, 2.0), Tuple::vector(0.0, 0.0, -1.0)),
-            (Tuple::point(0.0, 2.0, 2.0), Tuple::vector(0.0, -1.0, 0.0)),
-            (Tuple::point(2.0, 2.0, 0.0), Tuple::vector(-1.0, 0.0, 0.0)),
+            (Point::new(2.0, 0.0, 2.0), Vector::new(0.0, 0.0, -1.0)),
+            (Point::new(0.0, 2.0, 2.0), Vector::new(0.0, -1.0, 0.0)),
+            (Point::new(2.0, 2.0, 0.0), Vector::new(-1.0, 0.0, 0.0)),
         ];
 
         for (origin, direction) in scenarios {
@@ -980,9 +980,9 @@ mod tests {
     #[test]
     fn ray_misses_cylinder() {
         let scenarios = [
-            (Tuple::point(1.0, 0.0, 0.0), Tuple::vector(0.0, 1.0, 0.0)),
-            (Tuple::point(0.0, 0.0, 0.0), Tuple::vector(0.0, 1.0, 0.0)),
-            (Tuple::point(0.0, 0.0, -5.0), Tuple::vector(1.0, 1.0, 1.0)),
+            (Point::new(1.0, 0.0, 0.0), Vector::new(0.0, 1.0, 0.0)),
+            (Point::new(0.0, 0.0, 0.0), Vector::new(0.0, 1.0, 0.0)),
+            (Point::new(0.0, 0.0, -5.0), Vector::new(1.0, 1.0, 1.0)),
         ];
 
         for (origin, direction) in scenarios {
@@ -999,20 +999,20 @@ mod tests {
     fn ray_intersects_cylinder() {
         let scenarios = [
             (
-                Tuple::point(1.0, 0.0, -5.0),
-                Tuple::vector(0.0, 0.0, 1.0),
+                Point::new(1.0, 0.0, -5.0),
+                Vector::new(0.0, 0.0, 1.0),
                 5.0,
                 5.0,
             ),
             (
-                Tuple::point(0.0, 0.0, -5.0),
-                Tuple::vector(0.0, 0.0, 1.0),
+                Point::new(0.0, 0.0, -5.0),
+                Vector::new(0.0, 0.0, 1.0),
                 4.0,
                 6.0,
             ),
             (
-                Tuple::point(0.5, 0.0, -5.0),
-                Tuple::vector(0.1, 1.0, 1.0),
+                Point::new(0.5, 0.0, -5.0),
+                Vector::new(0.1, 1.0, 1.0),
                 6.80798,
                 7.08872,
             ),
@@ -1025,40 +1025,20 @@ mod tests {
             let xs = c.intersect(&r);
 
             assert_eq!(xs.len(), 2);
-            assert_abs_diff_eq!(xs[0], t0, epsilon = Tuple::default_epsilon());
-            assert_abs_diff_eq!(xs[1], t1, epsilon = Tuple::default_epsilon());
+            assert_abs_diff_eq!(xs[0], t0, epsilon = Point::default_epsilon());
+            assert_abs_diff_eq!(xs[1], t1, epsilon = Point::default_epsilon());
         }
     }
 
     #[test]
     fn intersecting_constrained_cylinder() {
         let scenarios = [
-            (Tuple::point(0.0, 1.5, 0.0), Tuple::vector(0.1, 1.0, 0.0), 0),
-            (
-                Tuple::point(0.0, 3.0, -5.0),
-                Tuple::vector(0.0, 0.0, 1.0),
-                0,
-            ),
-            (
-                Tuple::point(0.0, 0.0, -5.0),
-                Tuple::vector(0.0, 0.0, 1.0),
-                0,
-            ),
-            (
-                Tuple::point(0.0, 2.0, -5.0),
-                Tuple::vector(0.0, 0.0, 1.0),
-                0,
-            ),
-            (
-                Tuple::point(0.0, 1.0, -5.0),
-                Tuple::vector(0.0, 0.0, 1.0),
-                0,
-            ),
-            (
-                Tuple::point(0.0, 1.5, -2.0),
-                Tuple::vector(0.0, 0.0, 1.0),
-                2,
-            ),
+            (Point::new(0.0, 1.5, 0.0), Vector::new(0.1, 1.0, 0.0), 0),
+            (Point::new(0.0, 3.0, -5.0), Vector::new(0.0, 0.0, 1.0), 0),
+            (Point::new(0.0, 0.0, -5.0), Vector::new(0.0, 0.0, 1.0), 0),
+            (Point::new(0.0, 2.0, -5.0), Vector::new(0.0, 0.0, 1.0), 0),
+            (Point::new(0.0, 1.0, -5.0), Vector::new(0.0, 0.0, 1.0), 0),
+            (Point::new(0.0, 1.5, -2.0), Vector::new(0.0, 0.0, 1.0), 2),
         ];
 
         for (point, direction, count) in scenarios {
@@ -1074,31 +1054,11 @@ mod tests {
     #[test]
     fn intersecting_caps_of_closed_cylinder() {
         let scenarios = [
-            (
-                Tuple::point(0.0, 3.0, 0.0),
-                Tuple::vector(0.0, -1.0, 0.0),
-                2,
-            ),
-            (
-                Tuple::point(0.0, 3.0, -2.0),
-                Tuple::vector(0.0, -1.0, 2.0),
-                2,
-            ),
-            (
-                Tuple::point(0.0, 4.0, -2.0),
-                Tuple::vector(0.0, -1.0, 1.0),
-                2,
-            ),
-            (
-                Tuple::point(0.0, 0.0, -2.0),
-                Tuple::vector(0.0, 1.0, 2.0),
-                2,
-            ),
-            (
-                Tuple::point(0.0, -1.0, -2.0),
-                Tuple::vector(0.0, 1.0, 1.0),
-                2,
-            ),
+            (Point::new(0.0, 3.0, 0.0), Vector::new(0.0, -1.0, 0.0), 2),
+            (Point::new(0.0, 3.0, -2.0), Vector::new(0.0, -1.0, 2.0), 2),
+            (Point::new(0.0, 4.0, -2.0), Vector::new(0.0, -1.0, 1.0), 2),
+            (Point::new(0.0, 0.0, -2.0), Vector::new(0.0, 1.0, 2.0), 2),
+            (Point::new(0.0, -1.0, -2.0), Vector::new(0.0, 1.0, 1.0), 2),
         ];
 
         for (point, direction, count) in scenarios {
@@ -1115,20 +1075,20 @@ mod tests {
     fn intersect_cone_with_ray() {
         let scenarios = [
             (
-                Tuple::point(0.0, 0.0, -5.0),
-                Tuple::vector(0.0, 0.0, 1.0),
+                Point::new(0.0, 0.0, -5.0),
+                Vector::new(0.0, 0.0, 1.0),
                 5.0,
                 5.0,
             ),
             (
-                Tuple::point(0.0, 0.0, -5.0),
-                Tuple::vector(1.0, 1.0, 1.0),
+                Point::new(0.0, 0.0, -5.0),
+                Vector::new(1.0, 1.0, 1.0),
                 8.66025,
                 8.66025,
             ),
             (
-                Tuple::point(1.0, 1.0, -5.0),
-                Tuple::vector(-0.5, -1.0, 1.0),
+                Point::new(1.0, 1.0, -5.0),
+                Vector::new(-0.5, -1.0, 1.0),
                 4.55006,
                 49.44994,
             ),
@@ -1141,8 +1101,8 @@ mod tests {
             let xs = shape.intersect(&r);
 
             assert_eq!(xs.len(), 2);
-            assert_abs_diff_eq!(xs[0], t0, epsilon = Tuple::default_epsilon());
-            assert_abs_diff_eq!(xs[1], t1, epsilon = Tuple::default_epsilon());
+            assert_abs_diff_eq!(xs[0], t0, epsilon = Point::default_epsilon());
+            assert_abs_diff_eq!(xs[1], t1, epsilon = Point::default_epsilon());
         }
     }
 
@@ -1150,33 +1110,21 @@ mod tests {
     fn intersect_cone_with_ray_parallel_to_one_half() {
         let shape = SingleKind::Cone(Conic::default());
 
-        let direction = Tuple::vector(0.0, 1.0, 1.0).normalize();
-        let r = Ray::new(Tuple::point(0.0, 0.0, -1.0), direction);
+        let direction = Vector::new(0.0, 1.0, 1.0).normalize();
+        let r = Ray::new(Point::new(0.0, 0.0, -1.0), direction);
 
         let xs = shape.intersect(&r);
 
         assert_eq!(xs.len(), 1);
-        assert_abs_diff_eq!(xs[0], 0.35355, epsilon = Tuple::default_epsilon());
+        assert_abs_diff_eq!(xs[0], 0.35355, epsilon = Point::default_epsilon());
     }
 
     #[test]
     fn intersect_cone_end_caps() {
         let scenarios = [
-            (
-                Tuple::point(0.0, 0.0, -5.0),
-                Tuple::vector(0.0, 1.0, 0.0),
-                0,
-            ),
-            (
-                Tuple::point(0.0, 0.0, -0.25),
-                Tuple::vector(0.0, 1.0, 1.0),
-                2,
-            ),
-            (
-                Tuple::point(0.0, 0.0, -0.25),
-                Tuple::vector(0.0, 1.0, 0.0),
-                4,
-            ),
+            (Point::new(0.0, 0.0, -5.0), Vector::new(0.0, 1.0, 0.0), 0),
+            (Point::new(0.0, 0.0, -0.25), Vector::new(0.0, 1.0, 1.0), 2),
+            (Point::new(0.0, 0.0, -0.25), Vector::new(0.0, 1.0, 0.0), 4),
         ];
 
         for (origin, direction, count) in scenarios {
@@ -1193,8 +1141,8 @@ mod tests {
     fn intersect_ray_with_empty_group() {
         let group = Shape::new_group(Vec::new());
 
-        let r = Ray::new(Tuple::point(0.0, 0.0, 0.0), Tuple::vector(0.0, 0.0, 1.0));
-        let xs = group.intersect(&r, Vector::new());
+        let r = Ray::new(Point::new(0.0, 0.0, 0.0), Vector::new(0.0, 0.0, 1.0));
+        let xs = group.intersect(&r, im::Vector::new());
 
         assert!(xs.0.is_empty());
     }
@@ -1206,9 +1154,9 @@ mod tests {
         let s3 = Shape::new_sphere().with_transform(Matrix::translation(5.0, 0.0, 0.0));
         let group = Shape::new_group(vec![s1.clone(), s2.clone(), s3]);
 
-        let r = Ray::new(Tuple::point(0.0, 0.0, -5.0), Tuple::vector(0.0, 0.0, 1.0));
+        let r = Ray::new(Point::new(0.0, 0.0, -5.0), Vector::new(0.0, 0.0, 1.0));
         let xs = group
-            .intersect(&r, Vector::new())
+            .intersect(&r, im::Vector::new())
             .0
             .iter()
             .map(|i| i.object)
@@ -1226,8 +1174,8 @@ mod tests {
         let s = Shape::new_sphere().with_transform(Matrix::translation(5.0, 0.0, 0.0));
         let group = Shape::new_group(vec![s]).with_transform(Matrix::scaling(2.0, 2.0, 2.0));
 
-        let r = Ray::new(Tuple::point(10.0, 0.0, -10.0), Tuple::vector(0.0, 0.0, 1.0));
-        let xs = group.intersect(&r, Vector::new());
+        let r = Ray::new(Point::new(10.0, 0.0, -10.0), Vector::new(0.0, 0.0, 1.0));
+        let xs = group.intersect(&r, im::Vector::new());
 
         assert_eq!(xs.0.len(), 2);
     }
@@ -1235,13 +1183,13 @@ mod tests {
     #[test]
     fn intersect_ray_parallel_to_triangle() {
         let t = Shape::new_triangle(
-            Tuple::point(0.0, 1.0, 0.0),
-            Tuple::point(-1.0, 0.0, 0.0),
-            Tuple::point(1.0, 0.0, 0.0),
+            Point::new(0.0, 1.0, 0.0),
+            Point::new(-1.0, 0.0, 0.0),
+            Point::new(1.0, 0.0, 0.0),
         );
-        let r = Ray::new(Tuple::point(0.0, -1.0, -2.0), Tuple::vector(0.0, 1.0, 0.0));
+        let r = Ray::new(Point::new(0.0, -1.0, -2.0), Vector::new(0.0, 1.0, 0.0));
 
-        let xs = t.intersect(&r, Vector::new());
+        let xs = t.intersect(&r, im::Vector::new());
 
         assert!(xs.0.is_empty());
     }
@@ -1249,13 +1197,13 @@ mod tests {
     #[test]
     fn ray_misses_p1_p3_edge() {
         let t = Shape::new_triangle(
-            Tuple::point(0.0, 1.0, 0.0),
-            Tuple::point(-1.0, 0.0, 0.0),
-            Tuple::point(1.0, 0.0, 0.0),
+            Point::new(0.0, 1.0, 0.0),
+            Point::new(-1.0, 0.0, 0.0),
+            Point::new(1.0, 0.0, 0.0),
         );
-        let r = Ray::new(Tuple::point(1.0, 1.0, -2.0), Tuple::vector(0.0, 0.0, 1.0));
+        let r = Ray::new(Point::new(1.0, 1.0, -2.0), Vector::new(0.0, 0.0, 1.0));
 
-        let xs = t.intersect(&r, Vector::new());
+        let xs = t.intersect(&r, im::Vector::new());
 
         assert!(xs.0.is_empty());
     }
@@ -1263,13 +1211,13 @@ mod tests {
     #[test]
     fn ray_misses_p1_p2_edge() {
         let t = Shape::new_triangle(
-            Tuple::point(0.0, 1.0, 0.0),
-            Tuple::point(-1.0, 0.0, 0.0),
-            Tuple::point(1.0, 0.0, 0.0),
+            Point::new(0.0, 1.0, 0.0),
+            Point::new(-1.0, 0.0, 0.0),
+            Point::new(1.0, 0.0, 0.0),
         );
-        let r = Ray::new(Tuple::point(-1.0, 1.0, -2.0), Tuple::vector(0.0, 0.0, 1.0));
+        let r = Ray::new(Point::new(-1.0, 1.0, -2.0), Vector::new(0.0, 0.0, 1.0));
 
-        let xs = t.intersect(&r, Vector::new());
+        let xs = t.intersect(&r, im::Vector::new());
 
         assert!(xs.0.is_empty());
     }
@@ -1277,13 +1225,13 @@ mod tests {
     #[test]
     fn ray_misses_p2_p3_edge() {
         let t = Shape::new_triangle(
-            Tuple::point(0.0, 1.0, 0.0),
-            Tuple::point(-1.0, 0.0, 0.0),
-            Tuple::point(1.0, 0.0, 0.0),
+            Point::new(0.0, 1.0, 0.0),
+            Point::new(-1.0, 0.0, 0.0),
+            Point::new(1.0, 0.0, 0.0),
         );
-        let r = Ray::new(Tuple::point(0.0, -1.0, -2.0), Tuple::vector(0.0, 0.0, 1.0));
+        let r = Ray::new(Point::new(0.0, -1.0, -2.0), Vector::new(0.0, 0.0, 1.0));
 
-        let xs = t.intersect(&r, Vector::new());
+        let xs = t.intersect(&r, im::Vector::new());
 
         assert!(xs.0.is_empty());
     }
@@ -1291,14 +1239,14 @@ mod tests {
     #[test]
     fn ray_strikes_triangle() {
         let t = Shape::new_triangle(
-            Tuple::point(0.0, 1.0, 0.0),
-            Tuple::point(-1.0, 0.0, 0.0),
-            Tuple::point(1.0, 0.0, 0.0),
+            Point::new(0.0, 1.0, 0.0),
+            Point::new(-1.0, 0.0, 0.0),
+            Point::new(1.0, 0.0, 0.0),
         );
-        let r = Ray::new(Tuple::point(0.0, 0.5, -2.0), Tuple::vector(0.0, 0.0, 1.0));
+        let r = Ray::new(Point::new(0.0, 0.5, -2.0), Vector::new(0.0, 0.0, 1.0));
 
         let xs = t
-            .intersect(&r, Vector::new())
+            .intersect(&r, im::Vector::new())
             .0
             .iter()
             .map(|i| i.t)
@@ -1310,16 +1258,16 @@ mod tests {
 
     #[test]
     fn intersection_with_smooth_triangle_stores_uv() {
-        let p1 = Tuple::point(0.0, 1.0, 0.0);
-        let p2 = Tuple::point(-1.0, 0.0, 0.0);
-        let p3 = Tuple::point(1.0, 0.0, 0.0);
-        let n1 = Tuple::vector(0.0, 1.0, 0.0);
-        let n2 = Tuple::vector(-1.0, 0.0, 0.0);
-        let n3 = Tuple::vector(1.0, 0.0, 0.0);
+        let p1 = Point::new(0.0, 1.0, 0.0);
+        let p2 = Point::new(-1.0, 0.0, 0.0);
+        let p3 = Point::new(1.0, 0.0, 0.0);
+        let n1 = Vector::new(0.0, 1.0, 0.0);
+        let n2 = Vector::new(-1.0, 0.0, 0.0);
+        let n3 = Vector::new(1.0, 0.0, 0.0);
 
         let tri = Shape::new_smooth_triangle(p1, p2, p3, n1, n2, n3);
-        let r = Ray::new(Tuple::point(-0.2, 0.3, -2.0), Tuple::vector(0.0, 0.0, 1.0));
-        let intersections = tri.intersect(&r, Vector::new());
+        let r = Ray::new(Point::new(-0.2, 0.3, -2.0), Vector::new(0.0, 0.0, 1.0));
+        let intersections = tri.intersect(&r, im::Vector::new());
         let xs = intersections.0.iter().collect::<Vec<_>>();
 
         assert_eq!(xs.len(), 1);
@@ -1331,12 +1279,12 @@ mod tests {
     fn normal_on_translated_sphere() {
         let shape = Shape::new_sphere().with_transform(Matrix::translation(0.0, 1.0, 0.0));
         let n = shape.normal_at(
-            &Tuple::point(0.0, 1.70711, -FRAC_1_SQRT_2),
-            &Intersection::new(0.0, &shape, Vector::new()),
-            &Vector::new(),
+            &Point::new(0.0, 1.70711, -FRAC_1_SQRT_2),
+            &Intersection::new(0.0, &shape, im::Vector::new()),
+            &im::Vector::new(),
         );
 
-        assert_abs_diff_eq!(n, Tuple::vector(0.0, FRAC_1_SQRT_2, -FRAC_1_SQRT_2));
+        assert_abs_diff_eq!(n, Vector::new(0.0, FRAC_1_SQRT_2, -FRAC_1_SQRT_2));
     }
 
     #[test]
@@ -1344,42 +1292,42 @@ mod tests {
         let shape = Shape::new_sphere()
             .with_transform(Matrix::scaling(1.0, 0.5, 1.0) * Matrix::rotation_z(FRAC_PI_4));
         let n = shape.normal_at(
-            &Tuple::point(0.0, 2.0_f64.sqrt() / 2.0, -(2.0_f64.sqrt()) / 2.0),
-            &Intersection::new(0.0, &shape, Vector::new()),
-            &Vector::new(),
+            &Point::new(0.0, 2.0_f64.sqrt() / 2.0, -(2.0_f64.sqrt()) / 2.0),
+            &Intersection::new(0.0, &shape, im::Vector::new()),
+            &im::Vector::new(),
         );
 
-        assert_abs_diff_eq!(n, Tuple::vector(0.0, 0.97014, -0.24254));
+        assert_abs_diff_eq!(n, Vector::new(0.0, 0.97014, -0.24254));
     }
 
     #[test]
     fn sphere_normal_x_axis() {
         let s = SingleKind::Sphere;
-        let n = s.normal_at(&Tuple::point(1.0, 0.0, 0.0));
+        let n = s.normal_at(&Point::new(1.0, 0.0, 0.0));
 
-        assert_abs_diff_eq!(n, Tuple::vector(1.0, 0.0, 0.0));
+        assert_abs_diff_eq!(n, Vector::new(1.0, 0.0, 0.0));
     }
 
     #[test]
     fn sphere_normal_y_axis() {
         let s = SingleKind::Sphere;
-        let n = s.normal_at(&Tuple::point(0.0, 1.0, 0.0));
+        let n = s.normal_at(&Point::new(0.0, 1.0, 0.0));
 
-        assert_abs_diff_eq!(n, Tuple::vector(0.0, 1.0, 0.0));
+        assert_abs_diff_eq!(n, Vector::new(0.0, 1.0, 0.0));
     }
 
     #[test]
     fn sphere_normal_z_axis() {
         let s = SingleKind::Sphere;
-        let n = s.normal_at(&Tuple::point(0.0, 0.0, 1.0));
+        let n = s.normal_at(&Point::new(0.0, 0.0, 1.0));
 
-        assert_abs_diff_eq!(n, Tuple::vector(0.0, 0.0, 1.0));
+        assert_abs_diff_eq!(n, Vector::new(0.0, 0.0, 1.0));
     }
 
     #[test]
     fn sphere_normal_non_axial_point() {
         let s = SingleKind::Sphere;
-        let n = s.normal_at(&Tuple::point(
+        let n = s.normal_at(&Point::new(
             3.0_f64.sqrt() / 3.0,
             3.0_f64.sqrt() / 3.0,
             3.0_f64.sqrt() / 3.0,
@@ -1387,7 +1335,7 @@ mod tests {
 
         assert_abs_diff_eq!(
             n,
-            Tuple::vector(
+            Vector::new(
                 3.0_f64.sqrt() / 3.0,
                 3.0_f64.sqrt() / 3.0,
                 3.0_f64.sqrt() / 3.0
@@ -1398,7 +1346,7 @@ mod tests {
     #[test]
     fn normal_is_normalized() {
         let s = SingleKind::Sphere;
-        let n = s.normal_at(&Tuple::point(
+        let n = s.normal_at(&Point::new(
             3.0_f64.sqrt() / 3.0,
             3.0_f64.sqrt() / 3.0,
             3.0_f64.sqrt() / 3.0,
@@ -1410,29 +1358,26 @@ mod tests {
     #[test]
     fn normal_of_plane_is_constant() {
         let plane = SingleKind::Plane;
-        let n1 = plane.normal_at(&Tuple::point(0.0, 0.0, 0.0));
-        let n2 = plane.normal_at(&Tuple::point(10.0, 0.0, -10.0));
-        let n3 = plane.normal_at(&Tuple::point(-5.0, 0.0, 150.0));
+        let n1 = plane.normal_at(&Point::new(0.0, 0.0, 0.0));
+        let n2 = plane.normal_at(&Point::new(10.0, 0.0, -10.0));
+        let n3 = plane.normal_at(&Point::new(-5.0, 0.0, 150.0));
 
-        assert_abs_diff_eq!(n1, Tuple::vector(0.0, 1.0, 0.0));
-        assert_abs_diff_eq!(n2, Tuple::vector(0.0, 1.0, 0.0));
-        assert_abs_diff_eq!(n3, Tuple::vector(0.0, 1.0, 0.0));
+        assert_abs_diff_eq!(n1, Vector::new(0.0, 1.0, 0.0));
+        assert_abs_diff_eq!(n2, Vector::new(0.0, 1.0, 0.0));
+        assert_abs_diff_eq!(n3, Vector::new(0.0, 1.0, 0.0));
     }
 
     #[test]
     fn normal_on_surface_of_cube() {
         let scenarios = [
-            (Tuple::point(1.0, 0.5, -0.8), Tuple::vector(1.0, 0.0, 0.0)),
-            (Tuple::point(-1.0, -0.2, 0.9), Tuple::vector(-1.0, 0.0, 0.0)),
-            (Tuple::point(-0.4, 1.0, -0.1), Tuple::vector(0.0, 1.0, 0.0)),
-            (Tuple::point(0.3, -1.0, -0.7), Tuple::vector(0.0, -1.0, 0.0)),
-            (Tuple::point(-0.6, 0.3, 1.0), Tuple::vector(0.0, 0.0, 1.0)),
-            (Tuple::point(0.4, 0.4, -1.0), Tuple::vector(0.0, 0.0, -1.0)),
-            (Tuple::point(1.0, 1.0, 1.0), Tuple::vector(1.0, 0.0, 0.0)),
-            (
-                Tuple::point(-1.0, -1.0, -1.0),
-                Tuple::vector(-1.0, 0.0, 0.0),
-            ),
+            (Point::new(1.0, 0.5, -0.8), Vector::new(1.0, 0.0, 0.0)),
+            (Point::new(-1.0, -0.2, 0.9), Vector::new(-1.0, 0.0, 0.0)),
+            (Point::new(-0.4, 1.0, -0.1), Vector::new(0.0, 1.0, 0.0)),
+            (Point::new(0.3, -1.0, -0.7), Vector::new(0.0, -1.0, 0.0)),
+            (Point::new(-0.6, 0.3, 1.0), Vector::new(0.0, 0.0, 1.0)),
+            (Point::new(0.4, 0.4, -1.0), Vector::new(0.0, 0.0, -1.0)),
+            (Point::new(1.0, 1.0, 1.0), Vector::new(1.0, 0.0, 0.0)),
+            (Point::new(-1.0, -1.0, -1.0), Vector::new(-1.0, 0.0, 0.0)),
         ];
 
         for (point, normal) in scenarios {
@@ -1446,10 +1391,10 @@ mod tests {
     #[test]
     fn normal_on_cylinder() {
         let scenarios = [
-            (Tuple::point(1.0, 0.0, 0.0), Tuple::vector(1.0, 0.0, 0.0)),
-            (Tuple::point(0.0, 5.0, -1.0), Tuple::vector(0.0, 0.0, -1.0)),
-            (Tuple::point(0.0, -2.0, 1.0), Tuple::vector(0.0, 0.0, 1.0)),
-            (Tuple::point(-1.0, 1.0, 0.0), Tuple::vector(-1.0, 0.0, 0.0)),
+            (Point::new(1.0, 0.0, 0.0), Vector::new(1.0, 0.0, 0.0)),
+            (Point::new(0.0, 5.0, -1.0), Vector::new(0.0, 0.0, -1.0)),
+            (Point::new(0.0, -2.0, 1.0), Vector::new(0.0, 0.0, 1.0)),
+            (Point::new(-1.0, 1.0, 0.0), Vector::new(-1.0, 0.0, 0.0)),
         ];
 
         for (point, normal) in scenarios {
@@ -1463,12 +1408,12 @@ mod tests {
     #[test]
     fn normal_on_cylinder_end_caps() {
         let scenarios = [
-            (Tuple::point(0.0, 1.0, 0.03), Tuple::vector(0.0, -1.0, 0.0)),
-            (Tuple::point(0.5, 1.0, 0.0), Tuple::vector(0.0, -1.0, 0.0)),
-            (Tuple::point(0.0, 1.0, 0.5), Tuple::vector(0.0, -1.0, 0.0)),
-            (Tuple::point(0.0, 2.0, 0.0), Tuple::vector(0.0, 1.0, 0.0)),
-            (Tuple::point(0.5, 2.0, 0.0), Tuple::vector(0.0, 1.0, 0.0)),
-            (Tuple::point(0.0, 2.0, 0.5), Tuple::vector(0.0, 1.0, 0.0)),
+            (Point::new(0.0, 1.0, 0.03), Vector::new(0.0, -1.0, 0.0)),
+            (Point::new(0.5, 1.0, 0.0), Vector::new(0.0, -1.0, 0.0)),
+            (Point::new(0.0, 1.0, 0.5), Vector::new(0.0, -1.0, 0.0)),
+            (Point::new(0.0, 2.0, 0.0), Vector::new(0.0, 1.0, 0.0)),
+            (Point::new(0.5, 2.0, 0.0), Vector::new(0.0, 1.0, 0.0)),
+            (Point::new(0.0, 2.0, 0.5), Vector::new(0.0, 1.0, 0.0)),
         ];
 
         for (point, normal) in scenarios {
@@ -1482,12 +1427,12 @@ mod tests {
     #[test]
     fn normal_on_cone() {
         let scenarios = [
-            (Tuple::point(0.0, 0.0, 0.0), Tuple::vector(0.0, 0.0, 0.0)),
+            (Point::new(0.0, 0.0, 0.0), Vector::new(0.0, 0.0, 0.0)),
             (
-                Tuple::point(1.0, 1.0, 1.0),
-                Tuple::vector(1.0, -(2.0_f64.sqrt()), 1.0),
+                Point::new(1.0, 1.0, 1.0),
+                Vector::new(1.0, -(2.0_f64.sqrt()), 1.0),
             ),
-            (Tuple::point(-1.0, -1.0, 0.0), Tuple::vector(-1.0, 1.0, 0.0)),
+            (Point::new(-1.0, -1.0, 0.0), Vector::new(-1.0, 1.0, 0.0)),
         ];
 
         for (point, normal) in scenarios {
@@ -1505,62 +1450,62 @@ mod tests {
         let g1 = Shape::new_group(vec![g2.clone()]).with_transform(Matrix::rotation_y(FRAC_PI_2));
 
         let n = s.normal_at(
-            &Tuple::point(1.7321, 1.1547, -5.5774),
-            &Intersection::new(0.0, &s, Vector::new()),
-            &vector![g2.transform, g1.transform],
+            &Point::new(1.7321, 1.1547, -5.5774),
+            &Intersection::new(0.0, &s, im::Vector::new()),
+            &im::vector![g2.transform, g1.transform],
         );
 
-        assert_abs_diff_eq!(n, Tuple::vector(0.2857, 0.4286, -0.8571));
+        assert_abs_diff_eq!(n, Vector::new(0.2857, 0.4286, -0.8571));
     }
 
     #[test]
     fn normal_on_triangle() {
         let t = Shape::new_triangle(
-            Tuple::point(0.0, 1.0, 0.0),
-            Tuple::point(-1.0, 0.0, 0.0),
-            Tuple::point(1.0, 0.0, 0.0),
+            Point::new(0.0, 1.0, 0.0),
+            Point::new(-1.0, 0.0, 0.0),
+            Point::new(1.0, 0.0, 0.0),
         );
 
         assert_eq!(
             t.normal_at(
-                &Tuple::point(0.0, 0.5, 0.0),
-                &Intersection::new(0.0, &t, Vector::new()),
-                &Vector::new()
+                &Point::new(0.0, 0.5, 0.0),
+                &Intersection::new(0.0, &t, im::Vector::new()),
+                &im::Vector::new()
             ),
-            Tuple::vector(0.0, 0.0, 1.0)
+            Vector::new(0.0, 0.0, 1.0)
         );
         assert_eq!(
             t.normal_at(
-                &Tuple::point(-0.5, 0.75, 0.0),
-                &Intersection::new(0.0, &t, Vector::new()),
-                &Vector::new()
+                &Point::new(-0.5, 0.75, 0.0),
+                &Intersection::new(0.0, &t, im::Vector::new()),
+                &im::Vector::new()
             ),
-            Tuple::vector(0.0, 0.0, 1.0)
+            Vector::new(0.0, 0.0, 1.0)
         );
         assert_eq!(
             t.normal_at(
-                &Tuple::point(0.5, 0.25, 0.0),
-                &Intersection::new(0.0, &t, Vector::new()),
-                &Vector::new()
+                &Point::new(0.5, 0.25, 0.0),
+                &Intersection::new(0.0, &t, im::Vector::new()),
+                &im::Vector::new()
             ),
-            Tuple::vector(0.0, 0.0, 1.0)
+            Vector::new(0.0, 0.0, 1.0)
         );
     }
 
     #[test]
     fn smooth_triangle_uses_uv_to_interpolate_normal() {
-        let p1 = Tuple::point(0.0, 1.0, 0.0);
-        let p2 = Tuple::point(-1.0, 0.0, 0.0);
-        let p3 = Tuple::point(1.0, 0.0, 0.0);
-        let n1 = Tuple::vector(0.0, 1.0, 0.0);
-        let n2 = Tuple::vector(-1.0, 0.0, 0.0);
-        let n3 = Tuple::vector(1.0, 0.0, 0.0);
+        let p1 = Point::new(0.0, 1.0, 0.0);
+        let p2 = Point::new(-1.0, 0.0, 0.0);
+        let p3 = Point::new(1.0, 0.0, 0.0);
+        let n1 = Vector::new(0.0, 1.0, 0.0);
+        let n2 = Vector::new(-1.0, 0.0, 0.0);
+        let n3 = Vector::new(1.0, 0.0, 0.0);
 
         let tri = Shape::new_smooth_triangle(p1, p2, p3, n1, n2, n3);
-        let i = Intersection::new_with_uv(1.0, &tri, Vector::new(), 0.45, 0.25);
-        let n = tri.normal_at(&Tuple::point(0.0, 0.0, 0.0), &i, &Vector::new());
+        let i = Intersection::new_with_uv(1.0, &tri, im::Vector::new(), 0.45, 0.25);
+        let n = tri.normal_at(&Point::new(0.0, 0.0, 0.0), &i, &im::Vector::new());
 
-        assert_eq!(n, Tuple::vector(-0.5547, 0.83205, 0.0));
+        assert_eq!(n, Vector::new(-0.5547, 0.83205, 0.0));
     }
 
     #[test]
@@ -1571,10 +1516,10 @@ mod tests {
 
         assert_eq!(
             s.world_to_object(
-                &Tuple::point(-2.0, 0.0, -10.0),
-                &vector![g2.transform, g1.transform]
+                &Point::new(-2.0, 0.0, -10.0),
+                &im::vector![g2.transform, g1.transform]
             ),
-            Tuple::point(0.0, 0.0, -1.0)
+            Point::new(0.0, 0.0, -1.0)
         );
     }
 
@@ -1585,15 +1530,15 @@ mod tests {
         let g1 = Shape::new_group(vec![g2.clone()]).with_transform(Matrix::rotation_y(FRAC_PI_2));
 
         let n = s.normal_to_world(
-            &Tuple::vector(
+            &Vector::new(
                 3.0_f64.sqrt() / 3.0,
                 3.0_f64.sqrt() / 3.0,
                 3.0_f64.sqrt() / 3.0,
             ),
-            &vector![g2.transform, g1.transform],
+            &im::vector![g2.transform, g1.transform],
         );
 
-        assert_eq!(n, Tuple::vector(0.2857, 0.4286, -0.8571));
+        assert_eq!(n, Vector::new(0.2857, 0.4286, -0.8571));
     }
 
     #[test]
@@ -1642,10 +1587,10 @@ mod tests {
             let s1 = Shape::new_sphere();
             let s2 = Shape::new_cube();
             let xs = Intersections::new([
-                Intersection::new(1.0, &s1, Vector::new()),
-                Intersection::new(2.0, &s2, Vector::new()),
-                Intersection::new(3.0, &s1, Vector::new()),
-                Intersection::new(4.0, &s2, Vector::new()),
+                Intersection::new(1.0, &s1, im::Vector::new()),
+                Intersection::new(2.0, &s2, im::Vector::new()),
+                Intersection::new(3.0, &s1, im::Vector::new()),
+                Intersection::new(4.0, &s2, im::Vector::new()),
             ]);
 
             let result = operation
@@ -1664,8 +1609,8 @@ mod tests {
     #[test]
     fn ray_misses_csg_object() {
         let c = Shape::new_csg(Operation::Union, Shape::new_sphere(), Shape::new_cube());
-        let r = Ray::new(Tuple::point(0.0, 2.0, -5.0), Tuple::vector(0.0, 0.0, 1.0));
-        let xs = c.intersect(&r, Vector::new());
+        let r = Ray::new(Point::new(0.0, 2.0, -5.0), Vector::new(0.0, 0.0, 1.0));
+        let xs = c.intersect(&r, im::Vector::new());
 
         assert!(xs.0.is_empty());
     }
@@ -1676,8 +1621,8 @@ mod tests {
         let s2 = Shape::new_sphere().with_transform(Matrix::translation(0.0, 0.0, 0.5));
 
         let c = Shape::new_csg(Operation::Union, s1.clone(), s2.clone());
-        let r = Ray::new(Tuple::point(0.0, 0.0, -5.0), Tuple::vector(0.0, 0.0, 1.0));
-        let intersections = c.intersect(&r, Vector::new());
+        let r = Ray::new(Point::new(0.0, 0.0, -5.0), Vector::new(0.0, 0.0, 1.0));
+        let intersections = c.intersect(&r, im::Vector::new());
         let xs = intersections.0.iter().collect::<Vec<_>>();
 
         assert_eq!(xs.len(), 2);

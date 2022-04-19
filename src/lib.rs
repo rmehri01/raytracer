@@ -10,7 +10,8 @@
 
 pub mod core {
     pub mod matrix;
-    pub mod tuple;
+    pub mod point;
+    pub mod vector;
 }
 
 pub mod graphics {

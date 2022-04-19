@@ -1,7 +1,7 @@
 use approx::AbsDiffEq;
 
 use crate::{
-    core::tuple::Tuple,
+    core::{point::Point, vector::Vector},
     graphics::{color::Color, pattern::Pattern},
 };
 
@@ -24,11 +24,11 @@ impl Material {
     /// Returns the color of the material using the Phuong Reflection Model.
     pub fn lighting(
         &self,
-        object_point: &Tuple,
-        position: &Tuple,
+        object_point: &Point,
+        position: &Point,
         light: &PointLight,
-        eye_v: &Tuple,
-        normal_v: &Tuple,
+        eye_v: &Vector,
+        normal_v: &Vector,
         in_shadow: bool,
     ) -> Color {
         let color = self.pattern.map_or(self.color, |pattern| {
@@ -107,7 +107,6 @@ impl AbsDiffEq for Material {
 #[cfg(test)]
 mod tests {
     use approx::assert_abs_diff_eq;
-    use im::Vector;
 
     use crate::raytracer::shape::Shape;
 
@@ -136,14 +135,14 @@ mod tests {
     #[test]
     fn lighting_with_eye_between_light_and_surface() {
         let material = Material::default();
-        let position = Tuple::point(0.0, 0.0, 0.0);
+        let position = Point::new(0.0, 0.0, 0.0);
 
-        let eye_v = Tuple::vector(0.0, 0.0, -1.0);
-        let normal_v = Tuple::vector(0.0, 0.0, -1.0);
-        let light = PointLight::new(Tuple::point(0.0, 0.0, -10.0), Color::WHITE);
+        let eye_v = Vector::new(0.0, 0.0, -1.0);
+        let normal_v = Vector::new(0.0, 0.0, -1.0);
+        let light = PointLight::new(Point::new(0.0, 0.0, -10.0), Color::WHITE);
         let shape = Shape::new_sphere();
 
-        let object_point = shape.world_to_object(&position, &Vector::new());
+        let object_point = shape.world_to_object(&position, &im::Vector::new());
         let result = material.lighting(&object_point, &position, &light, &eye_v, &normal_v, false);
 
         assert_abs_diff_eq!(result, Color::new(1.9, 1.9, 1.9));
@@ -152,14 +151,14 @@ mod tests {
     #[test]
     fn lighting_with_eye_between_light_and_surface_eye_offset_45_degrees() {
         let material = Material::default();
-        let position = Tuple::point(0.0, 0.0, 0.0);
+        let position = Point::new(0.0, 0.0, 0.0);
 
-        let eye_v = Tuple::vector(0.0, 2_f64.sqrt() / 2.0, -(2_f64.sqrt()) / 2.0);
-        let normal_v = Tuple::vector(0.0, 0.0, -1.0);
-        let light = PointLight::new(Tuple::point(0.0, 0.0, -10.0), Color::WHITE);
+        let eye_v = Vector::new(0.0, 2_f64.sqrt() / 2.0, -(2_f64.sqrt()) / 2.0);
+        let normal_v = Vector::new(0.0, 0.0, -1.0);
+        let light = PointLight::new(Point::new(0.0, 0.0, -10.0), Color::WHITE);
         let shape = Shape::new_sphere();
 
-        let object_point = shape.world_to_object(&position, &Vector::new());
+        let object_point = shape.world_to_object(&position, &im::Vector::new());
         let result = material.lighting(&object_point, &position, &light, &eye_v, &normal_v, false);
 
         assert_abs_diff_eq!(result, Color::WHITE);
@@ -168,14 +167,14 @@ mod tests {
     #[test]
     fn lighting_with_eye_opposite_surface_light_offset_45_degrees() {
         let material = Material::default();
-        let position = Tuple::point(0.0, 0.0, 0.0);
+        let position = Point::new(0.0, 0.0, 0.0);
 
-        let eye_v = Tuple::vector(0.0, 0.0, -1.0);
-        let normal_v = Tuple::vector(0.0, 0.0, -1.0);
-        let light = PointLight::new(Tuple::point(0.0, 10.0, -10.0), Color::WHITE);
+        let eye_v = Vector::new(0.0, 0.0, -1.0);
+        let normal_v = Vector::new(0.0, 0.0, -1.0);
+        let light = PointLight::new(Point::new(0.0, 10.0, -10.0), Color::WHITE);
         let shape = Shape::new_sphere();
 
-        let object_point = shape.world_to_object(&position, &Vector::new());
+        let object_point = shape.world_to_object(&position, &im::Vector::new());
         let result = material.lighting(&object_point, &position, &light, &eye_v, &normal_v, false);
 
         assert_abs_diff_eq!(result, Color::new(0.7364, 0.7364, 0.7364));
@@ -184,14 +183,14 @@ mod tests {
     #[test]
     fn lighting_with_eye_in_path_of_reflection_vector() {
         let material = Material::default();
-        let position = Tuple::point(0.0, 0.0, 0.0);
+        let position = Point::new(0.0, 0.0, 0.0);
 
-        let eye_v = Tuple::vector(0.0, -(2_f64.sqrt()) / 2.0, -(2_f64.sqrt()) / 2.0);
-        let normal_v = Tuple::vector(0.0, 0.0, -1.0);
-        let light = PointLight::new(Tuple::point(0.0, 10.0, -10.0), Color::WHITE);
+        let eye_v = Vector::new(0.0, -(2_f64.sqrt()) / 2.0, -(2_f64.sqrt()) / 2.0);
+        let normal_v = Vector::new(0.0, 0.0, -1.0);
+        let light = PointLight::new(Point::new(0.0, 10.0, -10.0), Color::WHITE);
         let shape = Shape::new_sphere();
 
-        let object_point = shape.world_to_object(&position, &Vector::new());
+        let object_point = shape.world_to_object(&position, &im::Vector::new());
         let result = material.lighting(&object_point, &position, &light, &eye_v, &normal_v, false);
 
         assert_abs_diff_eq!(result, Color::new(1.6364, 1.6364, 1.6364));
@@ -200,14 +199,14 @@ mod tests {
     #[test]
     fn lighting_with_light_behind_surface() {
         let material = Material::default();
-        let position = Tuple::point(0.0, 0.0, 0.0);
+        let position = Point::new(0.0, 0.0, 0.0);
 
-        let eye_v = Tuple::vector(0.0, 0.0, -1.0);
-        let normal_v = Tuple::vector(0.0, 0.0, -1.0);
-        let light = PointLight::new(Tuple::point(0.0, 0.0, 10.0), Color::WHITE);
+        let eye_v = Vector::new(0.0, 0.0, -1.0);
+        let normal_v = Vector::new(0.0, 0.0, -1.0);
+        let light = PointLight::new(Point::new(0.0, 0.0, 10.0), Color::WHITE);
         let shape = Shape::new_sphere();
 
-        let object_point = shape.world_to_object(&position, &Vector::new());
+        let object_point = shape.world_to_object(&position, &im::Vector::new());
         let result = material.lighting(&object_point, &position, &light, &eye_v, &normal_v, false);
 
         assert_abs_diff_eq!(result, Color::new(0.1, 0.1, 0.1));
@@ -216,14 +215,14 @@ mod tests {
     #[test]
     fn lighting_with_surface_in_shadow() {
         let material = Material::default();
-        let position = Tuple::point(0.0, 0.0, 0.0);
+        let position = Point::new(0.0, 0.0, 0.0);
 
-        let eye_v = Tuple::vector(0.0, 0.0, -1.0);
-        let normal_v = Tuple::vector(0.0, 0.0, -1.0);
-        let light = PointLight::new(Tuple::point(0.0, 0.0, -10.0), Color::WHITE);
+        let eye_v = Vector::new(0.0, 0.0, -1.0);
+        let normal_v = Vector::new(0.0, 0.0, -1.0);
+        let light = PointLight::new(Point::new(0.0, 0.0, -10.0), Color::WHITE);
         let shape = Shape::new_sphere();
 
-        let object_point = shape.world_to_object(&position, &Vector::new());
+        let object_point = shape.world_to_object(&position, &im::Vector::new());
         assert_abs_diff_eq!(
             material.lighting(&object_point, &position, &light, &eye_v, &normal_v, true),
             Color::new(0.1, 0.1, 0.1)
@@ -240,17 +239,17 @@ mod tests {
             ..Material::default()
         };
 
-        let eye_v = Tuple::vector(0.0, 0.0, -1.0);
-        let normal_v = Tuple::vector(0.0, 0.0, -1.0);
-        let light = PointLight::new(Tuple::point(0.0, 0.0, -10.0), Color::WHITE);
+        let eye_v = Vector::new(0.0, 0.0, -1.0);
+        let normal_v = Vector::new(0.0, 0.0, -1.0);
+        let light = PointLight::new(Point::new(0.0, 0.0, -10.0), Color::WHITE);
         let shape = Shape::new_sphere();
 
-        let position = Tuple::point(0.9, 0.0, 0.0);
-        let object_point = shape.world_to_object(&position, &Vector::new());
+        let position = Point::new(0.9, 0.0, 0.0);
+        let object_point = shape.world_to_object(&position, &im::Vector::new());
         let c1 = material.lighting(&object_point, &position, &light, &eye_v, &normal_v, false);
 
-        let position = Tuple::point(1.1, 0.0, 0.0);
-        let object_point = shape.world_to_object(&position, &Vector::new());
+        let position = Point::new(1.1, 0.0, 0.0);
+        let object_point = shape.world_to_object(&position, &im::Vector::new());
         let c2 = material.lighting(&object_point, &position, &light, &eye_v, &normal_v, false);
 
         assert_abs_diff_eq!(c1, Color::WHITE);

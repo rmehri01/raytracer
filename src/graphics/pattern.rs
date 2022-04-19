@@ -1,4 +1,4 @@
-use crate::core::{matrix::Matrix, tuple::Tuple};
+use crate::core::{matrix::Matrix, point::Point};
 
 use super::color::Color;
 
@@ -45,7 +45,7 @@ impl Pattern {
         self
     }
 
-    pub fn pattern_at_object_point(&self, object_point: &Tuple) -> Color {
+    pub fn pattern_at_object_point(&self, object_point: &Point) -> Color {
         let pattern_point = self.transform_inversed * *object_point;
 
         self.kind.pattern_at(&pattern_point)
@@ -75,7 +75,7 @@ enum PatternKind {
 }
 
 impl PatternKind {
-    fn pattern_at(&self, pattern_point: &Tuple) -> Color {
+    fn pattern_at(&self, pattern_point: &Point) -> Color {
         match self {
             Self::Stripe { a, b } => Self::stripe_at(pattern_point, *a, *b),
             Self::Gradient { start, end } => Self::gradient_at(pattern_point, *start, *end),
@@ -86,7 +86,7 @@ impl PatternKind {
         }
     }
 
-    fn stripe_at(point: &Tuple, a: Color, b: Color) -> Color {
+    fn stripe_at(point: &Point, a: Color, b: Color) -> Color {
         if point.x.floor() as i32 % 2 == 0 {
             a
         } else {
@@ -94,14 +94,14 @@ impl PatternKind {
         }
     }
 
-    fn gradient_at(point: &Tuple, start: Color, end: Color) -> Color {
+    fn gradient_at(point: &Point, start: Color, end: Color) -> Color {
         let distance = end - start;
         let fraction = point.x - point.x.floor();
 
         start + distance * fraction
     }
 
-    fn ring_at(point: &Tuple, a: Color, b: Color) -> Color {
+    fn ring_at(point: &Point, a: Color, b: Color) -> Color {
         let distance = point.x.hypot(point.z);
 
         if distance.floor() as i32 % 2 == 0 {
@@ -111,7 +111,7 @@ impl PatternKind {
         }
     }
 
-    fn checker_at(point: &Tuple, a: Color, b: Color) -> Color {
+    fn checker_at(point: &Point, a: Color, b: Color) -> Color {
         let sum_floors = point.x.floor() + point.y.floor() + point.z.floor();
 
         if sum_floors as i32 % 2 == 0 {
@@ -125,7 +125,6 @@ impl PatternKind {
 #[cfg(test)]
 mod tests {
     use approx::assert_abs_diff_eq;
-    use im::Vector;
 
     use crate::raytracer::shape::Shape;
 
@@ -136,7 +135,7 @@ mod tests {
         let shape = Shape::new_sphere().with_transform(Matrix::scaling(2.0, 2.0, 2.0));
         let pattern = Pattern::new_test();
 
-        let object_point = shape.world_to_object(&Tuple::point(2.0, 3.0, 4.0), &Vector::new());
+        let object_point = shape.world_to_object(&Point::new(2.0, 3.0, 4.0), &im::Vector::new());
 
         assert_abs_diff_eq!(
             pattern.pattern_at_object_point(&object_point),
@@ -150,7 +149,7 @@ mod tests {
         let pattern =
             Pattern::new(PatternKind::Test).with_transform(Matrix::scaling(2.0, 2.0, 2.0));
 
-        let object_point = shape.world_to_object(&Tuple::point(2.0, 3.0, 4.0), &Vector::new());
+        let object_point = shape.world_to_object(&Point::new(2.0, 3.0, 4.0), &im::Vector::new());
 
         assert_abs_diff_eq!(
             pattern.pattern_at_object_point(&object_point),
@@ -164,7 +163,7 @@ mod tests {
         let pattern =
             Pattern::new(PatternKind::Test).with_transform(Matrix::translation(0.5, 1.0, 1.5));
 
-        let object_point = shape.world_to_object(&Tuple::point(2.5, 3.0, 3.5), &Vector::new());
+        let object_point = shape.world_to_object(&Point::new(2.5, 3.0, 3.5), &im::Vector::new());
 
         assert_abs_diff_eq!(
             pattern.pattern_at_object_point(&object_point),
@@ -179,18 +178,9 @@ mod tests {
             b: Color::BLACK,
         };
 
-        assert_abs_diff_eq!(
-            stripe.pattern_at(&Tuple::point(0.0, 0.0, 0.0)),
-            Color::WHITE
-        );
-        assert_abs_diff_eq!(
-            stripe.pattern_at(&Tuple::point(0.0, 1.0, 0.0)),
-            Color::WHITE
-        );
-        assert_abs_diff_eq!(
-            stripe.pattern_at(&Tuple::point(0.0, 2.0, 0.0)),
-            Color::WHITE
-        );
+        assert_abs_diff_eq!(stripe.pattern_at(&Point::new(0.0, 0.0, 0.0)), Color::WHITE);
+        assert_abs_diff_eq!(stripe.pattern_at(&Point::new(0.0, 1.0, 0.0)), Color::WHITE);
+        assert_abs_diff_eq!(stripe.pattern_at(&Point::new(0.0, 2.0, 0.0)), Color::WHITE);
     }
 
     #[test]
@@ -200,18 +190,9 @@ mod tests {
             b: Color::BLACK,
         };
 
-        assert_abs_diff_eq!(
-            stripe.pattern_at(&Tuple::point(0.0, 0.0, 0.0)),
-            Color::WHITE
-        );
-        assert_abs_diff_eq!(
-            stripe.pattern_at(&Tuple::point(0.0, 0.0, 1.0)),
-            Color::WHITE
-        );
-        assert_abs_diff_eq!(
-            stripe.pattern_at(&Tuple::point(0.0, 0.0, 2.0)),
-            Color::WHITE
-        );
+        assert_abs_diff_eq!(stripe.pattern_at(&Point::new(0.0, 0.0, 0.0)), Color::WHITE);
+        assert_abs_diff_eq!(stripe.pattern_at(&Point::new(0.0, 0.0, 1.0)), Color::WHITE);
+        assert_abs_diff_eq!(stripe.pattern_at(&Point::new(0.0, 0.0, 2.0)), Color::WHITE);
     }
 
     #[test]
@@ -221,30 +202,12 @@ mod tests {
             b: Color::BLACK,
         };
 
-        assert_abs_diff_eq!(
-            stripe.pattern_at(&Tuple::point(0.0, 0.0, 0.0)),
-            Color::WHITE
-        );
-        assert_abs_diff_eq!(
-            stripe.pattern_at(&Tuple::point(0.9, 0.0, 0.0)),
-            Color::WHITE
-        );
-        assert_abs_diff_eq!(
-            stripe.pattern_at(&Tuple::point(1.0, 0.0, 0.0)),
-            Color::BLACK
-        );
-        assert_abs_diff_eq!(
-            stripe.pattern_at(&Tuple::point(-0.1, 0.0, 0.0)),
-            Color::BLACK
-        );
-        assert_abs_diff_eq!(
-            stripe.pattern_at(&Tuple::point(-1.0, 0.0, 0.0)),
-            Color::BLACK
-        );
-        assert_abs_diff_eq!(
-            stripe.pattern_at(&Tuple::point(-1.1, 0.0, 0.0)),
-            Color::WHITE
-        );
+        assert_abs_diff_eq!(stripe.pattern_at(&Point::new(0.0, 0.0, 0.0)), Color::WHITE);
+        assert_abs_diff_eq!(stripe.pattern_at(&Point::new(0.9, 0.0, 0.0)), Color::WHITE);
+        assert_abs_diff_eq!(stripe.pattern_at(&Point::new(1.0, 0.0, 0.0)), Color::BLACK);
+        assert_abs_diff_eq!(stripe.pattern_at(&Point::new(-0.1, 0.0, 0.0)), Color::BLACK);
+        assert_abs_diff_eq!(stripe.pattern_at(&Point::new(-1.0, 0.0, 0.0)), Color::BLACK);
+        assert_abs_diff_eq!(stripe.pattern_at(&Point::new(-1.1, 0.0, 0.0)), Color::WHITE);
     }
 
     #[test]
@@ -255,19 +218,19 @@ mod tests {
         };
 
         assert_abs_diff_eq!(
-            gradient.pattern_at(&Tuple::point(0.0, 0.0, 0.0)),
+            gradient.pattern_at(&Point::new(0.0, 0.0, 0.0)),
             Color::WHITE
         );
         assert_abs_diff_eq!(
-            gradient.pattern_at(&Tuple::point(0.25, 0.25, 0.25)),
+            gradient.pattern_at(&Point::new(0.25, 0.25, 0.25)),
             Color::new(0.75, 0.75, 0.75)
         );
         assert_abs_diff_eq!(
-            gradient.pattern_at(&Tuple::point(0.5, 0.5, 0.5)),
+            gradient.pattern_at(&Point::new(0.5, 0.5, 0.5)),
             Color::new(0.5, 0.5, 0.5)
         );
         assert_abs_diff_eq!(
-            gradient.pattern_at(&Tuple::point(0.75, 0.75, 0.75)),
+            gradient.pattern_at(&Point::new(0.75, 0.75, 0.75)),
             Color::new(0.25, 0.25, 0.25)
         );
     }
@@ -279,11 +242,11 @@ mod tests {
             b: Color::BLACK,
         };
 
-        assert_abs_diff_eq!(ring.pattern_at(&Tuple::point(0.0, 0.0, 0.0)), Color::WHITE);
-        assert_abs_diff_eq!(ring.pattern_at(&Tuple::point(1.0, 0.0, 0.0)), Color::BLACK);
-        assert_abs_diff_eq!(ring.pattern_at(&Tuple::point(0.0, 0.0, 1.0)), Color::BLACK);
+        assert_abs_diff_eq!(ring.pattern_at(&Point::new(0.0, 0.0, 0.0)), Color::WHITE);
+        assert_abs_diff_eq!(ring.pattern_at(&Point::new(1.0, 0.0, 0.0)), Color::BLACK);
+        assert_abs_diff_eq!(ring.pattern_at(&Point::new(0.0, 0.0, 1.0)), Color::BLACK);
         assert_abs_diff_eq!(
-            ring.pattern_at(&Tuple::point(0.708, 0.0, 0.708)),
+            ring.pattern_at(&Point::new(0.708, 0.0, 0.708)),
             Color::BLACK
         );
     }
@@ -295,18 +258,12 @@ mod tests {
             b: Color::BLACK,
         };
 
+        assert_abs_diff_eq!(pattern.pattern_at(&Point::new(0.0, 0.0, 0.0)), Color::WHITE);
         assert_abs_diff_eq!(
-            pattern.pattern_at(&Tuple::point(0.0, 0.0, 0.0)),
+            pattern.pattern_at(&Point::new(0.99, 0.0, 0.0)),
             Color::WHITE
         );
-        assert_abs_diff_eq!(
-            pattern.pattern_at(&Tuple::point(0.99, 0.0, 0.0)),
-            Color::WHITE
-        );
-        assert_abs_diff_eq!(
-            pattern.pattern_at(&Tuple::point(1.0, 0.0, 0.0)),
-            Color::BLACK
-        );
+        assert_abs_diff_eq!(pattern.pattern_at(&Point::new(1.0, 0.0, 0.0)), Color::BLACK);
     }
 
     #[test]
@@ -316,16 +273,13 @@ mod tests {
             b: Color::BLACK,
         };
 
+        assert_abs_diff_eq!(pattern.pattern_at(&Point::new(0.0, 0.0, 0.0)), Color::WHITE);
         assert_abs_diff_eq!(
-            pattern.pattern_at(&Tuple::point(0.0, 0.0, 0.0)),
+            pattern.pattern_at(&Point::new(0.0, 0.99, 0.0)),
             Color::WHITE
         );
         assert_abs_diff_eq!(
-            pattern.pattern_at(&Tuple::point(0.0, 0.99, 0.0)),
-            Color::WHITE
-        );
-        assert_abs_diff_eq!(
-            pattern.pattern_at(&Tuple::point(0.0, 1.01, 0.0)),
+            pattern.pattern_at(&Point::new(0.0, 1.01, 0.0)),
             Color::BLACK
         );
     }
@@ -337,16 +291,13 @@ mod tests {
             b: Color::BLACK,
         };
 
+        assert_abs_diff_eq!(pattern.pattern_at(&Point::new(0.0, 0.0, 0.0)), Color::WHITE);
         assert_abs_diff_eq!(
-            pattern.pattern_at(&Tuple::point(0.0, 0.0, 0.0)),
+            pattern.pattern_at(&Point::new(0.0, 0.0, 0.99)),
             Color::WHITE
         );
         assert_abs_diff_eq!(
-            pattern.pattern_at(&Tuple::point(0.0, 0.0, 0.99)),
-            Color::WHITE
-        );
-        assert_abs_diff_eq!(
-            pattern.pattern_at(&Tuple::point(0.0, 0.0, 1.01)),
+            pattern.pattern_at(&Point::new(0.0, 0.0, 1.01)),
             Color::BLACK
         );
     }

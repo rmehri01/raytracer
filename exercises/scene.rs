@@ -1,7 +1,7 @@
 use std::f64::consts::{FRAC_PI_2, FRAC_PI_3, FRAC_PI_4};
 
 use raytracer::{
-    core::{matrix::Matrix, tuple::Tuple},
+    core::{matrix::Matrix, point::Point, vector::Vector},
     graphics::color::Color,
     raytracer::{
         camera::Camera, material::Material, point_light::PointLight, shape::Shape, world::World,
@@ -70,16 +70,16 @@ fn render_scene(path: &str) {
 
     let world = World {
         light: Some(PointLight::new(
-            Tuple::point(-10.0, 10.0, -10.0),
+            Point::new(-10.0, 10.0, -10.0),
             Color::WHITE,
         )),
         shapes: vec![floor, left_wall, right_wall, middle, right, left],
     };
 
     let camera = Camera::new(2000, 1000, FRAC_PI_3).with_transform(Matrix::view_transform(
-        Tuple::point(0.0, 1.5, -5.0),
-        Tuple::point(0.0, 1.0, 0.0),
-        Tuple::vector(0.0, 1.0, 0.0),
+        Point::new(0.0, 1.5, -5.0),
+        Point::new(0.0, 1.0, 0.0),
+        Vector::new(0.0, 1.0, 0.0),
     ));
 
     camera.render(&world).write_ppm(path);

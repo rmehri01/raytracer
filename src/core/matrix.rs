@@ -2,7 +2,7 @@ use std::ops;
 
 use approx::AbsDiffEq;
 
-use super::tuple::Tuple;
+use super::{point::Point, vector::Vector};
 
 #[derive(Debug, Clone, Copy)]
 pub struct Matrix<const N: usize>([[f64; N]; N]);
@@ -213,7 +213,7 @@ impl Matrix<4> {
         ])
     }
 
-    pub fn view_transform(from: Tuple, to: Tuple, up: Tuple) -> Self {
+    pub fn view_transform(from: Point, to: Point, up: Vector) -> Self {
         let forward = (to - from).normalize();
         let upn = up.normalize();
         let left = forward.cross(&upn);
@@ -283,19 +283,27 @@ impl<const N: usize> ops::Mul for Matrix<N> {
     }
 }
 
-impl ops::Mul<Tuple> for Matrix<4> {
-    type Output = Tuple;
+impl ops::Mul<Point> for Matrix<4> {
+    type Output = Point;
 
-    fn mul(self, other: Tuple) -> Self::Output {
-        let mut result = Tuple::new(0.0, 0.0, 0.0, 0.0);
+    fn mul(self, other: Point) -> Self::Output {
+        Self::Output::new(
+            self[0][0] * other.x + self[0][1] * other.y + self[0][2] * other.z + self[0][3],
+            self[1][0] * other.x + self[1][1] * other.y + self[1][2] * other.z + self[1][3],
+            self[2][0] * other.x + self[2][1] * other.y + self[2][2] * other.z + self[2][3],
+        )
+    }
+}
 
-        for i in 0..4 {
-            for j in 0..4 {
-                result[i] += self[i][j] * other[j];
-            }
-        }
+impl ops::Mul<Vector> for Matrix<4> {
+    type Output = Vector;
 
-        result
+    fn mul(self, other: Vector) -> Self::Output {
+        Self::Output::new(
+            self[0][0] * other.x + self[0][1] * other.y + self[0][2] * other.z,
+            self[1][0] * other.x + self[1][1] * other.y + self[1][2] * other.z,
+            self[2][0] * other.x + self[2][1] * other.y + self[2][2] * other.z,
+        )
     }
 }
 
@@ -408,16 +416,16 @@ mod tests {
     }
 
     #[test]
-    fn multiply_matrix_and_tuple() {
+    fn multiply_matrix_and_point() {
         let a = Matrix([
             [1.0, 2.0, 3.0, 4.0],
             [2.0, 4.0, 4.0, 2.0],
             [8.0, 6.0, 4.0, 1.0],
             [0.0, 0.0, 0.0, 1.0],
         ]);
-        let t = Tuple::new(1.0, 2.0, 3.0, 1.0);
+        let t = Point::new(1.0, 2.0, 3.0);
 
-        assert_abs_diff_eq!(a * t, Tuple::new(18.0, 24.0, 33.0, 1.0));
+        assert_eq!(a * t, Point::new(18.0, 24.0, 33.0));
     }
 
     #[test]
@@ -669,37 +677,35 @@ mod tests {
     }
 
     #[test]
-    fn multiply_almost_identity_by_tuple() {
+    fn multiply_almost_identity_by_point() {
         let mut a: Matrix<4> = Matrix::identity();
         a[0][0] = -2.0;
 
-        let b = a * Tuple::point(3.0, 2.0, 1.0);
+        let b = a * Point::new(3.0, 2.0, 1.0);
 
-        assert_relative_eq!(b.x, -6.0);
-        assert_relative_eq!(b.y, 2.0);
-        assert_relative_eq!(b.z, 1.0);
+        assert_abs_diff_eq!(b, Point::new(-6.0, 2.0, 1.0));
     }
 
     #[test]
     fn multiply_by_translation() {
         let a = Matrix::translation(5.0, -3.0, 2.0);
-        let p = Tuple::point(-3.0, 4.0, 5.0);
+        let p = Point::new(-3.0, 4.0, 5.0);
 
-        assert_abs_diff_eq!(a * p, Tuple::point(2.0, 1.0, 7.0));
+        assert_abs_diff_eq!(a * p, Point::new(2.0, 1.0, 7.0));
     }
 
     #[test]
     fn multiply_by_inverse_translation() {
         let a = Matrix::translation(5.0, -3.0, 2.0);
-        let p = Tuple::point(-3.0, 4.0, 5.0);
+        let p = Point::new(-3.0, 4.0, 5.0);
 
-        assert_abs_diff_eq!(a.inverse() * p, Tuple::point(-8.0, 7.0, 3.0));
+        assert_abs_diff_eq!(a.inverse() * p, Point::new(-8.0, 7.0, 3.0));
     }
 
     #[test]
     fn translation_doesnt_affect_vectors() {
         let a = Matrix::translation(5.0, -3.0, 2.0);
-        let v = Tuple::vector(-3.0, 4.0, 5.0);
+        let v = Vector::new(-3.0, 4.0, 5.0);
 
         assert_abs_diff_eq!(a * v, v);
     }
@@ -707,156 +713,156 @@ mod tests {
     #[test]
     fn scaling_matrix_applied_to_point() {
         let a = Matrix::scaling(2.0, 3.0, 4.0);
-        let p = Tuple::point(-4.0, 6.0, 8.0);
+        let p = Point::new(-4.0, 6.0, 8.0);
 
-        assert_abs_diff_eq!(a * p, Tuple::point(-8.0, 18.0, 32.0));
+        assert_abs_diff_eq!(a * p, Point::new(-8.0, 18.0, 32.0));
     }
 
     #[test]
     fn scaling_matrix_applied_to_vector() {
         let a = Matrix::scaling(2.0, 3.0, 4.0);
-        let v = Tuple::vector(-4.0, 6.0, 8.0);
+        let v = Vector::new(-4.0, 6.0, 8.0);
 
-        assert_abs_diff_eq!(a * v, Tuple::vector(-8.0, 18.0, 32.0));
+        assert_abs_diff_eq!(a * v, Vector::new(-8.0, 18.0, 32.0));
     }
 
     #[test]
     fn multiply_inverse_of_scaling_matrix() {
         let a = Matrix::scaling(2.0, 3.0, 4.0);
-        let p = Tuple::point(-4.0, 6.0, 8.0);
+        let p = Point::new(-4.0, 6.0, 8.0);
 
-        assert_abs_diff_eq!(a.inverse() * p, Tuple::point(-2.0, 2.0, 2.0));
+        assert_abs_diff_eq!(a.inverse() * p, Point::new(-2.0, 2.0, 2.0));
     }
 
     #[test]
     fn reflection_is_scaling_by_negative_value() {
         let a = Matrix::scaling(-1.0, 1.0, 1.0);
-        let p = Tuple::point(2.0, 3.0, 4.0);
+        let p = Point::new(2.0, 3.0, 4.0);
 
-        assert_abs_diff_eq!(a * p, Tuple::point(-2.0, 3.0, 4.0));
+        assert_abs_diff_eq!(a * p, Point::new(-2.0, 3.0, 4.0));
     }
 
     #[test]
     fn rotation_around_x_axis() {
-        let p = Tuple::point(0.0, 1.0, 0.0);
+        let p = Point::new(0.0, 1.0, 0.0);
         let half_quarter = Matrix::rotation_x(FRAC_PI_4);
         let full_quarter = Matrix::rotation_x(FRAC_PI_2);
 
         assert_abs_diff_eq!(
             half_quarter * p,
-            Tuple::point(0.0, 2.0_f64.sqrt() / 2.0, 2.0_f64.sqrt() / 2.0)
+            Point::new(0.0, 2.0_f64.sqrt() / 2.0, 2.0_f64.sqrt() / 2.0)
         );
-        assert_abs_diff_eq!(full_quarter * p, Tuple::point(0.0, 0.0, 1.0));
+        assert_abs_diff_eq!(full_quarter * p, Point::new(0.0, 0.0, 1.0));
     }
 
     #[test]
     fn rotation_around_y_axis() {
-        let p = Tuple::point(0.0, 0.0, 1.0);
+        let p = Point::new(0.0, 0.0, 1.0);
         let half_quarter = Matrix::rotation_y(FRAC_PI_4);
         let full_quarter = Matrix::rotation_y(FRAC_PI_2);
 
         assert_abs_diff_eq!(
             half_quarter * p,
-            Tuple::point(2.0_f64.sqrt() / 2.0, 0.0, 2.0_f64.sqrt() / 2.0)
+            Point::new(2.0_f64.sqrt() / 2.0, 0.0, 2.0_f64.sqrt() / 2.0)
         );
-        assert_abs_diff_eq!(full_quarter * p, Tuple::point(1.0, 0.0, 0.0));
+        assert_abs_diff_eq!(full_quarter * p, Point::new(1.0, 0.0, 0.0));
     }
 
     #[test]
     fn rotation_around_z_axis() {
-        let p = Tuple::point(0.0, 1.0, 0.0);
+        let p = Point::new(0.0, 1.0, 0.0);
         let half_quarter = Matrix::rotation_z(FRAC_PI_4);
         let full_quarter = Matrix::rotation_z(FRAC_PI_2);
 
         assert_abs_diff_eq!(
             half_quarter * p,
-            Tuple::point(-(2.0_f64.sqrt()) / 2.0, 2.0_f64.sqrt() / 2.0, 0.0)
+            Point::new(-(2.0_f64.sqrt()) / 2.0, 2.0_f64.sqrt() / 2.0, 0.0)
         );
-        assert_abs_diff_eq!(full_quarter * p, Tuple::point(-1.0, 0.0, 0.0));
+        assert_abs_diff_eq!(full_quarter * p, Point::new(-1.0, 0.0, 0.0));
     }
 
     #[test]
     fn shearing_moves_x_in_proportion_to_y() {
         let a = Matrix::shearing(1.0, 0.0, 0.0, 0.0, 0.0, 0.0);
-        let p = Tuple::point(2.0, 3.0, 4.0);
+        let p = Point::new(2.0, 3.0, 4.0);
 
-        assert_abs_diff_eq!(a * p, Tuple::point(5.0, 3.0, 4.0));
+        assert_abs_diff_eq!(a * p, Point::new(5.0, 3.0, 4.0));
     }
 
     #[test]
     fn shearing_moves_x_in_proportion_to_z() {
         let a = Matrix::shearing(0.0, 1.0, 0.0, 0.0, 0.0, 0.0);
-        let p = Tuple::point(2.0, 3.0, 4.0);
+        let p = Point::new(2.0, 3.0, 4.0);
 
-        assert_abs_diff_eq!(a * p, Tuple::point(6.0, 3.0, 4.0));
+        assert_abs_diff_eq!(a * p, Point::new(6.0, 3.0, 4.0));
     }
 
     #[test]
     fn shearing_moves_y_in_proportion_to_x() {
         let a = Matrix::shearing(0.0, 0.0, 1.0, 0.0, 0.0, 0.0);
-        let p = Tuple::point(2.0, 3.0, 4.0);
+        let p = Point::new(2.0, 3.0, 4.0);
 
-        assert_abs_diff_eq!(a * p, Tuple::point(2.0, 5.0, 4.0));
+        assert_abs_diff_eq!(a * p, Point::new(2.0, 5.0, 4.0));
     }
 
     #[test]
     fn shearing_moves_y_in_proportion_to_z() {
         let a = Matrix::shearing(0.0, 0.0, 0.0, 1.0, 0.0, 0.0);
-        let p = Tuple::point(2.0, 3.0, 4.0);
+        let p = Point::new(2.0, 3.0, 4.0);
 
-        assert_abs_diff_eq!(a * p, Tuple::point(2.0, 7.0, 4.0));
+        assert_abs_diff_eq!(a * p, Point::new(2.0, 7.0, 4.0));
     }
 
     #[test]
     fn shearing_moves_z_in_proportion_to_x() {
         let a = Matrix::shearing(0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
-        let p = Tuple::point(2.0, 3.0, 4.0);
+        let p = Point::new(2.0, 3.0, 4.0);
 
-        assert_abs_diff_eq!(a * p, Tuple::point(2.0, 3.0, 6.0));
+        assert_abs_diff_eq!(a * p, Point::new(2.0, 3.0, 6.0));
     }
 
     #[test]
     fn shearing_moves_z_in_proportion_to_y() {
         let a = Matrix::shearing(0.0, 0.0, 0.0, 0.0, 0.0, 1.0);
-        let p = Tuple::point(2.0, 3.0, 4.0);
+        let p = Point::new(2.0, 3.0, 4.0);
 
-        assert_abs_diff_eq!(a * p, Tuple::point(2.0, 3.0, 7.0));
+        assert_abs_diff_eq!(a * p, Point::new(2.0, 3.0, 7.0));
     }
 
     #[test]
     fn transformations_applied_in_sequence() {
-        let p = Tuple::point(1.0, 0.0, 1.0);
+        let p = Point::new(1.0, 0.0, 1.0);
         let a = Matrix::rotation_x(FRAC_PI_2);
         let b = Matrix::scaling(5.0, 5.0, 5.0);
         let c = Matrix::translation(10.0, 5.0, 7.0);
 
         let p2 = a * p;
-        assert_abs_diff_eq!(p2, Tuple::point(1.0, -1.0, 0.0));
+        assert_abs_diff_eq!(p2, Point::new(1.0, -1.0, 0.0));
 
         let p3 = b * p2;
-        assert_abs_diff_eq!(p3, Tuple::point(5.0, -5.0, 0.0));
+        assert_abs_diff_eq!(p3, Point::new(5.0, -5.0, 0.0));
 
         let p4 = c * p3;
-        assert_abs_diff_eq!(p4, Tuple::point(15.0, 0.0, 7.0));
+        assert_abs_diff_eq!(p4, Point::new(15.0, 0.0, 7.0));
     }
 
     #[test]
     fn chained_transformations() {
-        let p = Tuple::point(1.0, 0.0, 1.0);
+        let p = Point::new(1.0, 0.0, 1.0);
         let a = Matrix::rotation_x(FRAC_PI_2);
         let b = Matrix::scaling(5.0, 5.0, 5.0);
         let c = Matrix::translation(10.0, 5.0, 7.0);
 
         let t = c * b * a;
 
-        assert_abs_diff_eq!(t * p, Tuple::point(15.0, 0.0, 7.0));
+        assert_abs_diff_eq!(t * p, Point::new(15.0, 0.0, 7.0));
     }
 
     #[test]
     fn view_transformation_default_orientation() {
-        let from = Tuple::point(0.0, 0.0, 0.0);
-        let to = Tuple::point(0.0, 0.0, -1.0);
-        let up = Tuple::vector(0.0, 1.0, 0.0);
+        let from = Point::new(0.0, 0.0, 0.0);
+        let to = Point::new(0.0, 0.0, -1.0);
+        let up = Vector::new(0.0, 1.0, 0.0);
 
         let t = Matrix::view_transform(from, to, up);
 
@@ -865,9 +871,9 @@ mod tests {
 
     #[test]
     fn view_transformation_positive_z_direction() {
-        let from = Tuple::point(0.0, 0.0, 0.0);
-        let to = Tuple::point(0.0, 0.0, 1.0);
-        let up = Tuple::vector(0.0, 1.0, 0.0);
+        let from = Point::new(0.0, 0.0, 0.0);
+        let to = Point::new(0.0, 0.0, 1.0);
+        let up = Vector::new(0.0, 1.0, 0.0);
 
         let t = Matrix::view_transform(from, to, up);
 
@@ -876,9 +882,9 @@ mod tests {
 
     #[test]
     fn view_transformation_moves_world() {
-        let from = Tuple::point(0.0, 0.0, 8.0);
-        let to = Tuple::point(0.0, 0.0, 0.0);
-        let up = Tuple::vector(0.0, 1.0, 0.0);
+        let from = Point::new(0.0, 0.0, 8.0);
+        let to = Point::new(0.0, 0.0, 0.0);
+        let up = Vector::new(0.0, 1.0, 0.0);
 
         let t = Matrix::view_transform(from, to, up);
 
@@ -887,9 +893,9 @@ mod tests {
 
     #[test]
     fn arbitrary_view_transformation() {
-        let from = Tuple::point(1.0, 3.0, 2.0);
-        let to = Tuple::point(4.0, -2.0, 8.0);
-        let up = Tuple::vector(1.0, 1.0, 0.0);
+        let from = Point::new(1.0, 3.0, 2.0);
+        let to = Point::new(4.0, -2.0, 8.0);
+        let up = Vector::new(1.0, 1.0, 0.0);
 
         let t = Matrix::view_transform(from, to, up);
 

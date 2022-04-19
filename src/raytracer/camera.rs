@@ -1,5 +1,5 @@
 use crate::{
-    core::{matrix::Matrix, tuple::Tuple},
+    core::{matrix::Matrix, point::Point},
     graphics::canvas::Canvas,
 };
 
@@ -64,8 +64,8 @@ impl Camera {
         let world_x = self.half_width - x_offset;
         let world_y = self.half_height - y_offset;
 
-        let pixel = self.transform_inversed * Tuple::point(world_x, world_y, -1.0);
-        let origin = self.transform_inversed * Tuple::point(0.0, 0.0, 0.0);
+        let pixel = self.transform_inversed * Point::new(world_x, world_y, -1.0);
+        let origin = self.transform_inversed * Point::new(0.0, 0.0, 0.0);
         let direction = (pixel - origin).normalize();
 
         Ray::new(origin, direction)
@@ -78,7 +78,7 @@ mod tests {
 
     use approx::assert_abs_diff_eq;
 
-    use crate::graphics::color::Color;
+    use crate::{core::vector::Vector, graphics::color::Color};
 
     use super::*;
 
@@ -111,8 +111,8 @@ mod tests {
 
         let r = c.ray_for_pixel(100, 50);
 
-        assert_abs_diff_eq!(r.origin, Tuple::point(0.0, 0.0, 0.0));
-        assert_abs_diff_eq!(r.direction, Tuple::vector(0.0, 0.0, -1.0));
+        assert_abs_diff_eq!(r.origin, Point::new(0.0, 0.0, 0.0));
+        assert_abs_diff_eq!(r.direction, Vector::new(0.0, 0.0, -1.0));
     }
 
     #[test]
@@ -121,8 +121,8 @@ mod tests {
 
         let r = c.ray_for_pixel(0, 0);
 
-        assert_abs_diff_eq!(r.origin, Tuple::point(0.0, 0.0, 0.0));
-        assert_abs_diff_eq!(r.direction, Tuple::vector(0.66519, 0.33259, -0.66851));
+        assert_abs_diff_eq!(r.origin, Point::new(0.0, 0.0, 0.0));
+        assert_abs_diff_eq!(r.direction, Vector::new(0.66519, 0.33259, -0.66851));
     }
 
     #[test]
@@ -131,10 +131,10 @@ mod tests {
             .with_transform(Matrix::rotation_y(FRAC_PI_4) * Matrix::translation(0.0, -2.0, 5.0));
         let r = c.ray_for_pixel(100, 50);
 
-        assert_abs_diff_eq!(r.origin, Tuple::point(0.0, 2.0, -5.0));
+        assert_abs_diff_eq!(r.origin, Point::new(0.0, 2.0, -5.0));
         assert_abs_diff_eq!(
             r.direction,
-            Tuple::vector(2.0_f64.sqrt() / 2.0, 0.0, -(2.0_f64.sqrt()) / 2.0)
+            Vector::new(2.0_f64.sqrt() / 2.0, 0.0, -(2.0_f64.sqrt()) / 2.0)
         );
     }
 
@@ -142,9 +142,9 @@ mod tests {
     fn render_world_with_camera() {
         let w = World::default();
 
-        let from = Tuple::point(0.0, 0.0, -5.0);
-        let to = Tuple::point(0.0, 0.0, 0.0);
-        let up = Tuple::vector(0.0, 1.0, 0.0);
+        let from = Point::new(0.0, 0.0, -5.0);
+        let to = Point::new(0.0, 0.0, 0.0);
+        let up = Vector::new(0.0, 1.0, 0.0);
 
         let c = Camera::new(11, 11, FRAC_PI_2).with_transform(Matrix::view_transform(from, to, up));
         let image = c.render(&w);

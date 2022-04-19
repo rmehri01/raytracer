@@ -1,6 +1,5 @@
-use im::Vector;
 use raytracer::{
-    core::tuple::Tuple,
+    core::point::Point,
     graphics::{canvas::Canvas, color::Color},
     raytracer::{
         intersection::Intersection, material::Material, point_light::PointLight, ray::Ray,
@@ -16,7 +15,7 @@ fn render_shaded_sphere(path: &str) {
     let side_len = 500;
     let mut canvas = Canvas::new(side_len, side_len);
 
-    let ray_origin = Tuple::point(0.0, 0.0, -5.0);
+    let ray_origin = Point::new(0.0, 0.0, -5.0);
     let wall_z = 10.0;
     let wall_size = 7.0;
 
@@ -28,7 +27,7 @@ fn render_shaded_sphere(path: &str) {
         ..Material::default()
     });
 
-    let light_position = Tuple::point(-10.0, 10.0, -10.0);
+    let light_position = Point::new(-10.0, 10.0, -10.0);
     let light_color = Color::WHITE;
     let light = PointLight::new(light_position, light_color);
 
@@ -37,20 +36,20 @@ fn render_shaded_sphere(path: &str) {
 
         for x in 0..side_len {
             let world_x = -half + pixel_size * x as f64;
-            let position = Tuple::point(world_x, world_y, wall_z);
+            let position = Point::new(world_x, world_y, wall_z);
 
             let r = Ray::new(ray_origin, (position - ray_origin).normalize());
-            let xs = sphere.intersect(&r, Vector::new());
+            let xs = sphere.intersect(&r, im::Vector::new());
 
             if let Some(hit) = xs.hit() {
                 let point = r.position(hit.t);
                 let normal = sphere.normal_at(
                     &point,
-                    &Intersection::new(0.0, &sphere, Vector::new()),
-                    &Vector::new(),
+                    &Intersection::new(0.0, &sphere, im::Vector::new()),
+                    &im::Vector::new(),
                 );
                 let eye = -r.direction;
-                let object_point = sphere.world_to_object(&point, &Vector::new());
+                let object_point = sphere.world_to_object(&point, &im::Vector::new());
                 let color = hit.object.material.lighting(
                     &object_point,
                     &point,

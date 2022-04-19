@@ -1,7 +1,7 @@
 use std::f64::consts::FRAC_PI_6;
 
 use raytracer::{
-    core::{matrix::Matrix, tuple::Tuple},
+    core::{matrix::Matrix, point::Point},
     graphics::{canvas::Canvas, color::Color},
 };
 
@@ -12,7 +12,7 @@ fn main() {
 fn plot_clock(side_len: usize, path: &str) {
     let mut canvas = Canvas::new(side_len, side_len);
 
-    let twelve = Tuple::point(0.0, 0.0, 1.0);
+    let twelve = Point::new(0.0, 0.0, 1.0);
     let angle = FRAC_PI_6;
     let pixel_color = Color::WHITE;
     let radius = 3.0 / 8.0 * canvas.width as f64;

@@ -1,6 +1,5 @@
-use im::Vector;
 use raytracer::{
-    core::tuple::Tuple,
+    core::point::Point,
     graphics::{canvas::Canvas, color::Color},
     raytracer::{ray::Ray, shape::Shape},
 };
@@ -13,7 +12,7 @@ fn render_circle(path: &str) {
     let side_len = 500;
     let mut canvas = Canvas::new(side_len, side_len);
 
-    let ray_origin = Tuple::point(0.0, 0.0, -5.0);
+    let ray_origin = Point::new(0.0, 0.0, -5.0);
     let wall_z = 10.0;
     let wall_size = 7.0;
 
@@ -28,10 +27,10 @@ fn render_circle(path: &str) {
 
         for x in 0..side_len {
             let world_x = -half + pixel_size * x as f64;
-            let position = Tuple::point(world_x, world_y, wall_z);
+            let position = Point::new(world_x, world_y, wall_z);
 
             let r = Ray::new(ray_origin, (position - ray_origin).normalize());
-            let xs = sphere.intersect(&r, Vector::new());
+            let xs = sphere.intersect(&r, im::Vector::new());
 
             if xs.hit().is_some() {
                 canvas.write_pixel(x, y, color);

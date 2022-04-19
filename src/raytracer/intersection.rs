@@ -1,9 +1,8 @@
 use std::collections::BTreeSet;
 
 use approx::{AbsDiffEq, UlpsEq};
-use im::Vector;
 
-use crate::core::{matrix::Matrix, tuple::Tuple};
+use crate::core::{matrix::Matrix, point::Point, vector::Vector};
 
 use super::{ray::Ray, shape::Shape};
 
@@ -14,11 +13,11 @@ pub struct Intersection<'shape> {
     // TODO: maybe another type for triangle intersection
     pub u: f64,
     pub v: f64,
-    trail: Vector<Matrix<4>>,
+    trail: im::Vector<Matrix<4>>,
 }
 
 impl<'shape> Intersection<'shape> {
-    pub fn new(t: f64, object: &'shape Shape, trail: Vector<Matrix<4>>) -> Self {
+    pub fn new(t: f64, object: &'shape Shape, trail: im::Vector<Matrix<4>>) -> Self {
         Self {
             t,
             object,
@@ -31,7 +30,7 @@ impl<'shape> Intersection<'shape> {
     pub fn new_with_uv(
         t: f64,
         object: &'shape Shape,
-        trail: Vector<Matrix<4>>,
+        trail: im::Vector<Matrix<4>>,
         u: f64,
         v: f64,
     ) -> Self {
@@ -85,8 +84,8 @@ impl<'shape> Intersection<'shape> {
             shape: self.object,
             trail: self.trail.clone(),
             point,
-            over_point: point + normal_v * Tuple::default_epsilon(),
-            under_point: point - normal_v * Tuple::default_epsilon(),
+            over_point: point + normal_v * Point::default_epsilon(),
+            under_point: point - normal_v * Point::default_epsilon(),
             eye_v,
             normal_v,
             reflect_v: ray.direction.reflect(&normal_v),
@@ -158,13 +157,13 @@ impl<'shape> Intersections<'shape> {
 pub struct Computations<'shape> {
     pub t: f64,
     pub shape: &'shape Shape,
-    pub trail: Vector<Matrix<4>>,
-    pub point: Tuple,
-    pub over_point: Tuple,
-    pub under_point: Tuple,
-    pub eye_v: Tuple,
-    pub normal_v: Tuple,
-    pub reflect_v: Tuple,
+    pub trail: im::Vector<Matrix<4>>,
+    pub point: Point,
+    pub over_point: Point,
+    pub under_point: Point,
+    pub eye_v: Vector,
+    pub normal_v: Vector,
+    pub reflect_v: Vector,
     pub inside: bool,
     pub n1: f64,
     pub n2: f64,
@@ -206,7 +205,7 @@ mod tests {
     #[test]
     fn test_intersection_new() {
         let shape = Shape::new_sphere();
-        let intersection = Intersection::new(3.5, &shape, Vector::new());
+        let intersection = Intersection::new(3.5, &shape, im::Vector::new());
 
         assert_relative_eq!(intersection.t, 3.5);
         assert_eq!(intersection.object, &shape);
@@ -215,8 +214,8 @@ mod tests {
     #[test]
     fn hit_all_positive() {
         let shape = Shape::new_sphere();
-        let i1 = Intersection::new(1.0, &shape, Vector::new());
-        let i2 = Intersection::new(2.0, &shape, Vector::new());
+        let i1 = Intersection::new(1.0, &shape, im::Vector::new());
+        let i2 = Intersection::new(2.0, &shape, im::Vector::new());
 
         let xs = Intersections::new([i1.clone(), i2]);
         let hit = xs.hit().expect("valid hit");
@@ -227,8 +226,8 @@ mod tests {
     #[test]
     fn hit_some_negative() {
         let shape = Shape::new_sphere();
-        let i1 = Intersection::new(-1.0, &shape, Vector::new());
-        let i2 = Intersection::new(1.0, &shape, Vector::new());
+        let i1 = Intersection::new(-1.0, &shape, im::Vector::new());
+        let i2 = Intersection::new(1.0, &shape, im::Vector::new());
 
         let xs = Intersections::new([i1, i2.clone()]);
         let hit = xs.hit().expect("valid hit");
@@ -239,8 +238,8 @@ mod tests {
     #[test]
     fn hit_all_negative() {
         let shape = Shape::new_sphere();
-        let i1 = Intersection::new(-2.0, &shape, Vector::new());
-        let i2 = Intersection::new(-1.0, &shape, Vector::new());
+        let i1 = Intersection::new(-2.0, &shape, im::Vector::new());
+        let i2 = Intersection::new(-1.0, &shape, im::Vector::new());
 
         let xs = Intersections::new([i1, i2]);
         let hit = xs.hit();
@@ -251,10 +250,10 @@ mod tests {
     #[test]
     fn hit_lowest_nonnegative() {
         let shape = Shape::new_sphere();
-        let i1 = Intersection::new(5.0, &shape, Vector::new());
-        let i2 = Intersection::new(7.0, &shape, Vector::new());
-        let i3 = Intersection::new(-3.0, &shape, Vector::new());
-        let i4 = Intersection::new(2.0, &shape, Vector::new());
+        let i1 = Intersection::new(5.0, &shape, im::Vector::new());
+        let i2 = Intersection::new(7.0, &shape, im::Vector::new());
+        let i3 = Intersection::new(-3.0, &shape, im::Vector::new());
+        let i4 = Intersection::new(2.0, &shape, im::Vector::new());
 
         let xs = Intersections::new([i1, i2, i3, i4.clone()]);
         let hit = xs.hit().expect("valid hit");
@@ -264,41 +263,41 @@ mod tests {
 
     #[test]
     fn precomputing_state_of_intersection() {
-        let r = Ray::new(Tuple::point(0.0, 0.0, -5.0), Tuple::vector(0.0, 0.0, 1.0));
+        let r = Ray::new(Point::new(0.0, 0.0, -5.0), Vector::new(0.0, 0.0, 1.0));
         let shape = Shape::new_sphere();
-        let i = Intersection::new(4.0, &shape, Vector::new());
+        let i = Intersection::new(4.0, &shape, im::Vector::new());
 
         let comps = i.prepare_computations(&r, &Intersections::new([i.clone()]));
 
         assert_abs_diff_eq!(comps.t, i.t);
         assert_eq!(comps.shape, i.object);
-        assert_abs_diff_eq!(comps.point, Tuple::point(0.0, 0.0, -1.0));
-        assert_abs_diff_eq!(comps.eye_v, Tuple::vector(0.0, 0.0, -1.0));
-        assert_abs_diff_eq!(comps.normal_v, Tuple::vector(0.0, 0.0, -1.0));
+        assert_abs_diff_eq!(comps.point, Point::new(0.0, 0.0, -1.0));
+        assert_abs_diff_eq!(comps.eye_v, Vector::new(0.0, 0.0, -1.0));
+        assert_abs_diff_eq!(comps.normal_v, Vector::new(0.0, 0.0, -1.0));
     }
 
     #[test]
     fn precomputing_reflection_vector() {
         let shape = Shape::new_plane();
         let r = Ray::new(
-            Tuple::point(0.0, 1.0, -1.0),
-            Tuple::vector(0.0, -(2.0_f64.sqrt()) / 2.0, 2.0_f64.sqrt() / 2.0),
+            Point::new(0.0, 1.0, -1.0),
+            Vector::new(0.0, -(2.0_f64.sqrt()) / 2.0, 2.0_f64.sqrt() / 2.0),
         );
-        let i = Intersection::new(2.0_f64.sqrt(), &shape, Vector::new());
+        let i = Intersection::new(2.0_f64.sqrt(), &shape, im::Vector::new());
 
         let comps = i.prepare_computations(&r, &Intersections::new([i.clone()]));
 
         assert_abs_diff_eq!(
             comps.reflect_v,
-            Tuple::vector(0.0, 2.0_f64.sqrt() / 2.0, 2.0_f64.sqrt() / 2.0)
+            Vector::new(0.0, 2.0_f64.sqrt() / 2.0, 2.0_f64.sqrt() / 2.0)
         );
     }
 
     #[test]
     fn hit_when_intersection_outside() {
-        let r = Ray::new(Tuple::point(0.0, 0.0, -5.0), Tuple::vector(0.0, 0.0, 1.0));
+        let r = Ray::new(Point::new(0.0, 0.0, -5.0), Vector::new(0.0, 0.0, 1.0));
         let shape = Shape::new_sphere();
-        let i = Intersection::new(4.0, &shape, Vector::new());
+        let i = Intersection::new(4.0, &shape, im::Vector::new());
 
         let comps = i.prepare_computations(&r, &Intersections::new([i.clone()]));
 
@@ -307,26 +306,26 @@ mod tests {
 
     #[test]
     fn hit_when_intersection_inside() {
-        let r = Ray::new(Tuple::point(0.0, 0.0, 0.0), Tuple::vector(0.0, 0.0, 1.0));
+        let r = Ray::new(Point::new(0.0, 0.0, 0.0), Vector::new(0.0, 0.0, 1.0));
         let shape = Shape::new_sphere();
-        let i = Intersection::new(1.0, &shape, Vector::new());
+        let i = Intersection::new(1.0, &shape, im::Vector::new());
 
         let comps = i.prepare_computations(&r, &Intersections::new([i.clone()]));
 
-        assert_abs_diff_eq!(comps.point, Tuple::point(0.0, 0.0, 1.0));
-        assert_abs_diff_eq!(comps.eye_v, Tuple::vector(0.0, 0.0, -1.0));
+        assert_abs_diff_eq!(comps.point, Point::new(0.0, 0.0, 1.0));
+        assert_abs_diff_eq!(comps.eye_v, Vector::new(0.0, 0.0, -1.0));
         assert!(comps.inside);
-        assert_abs_diff_eq!(comps.normal_v, Tuple::vector(0.0, 0.0, -1.0));
+        assert_abs_diff_eq!(comps.normal_v, Vector::new(0.0, 0.0, -1.0));
     }
 
     #[test]
     fn hit_should_offset_the_point() {
-        let r = Ray::new(Tuple::point(0.0, 0.0, -5.0), Tuple::vector(0.0, 0.0, 1.0));
+        let r = Ray::new(Point::new(0.0, 0.0, -5.0), Vector::new(0.0, 0.0, 1.0));
         let shape = Shape::new_sphere().with_transform(Matrix::translation(0.0, 0.0, 1.0));
 
-        let i = Intersection::new(5.0, &shape, Vector::new());
+        let i = Intersection::new(5.0, &shape, im::Vector::new());
         let comps = i.prepare_computations(&r, &Intersections::new([i.clone()]));
-        let epsilon = Tuple::default_epsilon();
+        let epsilon = Point::default_epsilon();
 
         assert!(comps.over_point.z < epsilon / 2.0);
         assert!(comps.point.z > comps.over_point.z);
@@ -355,15 +354,15 @@ mod tests {
                 ..Material::default()
             });
 
-        let r = Ray::new(Tuple::point(0.0, 0.0, -4.0), Tuple::vector(0.0, 0.0, 1.0));
+        let r = Ray::new(Point::new(0.0, 0.0, -4.0), Vector::new(0.0, 0.0, 1.0));
 
         let xs = Intersections::new([
-            Intersection::new(2.0, &a, Vector::new()),
-            Intersection::new(2.75, &b, Vector::new()),
-            Intersection::new(3.25, &c, Vector::new()),
-            Intersection::new(4.75, &b, Vector::new()),
-            Intersection::new(5.25, &c, Vector::new()),
-            Intersection::new(6.0, &a, Vector::new()),
+            Intersection::new(2.0, &a, im::Vector::new()),
+            Intersection::new(2.75, &b, im::Vector::new()),
+            Intersection::new(3.25, &c, im::Vector::new()),
+            Intersection::new(4.75, &b, im::Vector::new()),
+            Intersection::new(5.25, &c, im::Vector::new()),
+            Intersection::new(6.0, &a, im::Vector::new()),
         ]);
 
         let scenarios = [
@@ -390,13 +389,13 @@ mod tests {
     fn under_point_offset_below_surface() {
         let shape = Shape::new_glass_sphere().with_transform(Matrix::translation(0.0, 0.0, -1.0));
 
-        let r = Ray::new(Tuple::point(0.0, 0.0, -5.0), Tuple::vector(0.0, 0.0, 1.0));
-        let i = Intersection::new(5.0, &shape, Vector::new());
+        let r = Ray::new(Point::new(0.0, 0.0, -5.0), Vector::new(0.0, 0.0, 1.0));
+        let i = Intersection::new(5.0, &shape, im::Vector::new());
 
         let xs = Intersections::new([i.clone()]);
         let comps = i.prepare_computations(&r, &xs);
 
-        assert!(comps.under_point.z > Tuple::default_epsilon() / 2.0);
+        assert!(comps.under_point.z > Point::default_epsilon() / 2.0);
         assert!(comps.point.z < comps.under_point.z);
     }
 
@@ -405,12 +404,12 @@ mod tests {
         let shape = Shape::new_glass_sphere();
 
         let r = Ray::new(
-            Tuple::point(0.0, 0.0, 2.0_f64.sqrt() / 2.0),
-            Tuple::vector(0.0, 1.0, 0.0),
+            Point::new(0.0, 0.0, 2.0_f64.sqrt() / 2.0),
+            Vector::new(0.0, 1.0, 0.0),
         );
         let xs = Intersections::new([
-            Intersection::new(-(2.0_f64.sqrt()) / 2.0, &shape, Vector::new()),
-            Intersection::new(2.0_f64.sqrt() / 2.0, &shape, Vector::new()),
+            Intersection::new(-(2.0_f64.sqrt()) / 2.0, &shape, im::Vector::new()),
+            Intersection::new(2.0_f64.sqrt() / 2.0, &shape, im::Vector::new()),
         ]);
 
         let comps = xs.0.iter().nth(1).unwrap().prepare_computations(&r, &xs);
@@ -422,10 +421,10 @@ mod tests {
     fn schlick_approximation_perpendicular_viewing_angle() {
         let shape = Shape::new_glass_sphere();
 
-        let r = Ray::new(Tuple::point(0.0, 0.0, 0.0), Tuple::vector(0.0, 1.0, 0.0));
+        let r = Ray::new(Point::new(0.0, 0.0, 0.0), Vector::new(0.0, 1.0, 0.0));
         let xs = Intersections::new([
-            Intersection::new(-1.0, &shape, Vector::new()),
-            Intersection::new(1.0, &shape, Vector::new()),
+            Intersection::new(-1.0, &shape, im::Vector::new()),
+            Intersection::new(1.0, &shape, im::Vector::new()),
         ]);
 
         let comps = xs.0.iter().nth(1).unwrap().prepare_computations(&r, &xs);
@@ -437,29 +436,29 @@ mod tests {
     fn schlick_approximation_small_angle_n2_greater_than_n1() {
         let shape = Shape::new_glass_sphere();
 
-        let r = Ray::new(Tuple::point(0.0, 0.99, -2.0), Tuple::vector(0.0, 0.0, 1.0));
-        let xs = Intersections::new([Intersection::new(1.8589, &shape, Vector::new())]);
+        let r = Ray::new(Point::new(0.0, 0.99, -2.0), Vector::new(0.0, 0.0, 1.0));
+        let xs = Intersections::new([Intersection::new(1.8589, &shape, im::Vector::new())]);
 
         let comps = xs.0.iter().next().unwrap().prepare_computations(&r, &xs);
 
-        assert_abs_diff_eq!(comps.schlick(), 0.48873, epsilon = Tuple::default_epsilon());
+        assert_abs_diff_eq!(comps.schlick(), 0.48873, epsilon = Point::default_epsilon());
     }
 
     #[test]
     fn prepare_normal_on_smooth_triangle() {
-        let p1 = Tuple::point(0.0, 1.0, 0.0);
-        let p2 = Tuple::point(-1.0, 0.0, 0.0);
-        let p3 = Tuple::point(1.0, 0.0, 0.0);
-        let n1 = Tuple::vector(0.0, 1.0, 0.0);
-        let n2 = Tuple::vector(-1.0, 0.0, 0.0);
-        let n3 = Tuple::vector(1.0, 0.0, 0.0);
+        let p1 = Point::new(0.0, 1.0, 0.0);
+        let p2 = Point::new(-1.0, 0.0, 0.0);
+        let p3 = Point::new(1.0, 0.0, 0.0);
+        let n1 = Vector::new(0.0, 1.0, 0.0);
+        let n2 = Vector::new(-1.0, 0.0, 0.0);
+        let n3 = Vector::new(1.0, 0.0, 0.0);
 
         let tri = Shape::new_smooth_triangle(p1, p2, p3, n1, n2, n3);
-        let i = Intersection::new_with_uv(1.0, &tri, Vector::new(), 0.45, 0.25);
-        let r = Ray::new(Tuple::point(-0.2, 0.3, -2.0), Tuple::vector(0.0, 0.0, 1.0));
+        let i = Intersection::new_with_uv(1.0, &tri, im::Vector::new(), 0.45, 0.25);
+        let r = Ray::new(Point::new(-0.2, 0.3, -2.0), Vector::new(0.0, 0.0, 1.0));
         let xs = Intersections::new([i.clone()]);
 
         let comps = i.prepare_computations(&r, &xs);
-        assert_eq!(comps.normal_v, Tuple::vector(-0.5547, 0.83205, 0.0));
+        assert_eq!(comps.normal_v, Vector::new(-0.5547, 0.83205, 0.0));
     }
 }

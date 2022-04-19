@@ -1,21 +1,21 @@
-use crate::core::{matrix::Matrix, tuple::Tuple};
+use crate::core::{matrix::Matrix, point::Point};
 
 use super::ray::Ray;
 
 /// An axis-aligned bounding box that can be used to quickly determine if a ray
 /// might intersect with anything in the box.
 pub struct Bounds {
-    minimum: Tuple,
-    maximum: Tuple,
+    minimum: Point,
+    maximum: Point,
 }
 
 impl Bounds {
-    pub fn new(minimum: Tuple, maximum: Tuple) -> Self {
+    pub fn new(minimum: Point, maximum: Point) -> Self {
         Self { minimum, maximum }
     }
 
     // TODO: this and transform not sure if better way
-    pub fn add_point(&mut self, point: &Tuple) {
+    pub fn add_point(&mut self, point: &Point) {
         self.minimum.x = self.minimum.x.min(point.x);
         self.minimum.y = self.minimum.y.min(point.y);
         self.minimum.z = self.minimum.z.min(point.z);
@@ -28,12 +28,12 @@ impl Bounds {
         let mut bounds = Self::default();
         let corners = [
             self.minimum,
-            Tuple::point(self.minimum.x, self.minimum.y, self.maximum.z),
-            Tuple::point(self.minimum.x, self.maximum.y, self.minimum.z),
-            Tuple::point(self.maximum.x, self.minimum.y, self.minimum.z),
-            Tuple::point(self.minimum.x, self.maximum.y, self.maximum.z),
-            Tuple::point(self.maximum.x, self.minimum.y, self.maximum.z),
-            Tuple::point(self.maximum.x, self.maximum.y, self.minimum.z),
+            Point::new(self.minimum.x, self.minimum.y, self.maximum.z),
+            Point::new(self.minimum.x, self.maximum.y, self.minimum.z),
+            Point::new(self.maximum.x, self.minimum.y, self.minimum.z),
+            Point::new(self.minimum.x, self.maximum.y, self.maximum.z),
+            Point::new(self.maximum.x, self.minimum.y, self.maximum.z),
+            Point::new(self.maximum.x, self.maximum.y, self.minimum.z),
             self.maximum,
         ];
 
@@ -90,8 +90,8 @@ impl Bounds {
 impl Default for Bounds {
     fn default() -> Self {
         Self {
-            minimum: Tuple::point(f64::INFINITY, f64::INFINITY, f64::INFINITY),
-            maximum: Tuple::point(f64::NEG_INFINITY, f64::NEG_INFINITY, f64::NEG_INFINITY),
+            minimum: Point::new(f64::INFINITY, f64::INFINITY, f64::INFINITY),
+            maximum: Point::new(f64::NEG_INFINITY, f64::NEG_INFINITY, f64::NEG_INFINITY),
         }
     }
 }

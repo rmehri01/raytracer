@@ -1,37 +1,37 @@
 use raytracer::{
-    core::tuple::Tuple,
+    core::{point::Point, vector::Vector},
     graphics::{canvas::Canvas, color::Color},
 };
 
 struct Projectile {
-    position: Tuple,
-    velocity: Tuple,
+    position: Point,
+    velocity: Vector,
 }
 
 impl Projectile {
-    fn new(position: Tuple, velocity: Tuple) -> Self {
+    fn new(position: Point, velocity: Vector) -> Self {
         Self { position, velocity }
     }
 }
 
 struct Environment {
-    gravity: Tuple,
-    wind: Tuple,
+    gravity: Vector,
+    wind: Vector,
 }
 
 impl Environment {
-    fn new(gravity: Tuple, wind: Tuple) -> Self {
+    fn new(gravity: Vector, wind: Vector) -> Self {
         Self { gravity, wind }
     }
 }
 
 fn main() {
-    let start = Tuple::point(0.0, 1.0, 0.0);
-    let velocity = Tuple::vector(1.0, 1.8, 0.0).normalize() * 11.25;
+    let start = Point::new(0.0, 1.0, 0.0);
+    let velocity = Vector::new(1.0, 1.8, 0.0).normalize() * 11.25;
     let p = Projectile::new(start, velocity);
 
-    let gravity = Tuple::vector(0.0, -0.1, 0.0);
-    let wind = Tuple::vector(-0.01, 0.0, 0.0);
+    let gravity = Vector::new(0.0, -0.1, 0.0);
+    let wind = Vector::new(-0.01, 0.0, 0.0);
     let e = Environment::new(gravity, wind);
 
     plot_trajectory(p, &e, "images/trajectory.ppm");
