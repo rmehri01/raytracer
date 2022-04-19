@@ -46,7 +46,6 @@ impl<'shape> Intersection<'shape> {
 
     pub fn prepare_computations(&self, ray: &Ray, xs: &Intersections<'shape>) -> Computations {
         // TODO: nicer way to do the containers that doesn't mix with what happens last
-        // TODO: need type annotation?
         let mut containers: Vec<&'shape Shape> = Vec::new();
 
         let mut n1 = None;

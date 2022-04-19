@@ -245,7 +245,6 @@ pub enum ShapeKind {
     // TODO: subtype of group?
     CSG {
         operation: Operation,
-        // TODO: reference instead?
         left: Box<Shape>,
         right: Box<Shape>,
     },
@@ -260,7 +259,6 @@ pub enum Operation {
 }
 
 impl Operation {
-    // TODO: use filter instead of mutation
     fn filter_intersections<'shape>(
         self,
         left: &Shape,
@@ -269,23 +267,24 @@ impl Operation {
         let mut in_l = false;
         let mut in_r = false;
 
-        let mut result = BTreeSet::new();
+        let intersections = intersections
+            .0
+            .into_iter()
+            .filter(|i| {
+                let l_hit = left.includes(i.object);
+                let allowed = self.intersection_allowed(l_hit, in_l, in_r);
 
-        for i in intersections.0 {
-            let l_hit = left.includes(i.object);
+                if l_hit {
+                    in_l = !in_l;
+                } else {
+                    in_r = !in_r;
+                }
 
-            if self.intersection_allowed(l_hit, in_l, in_r) {
-                result.insert(i);
-            }
+                allowed
+            })
+            .collect();
 
-            if l_hit {
-                in_l = !in_l;
-            } else {
-                in_r = !in_r;
-            }
-        }
-
-        Intersections(result)
+        Intersections(intersections)
     }
 
     /// Determines which intersections should be preserved.
