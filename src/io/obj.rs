@@ -22,7 +22,7 @@ fn parse_obj_string(obj_string: String) -> Shape {
     let mut current_group = None;
 
     for line in obj_string.lines() {
-        match &line.split(' ').collect::<Vec<&str>>()[..] {
+        match &line.trim().split(' ').collect::<Vec<&str>>()[..] {
             ["v", v1, v2, v3] => {
                 if let Ok(p) = parse_vertex(v1, v2, v3) {
                     vertices.push(p);
@@ -108,13 +108,13 @@ fn parse_vertex_ref(
     normals: &[Tuple],
 ) -> Result<(Tuple, Option<Tuple>), ParseIntError> {
     match v.split('/').collect::<Vec<&str>>()[..] {
-        [v, n] | [v, _, n] => {
+        [v, _, n] => {
             let v = v.parse::<usize>()? - 1;
             let n = n.parse::<usize>()? - 1;
 
             Ok((vertices[v], Some(normals[n])))
         }
-        [v] => {
+        [v] | [v, _] => {
             let v = v.parse::<usize>()? - 1;
 
             Ok((vertices[v], None))
