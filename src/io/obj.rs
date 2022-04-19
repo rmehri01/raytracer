@@ -6,15 +6,15 @@ use std::{
 
 use crate::{core::tuple::Tuple, raytracer::shape::Shape};
 
-pub fn parse_obj_file(path: &str) -> io::Result<Shape> {
+pub fn parse_file(path: &str) -> io::Result<Shape> {
     let obj_string = fs::read_to_string(path)?;
 
-    Ok(parse_obj_string(obj_string))
+    Ok(parse_string(obj_string))
 }
 
 /// Parses a string representation of an OBJ file, deliberately ignoring
 /// any lines that aren't recognized.
-fn parse_obj_string(obj_string: String) -> Shape {
+fn parse_string(obj_string: String) -> Shape {
     let mut triangles = Vec::new();
     let mut vertices = Vec::new();
     let mut normals = Vec::new();
@@ -142,7 +142,7 @@ mod tests {
         ]
         .join("\n");
 
-        parse_obj_string(obj_string);
+        parse_string(obj_string);
     }
 
     #[test]
@@ -163,7 +163,7 @@ mod tests {
         ]
         .join("\n");
 
-        let shape = parse_obj_string(obj_string);
+        let shape = parse_string(obj_string);
 
         if let ShapeKind::Group(group) = shape.kind {
             assert_eq!(group.len(), 2);
@@ -200,7 +200,7 @@ mod tests {
         ]
         .join("\n");
 
-        let shape = parse_obj_string(obj_string);
+        let shape = parse_string(obj_string);
 
         if let ShapeKind::Group(group) = shape.kind {
             assert_eq!(group.len(), 3);
@@ -247,7 +247,7 @@ mod tests {
         ]
         .join("\n");
 
-        let shape = parse_obj_string(obj_string);
+        let shape = parse_string(obj_string);
 
         if let ShapeKind::Group(group) = shape.kind {
             assert_eq!(group.len(), 2);
@@ -285,7 +285,7 @@ mod tests {
         ]
         .join("\n");
 
-        let shape = parse_obj_string(obj_string);
+        let shape = parse_string(obj_string);
         // ShapeKind::SmoothTriangle {triangular, n1, n2, n3}
         if let ShapeKind::Group(group) = shape.kind {
             let t1 = &group[0];

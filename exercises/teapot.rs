@@ -22,7 +22,7 @@ fn render_teapot(path: &str) {
     };
 
     let floor = Shape::new_plane().with_material(floor_material);
-    let teapot = obj::parse_obj_file("exercises/resources/teapot.obj").unwrap();
+    let teapot = obj::parse_file("exercises/resources/teapot.obj").unwrap();
 
     let world = World {
         light: Some(PointLight::new(
