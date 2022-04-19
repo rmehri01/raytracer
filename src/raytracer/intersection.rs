@@ -98,28 +98,28 @@ impl<'shape> Intersection<'shape> {
     }
 }
 
-impl<'shape> PartialEq for Intersection<'shape> {
+impl PartialEq for Intersection<'_> {
     fn eq(&self, other: &Self) -> bool {
         self.t
             .ulps_eq(&other.t, Self::default_epsilon(), Self::default_max_ulps())
     }
 }
 
-impl<'shape> Eq for Intersection<'shape> {}
+impl Eq for Intersection<'_> {}
 
-impl<'shape> PartialOrd for Intersection<'shape> {
+impl PartialOrd for Intersection<'_> {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         self.t.partial_cmp(&other.t)
     }
 }
 
-impl<'shape> Ord for Intersection<'shape> {
+impl Ord for Intersection<'_> {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         self.t.partial_cmp(&other.t).expect("t is not NaN")
     }
 }
 
-impl<'shape> AbsDiffEq for Intersection<'shape> {
+impl AbsDiffEq for Intersection<'_> {
     type Epsilon = f64;
 
     fn default_epsilon() -> Self::Epsilon {
@@ -131,7 +131,7 @@ impl<'shape> AbsDiffEq for Intersection<'shape> {
     }
 }
 
-impl<'shape> UlpsEq for Intersection<'shape> {
+impl UlpsEq for Intersection<'_> {
     fn default_max_ulps() -> u32 {
         4
     }
@@ -171,7 +171,7 @@ pub struct Computations<'shape> {
     pub n2: f64,
 }
 
-impl<'shape> Computations<'shape> {
+impl Computations<'_> {
     /// The Schlick approximation for the Fresnel reflectance.
     /// Computes the reflectance, which is a number between 0 and 1
     /// representing the fraction of light reflected.
