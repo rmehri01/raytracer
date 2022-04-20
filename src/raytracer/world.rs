@@ -11,6 +11,7 @@ use super::{
     shape::Shape,
 };
 
+/// A collection of all objects in a scene.
 #[derive(Debug, PartialEq)]
 pub struct World {
     pub shapes: Vec<Shape>,
@@ -27,7 +28,7 @@ impl World {
     }
 
     pub fn color_at(&self, ray: &Ray, remaining_recursions: u8) -> Color {
-        let intersections = self.intersect(ray);
+        let intersections = self.intersections(ray);
         let hit = intersections.hit();
 
         match hit {
@@ -39,7 +40,7 @@ impl World {
         }
     }
 
-    fn intersect(&self, ray: &Ray) -> Intersections {
+    fn intersections(&self, ray: &Ray) -> Intersections {
         let intersects = self
             .shapes
             .iter()
@@ -78,7 +79,7 @@ impl World {
         let direction = v.normalize();
 
         let r = Ray::new(*point, direction);
-        let intersections = self.intersect(&r);
+        let intersections = self.intersections(&r);
 
         intersections.hit().map_or(false, |hit| hit.t < distance)
     }
@@ -171,7 +172,7 @@ mod tests {
         let r = Ray::new(Point::new(0.0, 0.0, -5.0), Vector::new(0.0, 0.0, 1.0));
 
         let xs = world
-            .intersect(&r)
+            .intersections(&r)
             .0
             .iter()
             .map(|x| x.t)

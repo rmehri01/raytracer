@@ -14,15 +14,7 @@ impl Bounds {
         Self { minimum, maximum }
     }
 
-    pub fn add_point(&mut self, point: &Point) {
-        self.minimum.x = self.minimum.x.min(point.x);
-        self.minimum.y = self.minimum.y.min(point.y);
-        self.minimum.z = self.minimum.z.min(point.z);
-        self.maximum.x = self.maximum.x.max(point.x);
-        self.maximum.y = self.maximum.y.max(point.y);
-        self.maximum.z = self.maximum.z.max(point.z);
-    }
-
+    /// Extends the bounding box to include all points in the transformed box.
     pub fn transform(&mut self, transform: &Transformation) {
         let mut bounds = Self::default();
         let corners = [
@@ -40,6 +32,16 @@ impl Bounds {
             let transformed_point = *transform * *corner;
             bounds.add_point(&transformed_point);
         }
+    }
+
+    /// Extends the bounding box to include the given point.
+    pub fn add_point(&mut self, point: &Point) {
+        self.minimum.x = self.minimum.x.min(point.x);
+        self.minimum.y = self.minimum.y.min(point.y);
+        self.minimum.z = self.minimum.z.min(point.z);
+        self.maximum.x = self.maximum.x.max(point.x);
+        self.maximum.y = self.maximum.y.max(point.y);
+        self.maximum.z = self.maximum.z.max(point.z);
     }
 
     // TODO: duplicated

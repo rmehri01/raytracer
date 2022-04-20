@@ -6,6 +6,7 @@ use crate::core::{matrix::Transformation, point::Point, vector::Vector};
 
 use super::{ray::Ray, shape::Shape};
 
+/// Describes where an intersection occurs and on what object.
 #[derive(Debug, Clone)]
 pub struct Intersection<'shape> {
     pub t: f64,
@@ -146,6 +147,7 @@ impl<'shape> Intersections<'shape> {
         Self(BTreeSet::from(xs))
     }
 
+    /// Finds the first visible intersection.
     pub fn hit(&self) -> Option<Intersection> {
         self.0.iter().find(|i| i.t >= 0.0).cloned()
     }
