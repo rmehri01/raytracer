@@ -1,5 +1,8 @@
 use crate::{
-    core::{matrix::Matrix, point::Point},
+    core::{
+        matrix::{Matrix, Transformation},
+        point::Point,
+    },
     graphics::canvas::Canvas,
 };
 
@@ -8,8 +11,8 @@ use super::{ray::Ray, world::World};
 pub struct Camera {
     h_size: usize,
     v_size: usize,
-    transform: Matrix<4>,
-    transform_inversed: Matrix<4>,
+    transform: Transformation,
+    transform_inversed: Transformation,
     half_width: f64,
     half_height: f64,
     pixel_size: f64,
@@ -37,7 +40,7 @@ impl Camera {
         }
     }
 
-    pub fn with_transform(mut self, transform: Matrix<4>) -> Self {
+    pub fn with_transform(mut self, transform: Transformation) -> Self {
         self.transform = transform;
         self.transform_inversed = transform.inverse();
         self

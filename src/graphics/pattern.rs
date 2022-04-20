@@ -1,11 +1,14 @@
-use crate::core::{matrix::Matrix, point::Point};
+use crate::core::{
+    matrix::{Matrix, Transformation},
+    point::Point,
+};
 
 use super::color::Color;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Pattern {
-    transform: Matrix<4>,
-    transform_inversed: Matrix<4>,
+    transform: Transformation,
+    transform_inversed: Transformation,
     kind: PatternKind,
 }
 
@@ -39,7 +42,7 @@ impl Pattern {
         Self::new(PatternKind::Test)
     }
 
-    pub fn with_transform(mut self, transform: Matrix<4>) -> Self {
+    pub fn with_transform(mut self, transform: Transformation) -> Self {
         self.transform = transform;
         self.transform_inversed = transform.inverse();
         self

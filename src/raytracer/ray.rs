@@ -1,4 +1,4 @@
-use crate::core::{matrix::Matrix, point::Point, vector::Vector};
+use crate::core::{matrix::Transformation, point::Point, vector::Vector};
 
 /// A ray in 3D space with a origin position and direction vector.
 #[derive(Debug)]
@@ -16,7 +16,7 @@ impl Ray {
         self.origin + self.direction * t
     }
 
-    pub fn transform(&self, m: &Matrix<4>) -> Self {
+    pub fn transform(&self, m: &Transformation) -> Self {
         Self {
             origin: *m * self.origin,
             direction: *m * self.direction,
@@ -27,6 +27,8 @@ impl Ray {
 #[cfg(test)]
 mod tests {
     use approx::assert_abs_diff_eq;
+
+    use crate::core::matrix::Matrix;
 
     use super::*;
 

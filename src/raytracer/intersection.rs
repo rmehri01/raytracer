@@ -2,7 +2,7 @@ use std::collections::BTreeSet;
 
 use approx::{AbsDiffEq, UlpsEq};
 
-use crate::core::{matrix::Matrix, point::Point, vector::Vector};
+use crate::core::{matrix::Transformation, point::Point, vector::Vector};
 
 use super::{ray::Ray, shape::Shape};
 
@@ -13,11 +13,11 @@ pub struct Intersection<'shape> {
     // TODO: maybe another type for triangle intersection
     pub u: f64,
     pub v: f64,
-    trail: im::Vector<Matrix<4>>,
+    trail: im::Vector<Transformation>,
 }
 
 impl<'shape> Intersection<'shape> {
-    pub fn new(t: f64, object: &'shape Shape, trail: im::Vector<Matrix<4>>) -> Self {
+    pub fn new(t: f64, object: &'shape Shape, trail: im::Vector<Transformation>) -> Self {
         Self {
             t,
             object,
@@ -30,7 +30,7 @@ impl<'shape> Intersection<'shape> {
     pub fn new_with_uv(
         t: f64,
         object: &'shape Shape,
-        trail: im::Vector<Matrix<4>>,
+        trail: im::Vector<Transformation>,
         u: f64,
         v: f64,
     ) -> Self {
@@ -44,7 +44,6 @@ impl<'shape> Intersection<'shape> {
     }
 
     pub fn prepare_computations(&self, ray: &Ray, xs: &Intersections<'shape>) -> Computations {
-        // TODO: nicer way to do the containers that doesn't mix with what happens last
         let mut containers: Vec<&'shape Shape> = Vec::new();
 
         let mut n1 = None;
@@ -157,7 +156,7 @@ impl<'shape> Intersections<'shape> {
 pub struct Computations<'shape> {
     pub t: f64,
     pub shape: &'shape Shape,
-    pub trail: im::Vector<Matrix<4>>,
+    pub trail: im::Vector<Transformation>,
     pub point: Point,
     pub over_point: Point,
     pub under_point: Point,
@@ -198,7 +197,7 @@ impl Computations<'_> {
 mod tests {
     use approx::{assert_abs_diff_eq, assert_relative_eq};
 
-    use crate::raytracer::material::Material;
+    use crate::{core::matrix::Matrix, raytracer::material::Material};
 
     use super::*;
 

@@ -4,6 +4,8 @@ use approx::AbsDiffEq;
 
 use super::{point::Point, vector::Vector};
 
+pub type Transformation = Matrix<4>;
+
 #[derive(Debug, Clone, Copy)]
 pub struct Matrix<const N: usize>([[f64; N]; N]);
 
@@ -647,9 +649,9 @@ mod tests {
 
     #[test]
     fn invert_identity() {
-        let indentity: Matrix<4> = Matrix::identity();
+        let identity: Matrix<4> = Matrix::identity();
 
-        assert_abs_diff_eq!(indentity.inverse(), Matrix::identity());
+        assert_abs_diff_eq!(identity.inverse(), Matrix::identity());
     }
 
     #[test]

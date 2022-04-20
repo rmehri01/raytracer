@@ -1,4 +1,4 @@
-use crate::core::{matrix::Matrix, point::Point};
+use crate::core::{matrix::Transformation, point::Point};
 
 use super::ray::Ray;
 
@@ -24,7 +24,7 @@ impl Bounds {
         self.maximum.z = self.maximum.z.max(point.z);
     }
 
-    pub fn transform(self, transform: &Matrix<4>) -> Self {
+    pub fn transform(self, transform: &Transformation) -> Self {
         let mut bounds = Self::default();
         let corners = [
             self.minimum,

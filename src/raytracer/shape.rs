@@ -2,7 +2,11 @@ use std::collections::BTreeSet;
 
 use approx::AbsDiffEq;
 
-use crate::core::{matrix::Matrix, point::Point, vector::Vector};
+use crate::core::{
+    matrix::{Matrix, Transformation},
+    point::Point,
+    vector::Vector,
+};
 
 use super::{
     bounds::Bounds,
@@ -13,8 +17,8 @@ use super::{
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Shape {
-    pub transform: Matrix<4>,
-    transform_inversed: Matrix<4>,
+    pub transform: Transformation,
+    transform_inversed: Transformation,
     pub material: Material,
     pub kind: ShapeKind,
 }
@@ -96,7 +100,7 @@ impl Shape {
         })
     }
 
-    pub fn with_transform(mut self, transform: Matrix<4>) -> Self {
+    pub fn with_transform(mut self, transform: Transformation) -> Self {
         self.transform = transform;
         self.transform_inversed = transform.inverse();
         self
@@ -107,7 +111,7 @@ impl Shape {
         self
     }
 
-    pub fn intersect(&self, ray: &Ray, mut trail: im::Vector<Matrix<4>>) -> Intersections {
+    pub fn intersect(&self, ray: &Ray, mut trail: im::Vector<Transformation>) -> Intersections {
         let local_ray = ray.transform(&self.transform_inversed);
 
         match &self.kind {
@@ -178,7 +182,7 @@ impl Shape {
         &self,
         point: &Point,
         hit: &Intersection,
-        trail: &im::Vector<Matrix<4>>,
+        trail: &im::Vector<Transformation>,
     ) -> Vector {
         match &self.kind {
             ShapeKind::Single(single) => {
@@ -198,7 +202,11 @@ impl Shape {
     }
 
     // TODO: should mutate vector to avoid duplication?
-    pub fn world_to_object(&self, world_point: &Point, trail: &im::Vector<Matrix<4>>) -> Point {
+    pub fn world_to_object(
+        &self,
+        world_point: &Point,
+        trail: &im::Vector<Transformation>,
+    ) -> Point {
         let trail_point = trail
             .iter()
             .rev()
@@ -207,7 +215,7 @@ impl Shape {
         self.transform_inversed * trail_point
     }
 
-    fn normal_to_world(&self, normal: &Vector, trail: &im::Vector<Matrix<4>>) -> Vector {
+    fn normal_to_world(&self, normal: &Vector, trail: &im::Vector<Transformation>) -> Vector {
         let normal = self.transform_inversed.transpose() * *normal;
         let normal = normal.normalize();
 
