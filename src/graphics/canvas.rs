@@ -15,12 +15,16 @@ impl Canvas {
     const PPM_MAX_COLOR_VALUE: u8 = 255;
     const PPM_MAX_LINE_LEN: u8 = 70;
 
-    pub fn new(width: usize, height: usize) -> Self {
+    pub fn new(width: usize, height: usize, pixels: Vec<Color>) -> Self {
         Self {
             width,
             height,
-            pixels: vec![Color::BLACK; width * height],
+            pixels,
         }
+    }
+
+    pub fn empty(width: usize, height: usize) -> Self {
+        Self::new(width, height, vec![Color::BLACK; width * height])
     }
 
     pub fn write_pixel(&mut self, x: usize, y: usize, color: Color) {
@@ -96,7 +100,7 @@ mod tests {
 
     #[test]
     fn new() {
-        let canvas = Canvas::new(10, 20);
+        let canvas = Canvas::empty(10, 20);
 
         assert_eq!(canvas.width, 10);
         assert_eq!(canvas.height, 20);
@@ -109,7 +113,7 @@ mod tests {
 
     #[test]
     fn write_pixel() {
-        let mut canvas = Canvas::new(10, 20);
+        let mut canvas = Canvas::empty(10, 20);
         let red = Color::new(1.0, 0.0, 0.0);
 
         canvas.write_pixel(2, 3, red);
@@ -122,7 +126,7 @@ mod tests {
 
     #[test]
     fn ppm_header() {
-        let canvas = Canvas::new(5, 3);
+        let canvas = Canvas::empty(5, 3);
 
         let ppm = canvas.to_ppm();
 
@@ -134,7 +138,7 @@ mod tests {
 
     #[test]
     fn ppm_pixel_data() {
-        let mut canvas = Canvas::new(5, 3);
+        let mut canvas = Canvas::empty(5, 3);
         let c1 = Color::new(1.5, 0.0, 0.0);
         let c2 = Color::new(0.0, 0.5, 0.0);
         let c3 = Color::new(-0.5, 0.0, 1.0);
@@ -158,7 +162,7 @@ mod tests {
 
     #[test]
     fn ppm_split_long_lines() {
-        let mut canvas = Canvas::new(10, 2);
+        let mut canvas = Canvas::empty(10, 2);
 
         for row in 0..canvas.height {
             for col in 0..canvas.width {
@@ -193,7 +197,7 @@ mod tests {
 
     #[test]
     fn ppm_terminate_with_newline() {
-        let canvas = Canvas::new(5, 3);
+        let canvas = Canvas::empty(5, 3);
 
         let ppm = canvas.to_ppm();
 

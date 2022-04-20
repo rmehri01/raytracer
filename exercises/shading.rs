@@ -13,7 +13,7 @@ fn main() {
 
 fn render_shaded_sphere(path: &str) {
     let side_len = 500;
-    let mut canvas = Canvas::new(side_len, side_len);
+    let mut canvas = Canvas::empty(side_len, side_len);
 
     let ray_origin = Point::new(0.0, 0.0, -5.0);
     let wall_z = 10.0;

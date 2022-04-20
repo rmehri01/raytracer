@@ -38,7 +38,7 @@ fn main() {
 }
 
 fn plot_trajectory(mut p: Projectile, e: &Environment, path: &str) {
-    let mut canvas = Canvas::new(900, 550);
+    let mut canvas = Canvas::empty(900, 550);
     let pixel_color = Color::new(0.85, 0.35, 0.40);
 
     while p.position.y > 0.0 {

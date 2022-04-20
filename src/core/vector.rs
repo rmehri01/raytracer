@@ -20,7 +20,6 @@ impl Vector {
         (self.x.powi(2) + self.y.powi(2) + self.z.powi(2)).sqrt()
     }
 
-    // TODO: mutate?
     pub fn normalize(&self) -> Self {
         let m = self.magnitude();
 

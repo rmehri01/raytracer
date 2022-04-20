@@ -1,3 +1,5 @@
+use rayon::iter::{IntoParallelIterator, ParallelIterator};
+
 use crate::{
     core::{
         matrix::{Matrix, Transformation},
@@ -47,17 +49,20 @@ impl Camera {
     }
 
     pub fn render(&self, world: &World) -> Canvas {
-        let mut canvas = Canvas::new(self.h_size, self.v_size);
+        let colors = (0..self.v_size)
+            .into_par_iter()
+            .flat_map(|y| {
+                (0..self.h_size)
+                    .into_par_iter()
+                    .map(|x| {
+                        let ray = self.ray_for_pixel(x, y);
+                        world.color_at(&ray, 5)
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .collect::<Vec<_>>();
 
-        for y in 0..self.v_size {
-            for x in 0..self.h_size {
-                let ray = self.ray_for_pixel(x, y);
-                let color = world.color_at(&ray, 5);
-                canvas.write_pixel(x, y, color);
-            }
-        }
-
-        canvas
+        Canvas::new(self.h_size, self.v_size, colors)
     }
 
     fn ray_for_pixel(&self, px: usize, py: usize) -> Ray {

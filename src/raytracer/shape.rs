@@ -125,7 +125,7 @@ impl Shape {
                 Intersections(intersections)
             }
             ShapeKind::Group(children) => {
-                trail.push_front(self.transform);
+                trail.push_front(self.transform_inversed);
                 if self.bounds().intersects(&local_ray) {
                     let intersections = children
                         .iter()
@@ -201,16 +201,12 @@ impl Shape {
         }
     }
 
-    // TODO: should mutate vector to avoid duplication?
     pub fn world_to_object(
         &self,
         world_point: &Point,
         trail: &im::Vector<Transformation>,
     ) -> Point {
-        let trail_point = trail
-            .iter()
-            .rev()
-            .fold(*world_point, |acc, mat| mat.inverse() * acc);
+        let trail_point = trail.iter().rev().fold(*world_point, |acc, &mat| mat * acc);
 
         self.transform_inversed * trail_point
     }
@@ -220,7 +216,7 @@ impl Shape {
         let normal = normal.normalize();
 
         trail.iter().fold(normal, |acc, mat| {
-            let normal = mat.inverse().transpose() * acc;
+            let normal = mat.transpose() * acc;
             normal.normalize()
         })
     }
@@ -1460,7 +1456,7 @@ mod tests {
         let n = s.normal_at(
             &Point::new(1.7321, 1.1547, -5.5774),
             &Intersection::new(0.0, &s, im::Vector::new()),
-            &im::vector![g2.transform, g1.transform],
+            &im::vector![g2.transform_inversed, g1.transform_inversed],
         );
 
         assert_abs_diff_eq!(n, Vector::new(0.2857, 0.4286, -0.8571));
@@ -1525,7 +1521,7 @@ mod tests {
         assert_eq!(
             s.world_to_object(
                 &Point::new(-2.0, 0.0, -10.0),
-                &im::vector![g2.transform, g1.transform]
+                &im::vector![g2.transform_inversed, g1.transform_inversed]
             ),
             Point::new(0.0, 0.0, -1.0)
         );
@@ -1543,7 +1539,7 @@ mod tests {
                 3.0_f64.sqrt() / 3.0,
                 3.0_f64.sqrt() / 3.0,
             ),
-            &im::vector![g2.transform, g1.transform],
+            &im::vector![g2.transform_inversed, g1.transform_inversed],
         );
 
         assert_eq!(n, Vector::new(0.2857, 0.4286, -0.8571));

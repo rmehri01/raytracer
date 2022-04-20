@@ -138,7 +138,6 @@ impl UlpsEq for Intersection<'_> {
     }
 }
 
-// TODO: need to keep duplicates?
 #[derive(Debug, Clone)]
 pub struct Intersections<'shape>(pub BTreeSet<Intersection<'shape>>);
 
