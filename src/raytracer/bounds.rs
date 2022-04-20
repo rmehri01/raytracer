@@ -14,7 +14,6 @@ impl Bounds {
         Self { minimum, maximum }
     }
 
-    // TODO: this and transform not sure if better way
     pub fn add_point(&mut self, point: &Point) {
         self.minimum.x = self.minimum.x.min(point.x);
         self.minimum.y = self.minimum.y.min(point.y);
@@ -24,7 +23,7 @@ impl Bounds {
         self.maximum.z = self.maximum.z.max(point.z);
     }
 
-    pub fn transform(self, transform: &Transformation) -> Self {
+    pub fn transform(&mut self, transform: &Transformation) {
         let mut bounds = Self::default();
         let corners = [
             self.minimum,
@@ -41,8 +40,6 @@ impl Bounds {
             let transformed_point = *transform * *corner;
             bounds.add_point(&transformed_point);
         }
-
-        self
     }
 
     // TODO: duplicated

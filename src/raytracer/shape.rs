@@ -166,14 +166,22 @@ impl Shape {
         match &self.kind {
             ShapeKind::Single(single) => single.bounds(),
             ShapeKind::Group(children) => {
-                children.iter().fold(Bounds::default(), |bounds, child| {
-                    bounds.transform(&child.transform)
-                })
+                children
+                    .iter()
+                    .fold(Bounds::default(), |mut bounds, child| {
+                        bounds.transform(&child.transform);
+                        bounds
+                    })
             }
             ShapeKind::SmoothTriangle { triangular, .. } => triangular.bounds(),
-            ShapeKind::CSG { left, right, .. } => Bounds::default()
-                .transform(&left.transform)
-                .transform(&right.transform),
+            ShapeKind::CSG { left, right, .. } => {
+                let mut bounds = Bounds::default();
+
+                bounds.transform(&left.transform);
+                bounds.transform(&right.transform);
+
+                bounds
+            }
         }
     }
 
