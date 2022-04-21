@@ -111,7 +111,7 @@ impl Shape {
         self
     }
 
-    pub fn intersect(&self, ray: &Ray, mut trail: im::Vector<Transformation>) -> Intersections {
+    pub fn intersect(&self, ray: &Ray, trail: &im::Vector<Transformation>) -> Intersections {
         let local_ray = ray.transform(&self.transform_inversed);
 
         match &self.kind {
@@ -125,11 +125,12 @@ impl Shape {
                 Intersections(intersections)
             }
             ShapeKind::Group(children) => {
-                trail.push_front(self.transform_inversed);
                 if self.bounds().intersects(&local_ray) {
+                    let mut new_trail = trail.clone();
+                    new_trail.push_front(self.transform);
                     let intersections = children
                         .iter()
-                        .flat_map(|child| child.intersect(&local_ray, trail.clone()).0)
+                        .flat_map(|child| child.intersect(&local_ray, &new_trail).0)
                         .collect();
 
                     Intersections(intersections)
@@ -153,8 +154,10 @@ impl Shape {
                 right,
             } => {
                 // TODO: could be cleaner?
-                let mut left_intersections = left.intersect(&local_ray, trail.clone()).0;
-                let mut right_intersections = right.intersect(&local_ray, trail.clone()).0;
+                let mut new_trail = trail.clone();
+                new_trail.push_front(self.transform);
+                let mut left_intersections = left.intersect(&local_ray, &new_trail).0;
+                let mut right_intersections = right.intersect(&local_ray, &new_trail).0;
                 left_intersections.append(&mut right_intersections);
 
                 operation.filter_intersections(left, Intersections(left_intersections))
@@ -765,7 +768,7 @@ mod tests {
         let shape = Shape::new_sphere().with_transform(Matrix::scaling(2.0, 2.0, 2.0));
 
         let xs = shape
-            .intersect(&r, im::Vector::new())
+            .intersect(&r, &im::Vector::new())
             .0
             .iter()
             .map(|i| i.t)
@@ -781,7 +784,7 @@ mod tests {
         let r = Ray::new(Point::new(0.0, 0.0, -5.0), Vector::new(0.0, 0.0, 1.0));
         let shape = Shape::new_sphere().with_transform(Matrix::translation(5.0, 0.0, 0.0));
 
-        assert!(shape.intersect(&r, im::Vector::new()).0.is_empty());
+        assert!(shape.intersect(&r, &im::Vector::new()).0.is_empty());
     }
 
     #[test]
@@ -890,7 +893,7 @@ mod tests {
         let shape = Shape::new_sphere();
 
         let shapes = shape
-            .intersect(&r, im::Vector::new())
+            .intersect(&r, &im::Vector::new())
             .0
             .iter()
             .map(|i| i.object)
@@ -1154,7 +1157,7 @@ mod tests {
         let group = Shape::new_group(Vec::new());
 
         let r = Ray::new(Point::new(0.0, 0.0, 0.0), Vector::new(0.0, 0.0, 1.0));
-        let xs = group.intersect(&r, im::Vector::new());
+        let xs = group.intersect(&r, &im::Vector::new());
 
         assert!(xs.0.is_empty());
     }
@@ -1168,7 +1171,7 @@ mod tests {
 
         let r = Ray::new(Point::new(0.0, 0.0, -5.0), Vector::new(0.0, 0.0, 1.0));
         let xs = group
-            .intersect(&r, im::Vector::new())
+            .intersect(&r, &im::Vector::new())
             .0
             .iter()
             .map(|i| i.object)
@@ -1187,7 +1190,7 @@ mod tests {
         let group = Shape::new_group(vec![s]).with_transform(Matrix::scaling(2.0, 2.0, 2.0));
 
         let r = Ray::new(Point::new(10.0, 0.0, -10.0), Vector::new(0.0, 0.0, 1.0));
-        let xs = group.intersect(&r, im::Vector::new());
+        let xs = group.intersect(&r, &im::Vector::new());
 
         assert_eq!(xs.0.len(), 2);
     }
@@ -1201,7 +1204,7 @@ mod tests {
         );
         let r = Ray::new(Point::new(0.0, -1.0, -2.0), Vector::new(0.0, 1.0, 0.0));
 
-        let xs = t.intersect(&r, im::Vector::new());
+        let xs = t.intersect(&r, &im::Vector::new());
 
         assert!(xs.0.is_empty());
     }
@@ -1215,7 +1218,7 @@ mod tests {
         );
         let r = Ray::new(Point::new(1.0, 1.0, -2.0), Vector::new(0.0, 0.0, 1.0));
 
-        let xs = t.intersect(&r, im::Vector::new());
+        let xs = t.intersect(&r, &im::Vector::new());
 
         assert!(xs.0.is_empty());
     }
@@ -1229,7 +1232,7 @@ mod tests {
         );
         let r = Ray::new(Point::new(-1.0, 1.0, -2.0), Vector::new(0.0, 0.0, 1.0));
 
-        let xs = t.intersect(&r, im::Vector::new());
+        let xs = t.intersect(&r, &im::Vector::new());
 
         assert!(xs.0.is_empty());
     }
@@ -1243,7 +1246,7 @@ mod tests {
         );
         let r = Ray::new(Point::new(0.0, -1.0, -2.0), Vector::new(0.0, 0.0, 1.0));
 
-        let xs = t.intersect(&r, im::Vector::new());
+        let xs = t.intersect(&r, &im::Vector::new());
 
         assert!(xs.0.is_empty());
     }
@@ -1258,7 +1261,7 @@ mod tests {
         let r = Ray::new(Point::new(0.0, 0.5, -2.0), Vector::new(0.0, 0.0, 1.0));
 
         let xs = t
-            .intersect(&r, im::Vector::new())
+            .intersect(&r, &im::Vector::new())
             .0
             .iter()
             .map(|i| i.t)
@@ -1279,7 +1282,7 @@ mod tests {
 
         let tri = Shape::new_smooth_triangle(p1, p2, p3, n1, n2, n3);
         let r = Ray::new(Point::new(-0.2, 0.3, -2.0), Vector::new(0.0, 0.0, 1.0));
-        let intersections = tri.intersect(&r, im::Vector::new());
+        let intersections = tri.intersect(&r, &im::Vector::new());
         let xs = intersections.0.iter().collect::<Vec<_>>();
 
         assert_eq!(xs.len(), 1);
@@ -1622,7 +1625,7 @@ mod tests {
     fn ray_misses_csg_object() {
         let c = Shape::new_csg(Operation::Union, Shape::new_sphere(), Shape::new_cube());
         let r = Ray::new(Point::new(0.0, 2.0, -5.0), Vector::new(0.0, 0.0, 1.0));
-        let xs = c.intersect(&r, im::Vector::new());
+        let xs = c.intersect(&r, &im::Vector::new());
 
         assert!(xs.0.is_empty());
     }
@@ -1634,7 +1637,7 @@ mod tests {
 
         let c = Shape::new_csg(Operation::Union, s1.clone(), s2.clone());
         let r = Ray::new(Point::new(0.0, 0.0, -5.0), Vector::new(0.0, 0.0, 1.0));
-        let intersections = c.intersect(&r, im::Vector::new());
+        let intersections = c.intersect(&r, &im::Vector::new());
         let xs = intersections.0.iter().collect::<Vec<_>>();
 
         assert_eq!(xs.len(), 2);

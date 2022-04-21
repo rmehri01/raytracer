@@ -41,10 +41,11 @@ impl World {
     }
 
     fn intersections(&self, ray: &Ray) -> Intersections {
+        let trail = im::Vector::new();
         let intersects = self
             .shapes
             .iter()
-            .flat_map(|shape| shape.intersect(ray, im::Vector::new()).0)
+            .flat_map(|shape| shape.intersect(ray, &trail).0)
             .collect();
 
         Intersections(intersects)

@@ -39,7 +39,7 @@ fn render_shaded_sphere(path: &str) {
             let position = Point::new(world_x, world_y, wall_z);
 
             let r = Ray::new(ray_origin, (position - ray_origin).normalize());
-            let xs = sphere.intersect(&r, im::Vector::new());
+            let xs = sphere.intersect(&r, &im::Vector::new());
 
             if let Some(hit) = xs.hit() {
                 let point = r.position(hit.t);
