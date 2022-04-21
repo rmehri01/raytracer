@@ -148,8 +148,8 @@ impl<'shape> Intersections<'shape> {
     }
 
     /// Finds the first visible intersection.
-    pub fn hit(&self) -> Option<Intersection> {
-        self.0.iter().find(|i| i.t >= 0.0).cloned()
+    pub fn hit(&self) -> Option<&Intersection> {
+        self.0.iter().find(|i| i.t >= 0.0)
     }
 }
 
@@ -220,7 +220,7 @@ mod tests {
         let xs = Intersections::new([i1.clone(), i2]);
         let hit = xs.hit().expect("valid hit");
 
-        assert_abs_diff_eq!(hit, i1);
+        assert_abs_diff_eq!(hit, &i1);
     }
 
     #[test]
@@ -232,7 +232,7 @@ mod tests {
         let xs = Intersections::new([i1, i2.clone()]);
         let hit = xs.hit().expect("valid hit");
 
-        assert_abs_diff_eq!(hit, i2);
+        assert_abs_diff_eq!(hit, &i2);
     }
 
     #[test]
@@ -258,7 +258,7 @@ mod tests {
         let xs = Intersections::new([i1, i2, i3, i4.clone()]);
         let hit = xs.hit().expect("valid hit");
 
-        assert_abs_diff_eq!(hit, i4);
+        assert_abs_diff_eq!(hit, &i4);
     }
 
     #[test]
