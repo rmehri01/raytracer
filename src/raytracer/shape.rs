@@ -111,7 +111,7 @@ impl Shape {
         self
     }
 
-    pub fn intersect(&self, ray: &Ray, trail: &im::Vector<Transformation>) -> Intersections {
+    pub fn intersect(&self, ray: &Ray, trail: &im_rc::Vector<Transformation>) -> Intersections {
         let local_ray = ray.transform(&self.transform_inversed);
 
         match &self.kind {
@@ -193,7 +193,7 @@ impl Shape {
         &self,
         point: &Point,
         hit: &Intersection,
-        trail: &im::Vector<Transformation>,
+        trail: &im_rc::Vector<Transformation>,
     ) -> Vector {
         match &self.kind {
             ShapeKind::Single(single) => {
@@ -215,14 +215,14 @@ impl Shape {
     pub fn world_to_object(
         &self,
         world_point: &Point,
-        trail: &im::Vector<Transformation>,
+        trail: &im_rc::Vector<Transformation>,
     ) -> Point {
         let trail_point = trail.iter().rev().fold(*world_point, |acc, &mat| mat * acc);
 
         self.transform_inversed * trail_point
     }
 
-    fn normal_to_world(&self, normal: &Vector, trail: &im::Vector<Transformation>) -> Vector {
+    fn normal_to_world(&self, normal: &Vector, trail: &im_rc::Vector<Transformation>) -> Vector {
         let normal = self.transform_inversed.transpose() * *normal;
         let normal = normal.normalize();
 
@@ -768,7 +768,7 @@ mod tests {
         let shape = Shape::new_sphere().with_transform(Matrix::scaling(2.0, 2.0, 2.0));
 
         let xs = shape
-            .intersect(&r, &im::Vector::new())
+            .intersect(&r, &im_rc::Vector::new())
             .0
             .iter()
             .map(|i| i.t)
@@ -784,7 +784,7 @@ mod tests {
         let r = Ray::new(Point::new(0.0, 0.0, -5.0), Vector::new(0.0, 0.0, 1.0));
         let shape = Shape::new_sphere().with_transform(Matrix::translation(5.0, 0.0, 0.0));
 
-        assert!(shape.intersect(&r, &im::Vector::new()).0.is_empty());
+        assert!(shape.intersect(&r, &im_rc::Vector::new()).0.is_empty());
     }
 
     #[test]
@@ -893,7 +893,7 @@ mod tests {
         let shape = Shape::new_sphere();
 
         let shapes = shape
-            .intersect(&r, &im::Vector::new())
+            .intersect(&r, &im_rc::Vector::new())
             .0
             .iter()
             .map(|i| i.object)
@@ -1157,7 +1157,7 @@ mod tests {
         let group = Shape::new_group(Vec::new());
 
         let r = Ray::new(Point::new(0.0, 0.0, 0.0), Vector::new(0.0, 0.0, 1.0));
-        let xs = group.intersect(&r, &im::Vector::new());
+        let xs = group.intersect(&r, &im_rc::Vector::new());
 
         assert!(xs.0.is_empty());
     }
@@ -1171,7 +1171,7 @@ mod tests {
 
         let r = Ray::new(Point::new(0.0, 0.0, -5.0), Vector::new(0.0, 0.0, 1.0));
         let xs = group
-            .intersect(&r, &im::Vector::new())
+            .intersect(&r, &im_rc::Vector::new())
             .0
             .iter()
             .map(|i| i.object)
@@ -1190,7 +1190,7 @@ mod tests {
         let group = Shape::new_group(vec![s]).with_transform(Matrix::scaling(2.0, 2.0, 2.0));
 
         let r = Ray::new(Point::new(10.0, 0.0, -10.0), Vector::new(0.0, 0.0, 1.0));
-        let xs = group.intersect(&r, &im::Vector::new());
+        let xs = group.intersect(&r, &im_rc::Vector::new());
 
         assert_eq!(xs.0.len(), 2);
     }
@@ -1204,7 +1204,7 @@ mod tests {
         );
         let r = Ray::new(Point::new(0.0, -1.0, -2.0), Vector::new(0.0, 1.0, 0.0));
 
-        let xs = t.intersect(&r, &im::Vector::new());
+        let xs = t.intersect(&r, &im_rc::Vector::new());
 
         assert!(xs.0.is_empty());
     }
@@ -1218,7 +1218,7 @@ mod tests {
         );
         let r = Ray::new(Point::new(1.0, 1.0, -2.0), Vector::new(0.0, 0.0, 1.0));
 
-        let xs = t.intersect(&r, &im::Vector::new());
+        let xs = t.intersect(&r, &im_rc::Vector::new());
 
         assert!(xs.0.is_empty());
     }
@@ -1232,7 +1232,7 @@ mod tests {
         );
         let r = Ray::new(Point::new(-1.0, 1.0, -2.0), Vector::new(0.0, 0.0, 1.0));
 
-        let xs = t.intersect(&r, &im::Vector::new());
+        let xs = t.intersect(&r, &im_rc::Vector::new());
 
         assert!(xs.0.is_empty());
     }
@@ -1246,7 +1246,7 @@ mod tests {
         );
         let r = Ray::new(Point::new(0.0, -1.0, -2.0), Vector::new(0.0, 0.0, 1.0));
 
-        let xs = t.intersect(&r, &im::Vector::new());
+        let xs = t.intersect(&r, &im_rc::Vector::new());
 
         assert!(xs.0.is_empty());
     }
@@ -1261,7 +1261,7 @@ mod tests {
         let r = Ray::new(Point::new(0.0, 0.5, -2.0), Vector::new(0.0, 0.0, 1.0));
 
         let xs = t
-            .intersect(&r, &im::Vector::new())
+            .intersect(&r, &im_rc::Vector::new())
             .0
             .iter()
             .map(|i| i.t)
@@ -1282,7 +1282,7 @@ mod tests {
 
         let tri = Shape::new_smooth_triangle(p1, p2, p3, n1, n2, n3);
         let r = Ray::new(Point::new(-0.2, 0.3, -2.0), Vector::new(0.0, 0.0, 1.0));
-        let intersections = tri.intersect(&r, &im::Vector::new());
+        let intersections = tri.intersect(&r, &im_rc::Vector::new());
         let xs = intersections.0.iter().collect::<Vec<_>>();
 
         assert_eq!(xs.len(), 1);
@@ -1295,8 +1295,8 @@ mod tests {
         let shape = Shape::new_sphere().with_transform(Matrix::translation(0.0, 1.0, 0.0));
         let n = shape.normal_at(
             &Point::new(0.0, 1.70711, -FRAC_1_SQRT_2),
-            &Intersection::new(0.0, &shape, im::Vector::new()),
-            &im::Vector::new(),
+            &Intersection::new(0.0, &shape, im_rc::Vector::new()),
+            &im_rc::Vector::new(),
         );
 
         assert_abs_diff_eq!(n, Vector::new(0.0, FRAC_1_SQRT_2, -FRAC_1_SQRT_2));
@@ -1308,8 +1308,8 @@ mod tests {
             .with_transform(Matrix::scaling(1.0, 0.5, 1.0) * Matrix::rotation_z(FRAC_PI_4));
         let n = shape.normal_at(
             &Point::new(0.0, 2.0_f64.sqrt() / 2.0, -(2.0_f64.sqrt()) / 2.0),
-            &Intersection::new(0.0, &shape, im::Vector::new()),
-            &im::Vector::new(),
+            &Intersection::new(0.0, &shape, im_rc::Vector::new()),
+            &im_rc::Vector::new(),
         );
 
         assert_abs_diff_eq!(n, Vector::new(0.0, 0.97014, -0.24254));
@@ -1466,8 +1466,8 @@ mod tests {
 
         let n = s.normal_at(
             &Point::new(1.7321, 1.1547, -5.5774),
-            &Intersection::new(0.0, &s, im::Vector::new()),
-            &im::vector![g2.transform_inversed, g1.transform_inversed],
+            &Intersection::new(0.0, &s, im_rc::Vector::new()),
+            &im_rc::vector![g2.transform_inversed, g1.transform_inversed],
         );
 
         assert_abs_diff_eq!(n, Vector::new(0.2857, 0.4286, -0.8571));
@@ -1484,24 +1484,24 @@ mod tests {
         assert_eq!(
             t.normal_at(
                 &Point::new(0.0, 0.5, 0.0),
-                &Intersection::new(0.0, &t, im::Vector::new()),
-                &im::Vector::new()
+                &Intersection::new(0.0, &t, im_rc::Vector::new()),
+                &im_rc::Vector::new()
             ),
             Vector::new(0.0, 0.0, 1.0)
         );
         assert_eq!(
             t.normal_at(
                 &Point::new(-0.5, 0.75, 0.0),
-                &Intersection::new(0.0, &t, im::Vector::new()),
-                &im::Vector::new()
+                &Intersection::new(0.0, &t, im_rc::Vector::new()),
+                &im_rc::Vector::new()
             ),
             Vector::new(0.0, 0.0, 1.0)
         );
         assert_eq!(
             t.normal_at(
                 &Point::new(0.5, 0.25, 0.0),
-                &Intersection::new(0.0, &t, im::Vector::new()),
-                &im::Vector::new()
+                &Intersection::new(0.0, &t, im_rc::Vector::new()),
+                &im_rc::Vector::new()
             ),
             Vector::new(0.0, 0.0, 1.0)
         );
@@ -1517,8 +1517,8 @@ mod tests {
         let n3 = Vector::new(1.0, 0.0, 0.0);
 
         let tri = Shape::new_smooth_triangle(p1, p2, p3, n1, n2, n3);
-        let i = Intersection::new_with_uv(1.0, &tri, im::Vector::new(), 0.45, 0.25);
-        let n = tri.normal_at(&Point::new(0.0, 0.0, 0.0), &i, &im::Vector::new());
+        let i = Intersection::new_with_uv(1.0, &tri, im_rc::Vector::new(), 0.45, 0.25);
+        let n = tri.normal_at(&Point::new(0.0, 0.0, 0.0), &i, &im_rc::Vector::new());
 
         assert_eq!(n, Vector::new(-0.5547, 0.83205, 0.0));
     }
@@ -1532,7 +1532,7 @@ mod tests {
         assert_eq!(
             s.world_to_object(
                 &Point::new(-2.0, 0.0, -10.0),
-                &im::vector![g2.transform_inversed, g1.transform_inversed]
+                &im_rc::vector![g2.transform_inversed, g1.transform_inversed]
             ),
             Point::new(0.0, 0.0, -1.0)
         );
@@ -1550,7 +1550,7 @@ mod tests {
                 3.0_f64.sqrt() / 3.0,
                 3.0_f64.sqrt() / 3.0,
             ),
-            &im::vector![g2.transform_inversed, g1.transform_inversed],
+            &im_rc::vector![g2.transform_inversed, g1.transform_inversed],
         );
 
         assert_eq!(n, Vector::new(0.2857, 0.4286, -0.8571));
@@ -1602,10 +1602,10 @@ mod tests {
             let s1 = Shape::new_sphere();
             let s2 = Shape::new_cube();
             let xs = Intersections::new([
-                Intersection::new(1.0, &s1, im::Vector::new()),
-                Intersection::new(2.0, &s2, im::Vector::new()),
-                Intersection::new(3.0, &s1, im::Vector::new()),
-                Intersection::new(4.0, &s2, im::Vector::new()),
+                Intersection::new(1.0, &s1, im_rc::Vector::new()),
+                Intersection::new(2.0, &s2, im_rc::Vector::new()),
+                Intersection::new(3.0, &s1, im_rc::Vector::new()),
+                Intersection::new(4.0, &s2, im_rc::Vector::new()),
             ]);
 
             let result = operation
@@ -1625,7 +1625,7 @@ mod tests {
     fn ray_misses_csg_object() {
         let c = Shape::new_csg(Operation::Union, Shape::new_sphere(), Shape::new_cube());
         let r = Ray::new(Point::new(0.0, 2.0, -5.0), Vector::new(0.0, 0.0, 1.0));
-        let xs = c.intersect(&r, &im::Vector::new());
+        let xs = c.intersect(&r, &im_rc::Vector::new());
 
         assert!(xs.0.is_empty());
     }
@@ -1637,7 +1637,7 @@ mod tests {
 
         let c = Shape::new_csg(Operation::Union, s1.clone(), s2.clone());
         let r = Ray::new(Point::new(0.0, 0.0, -5.0), Vector::new(0.0, 0.0, 1.0));
-        let intersections = c.intersect(&r, &im::Vector::new());
+        let intersections = c.intersect(&r, &im_rc::Vector::new());
         let xs = intersections.0.iter().collect::<Vec<_>>();
 
         assert_eq!(xs.len(), 2);

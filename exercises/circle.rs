@@ -30,7 +30,7 @@ fn render_circle(path: &str) {
             let position = Point::new(world_x, world_y, wall_z);
 
             let r = Ray::new(ray_origin, (position - ray_origin).normalize());
-            let xs = sphere.intersect(&r, &im::Vector::new());
+            let xs = sphere.intersect(&r, &im_rc::Vector::new());
 
             if xs.hit().is_some() {
                 canvas.write_pixel(x, y, color);

@@ -39,17 +39,17 @@ fn render_shaded_sphere(path: &str) {
             let position = Point::new(world_x, world_y, wall_z);
 
             let r = Ray::new(ray_origin, (position - ray_origin).normalize());
-            let xs = sphere.intersect(&r, &im::Vector::new());
+            let xs = sphere.intersect(&r, &im_rc::Vector::new());
 
             if let Some(hit) = xs.hit() {
                 let point = r.position(hit.t);
                 let normal = sphere.normal_at(
                     &point,
-                    &Intersection::new(0.0, &sphere, im::Vector::new()),
-                    &im::Vector::new(),
+                    &Intersection::new(0.0, &sphere, im_rc::Vector::new()),
+                    &im_rc::Vector::new(),
                 );
                 let eye = -r.direction;
-                let object_point = sphere.world_to_object(&point, &im::Vector::new());
+                let object_point = sphere.world_to_object(&point, &im_rc::Vector::new());
                 let color = hit.object.material.lighting(
                     &object_point,
                     &point,

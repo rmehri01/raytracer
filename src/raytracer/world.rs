@@ -41,7 +41,7 @@ impl World {
     }
 
     fn intersections(&self, ray: &Ray) -> Intersections {
-        let trail = im::Vector::new();
+        let trail = im_rc::Vector::new();
         let intersects = self
             .shapes
             .iter()
@@ -191,7 +191,7 @@ mod tests {
         let world = World::default();
         let r = Ray::new(Point::new(0.0, 0.0, -5.0), Vector::new(0.0, 0.0, 1.0));
         let shape = &world.shapes[0];
-        let i = Intersection::new(4.0, shape, im::Vector::new());
+        let i = Intersection::new(4.0, shape, im_rc::Vector::new());
         let comps = i.prepare_computations(&r, &Intersections::new([i.clone()]));
 
         let color = world.shade_hit(&comps, 5);
@@ -208,7 +208,7 @@ mod tests {
 
         let r = Ray::new(Point::new(0.0, 0.0, 0.0), Vector::new(0.0, 0.0, 1.0));
         let shape = &world.shapes[1];
-        let i = Intersection::new(0.5, shape, im::Vector::new());
+        let i = Intersection::new(0.5, shape, im_rc::Vector::new());
         let comps = i.prepare_computations(&r, &Intersections::new([i.clone()]));
 
         let color = world.shade_hit(&comps, 5);
@@ -292,7 +292,7 @@ mod tests {
         };
 
         let r = Ray::new(Point::new(0.0, 0.0, 5.0), Vector::new(0.0, 0.0, 1.0));
-        let i = Intersection::new(4.0, &s2, im::Vector::new());
+        let i = Intersection::new(4.0, &s2, im_rc::Vector::new());
         let comps = i.prepare_computations(&r, &Intersections::new([i.clone()]));
 
         assert_abs_diff_eq!(w.shade_hit(&comps, 5), Color::new(0.1, 0.1, 0.1));
@@ -304,7 +304,7 @@ mod tests {
         w.shapes[1].material.ambient = 1.0;
 
         let r = Ray::new(Point::new(0.0, 0.0, 0.0), Vector::new(0.0, 0.0, 1.0));
-        let i = Intersection::new(1.0, &w.shapes[1], im::Vector::new());
+        let i = Intersection::new(1.0, &w.shapes[1], im_rc::Vector::new());
 
         let comps = i.prepare_computations(&r, &Intersections::new([i.clone()]));
 
@@ -327,7 +327,7 @@ mod tests {
             Point::new(0.0, 0.0, -3.0),
             Vector::new(0.0, -(2.0_f64.sqrt()) / 2.0, 2.0_f64.sqrt() / 2.0),
         );
-        let i = Intersection::new(2.0_f64.sqrt(), &shape, im::Vector::new());
+        let i = Intersection::new(2.0_f64.sqrt(), &shape, im_rc::Vector::new());
 
         let comps = i.prepare_computations(&r, &Intersections::new([i.clone()]));
 
@@ -353,7 +353,7 @@ mod tests {
             Point::new(0.0, 0.0, -3.0),
             Vector::new(0.0, -(2.0_f64.sqrt()) / 2.0, 2.0_f64.sqrt() / 2.0),
         );
-        let i = Intersection::new(2.0_f64.sqrt(), &shape, im::Vector::new());
+        let i = Intersection::new(2.0_f64.sqrt(), &shape, im_rc::Vector::new());
 
         let comps = i.prepare_computations(&r, &Intersections::new([i.clone()]));
 
@@ -404,7 +404,7 @@ mod tests {
             Point::new(0.0, 0.0, -3.0),
             Vector::new(0.0, -(2.0_f64.sqrt()) / 2.0, 2.0_f64.sqrt() / 2.0),
         );
-        let i = Intersection::new(2.0_f64.sqrt(), &shape, im::Vector::new());
+        let i = Intersection::new(2.0_f64.sqrt(), &shape, im_rc::Vector::new());
 
         let comps = i.prepare_computations(&r, &Intersections::new([i.clone()]));
 
@@ -418,8 +418,8 @@ mod tests {
 
         let r = Ray::new(Point::new(0.0, 0.0, -5.0), Vector::new(0.0, 0.0, 1.0));
         let xs = Intersections::new([
-            Intersection::new(4.0, shape, im::Vector::new()),
-            Intersection::new(6.0, shape, im::Vector::new()),
+            Intersection::new(4.0, shape, im_rc::Vector::new()),
+            Intersection::new(6.0, shape, im_rc::Vector::new()),
         ]);
 
         let comps = xs.0.iter().next().unwrap().prepare_computations(&r, &xs);
@@ -437,8 +437,8 @@ mod tests {
 
         let r = Ray::new(Point::new(0.0, 0.0, -5.0), Vector::new(0.0, 0.0, 1.0));
         let xs = Intersections::new([
-            Intersection::new(4.0, shape, im::Vector::new()),
-            Intersection::new(6.0, shape, im::Vector::new()),
+            Intersection::new(4.0, shape, im_rc::Vector::new()),
+            Intersection::new(6.0, shape, im_rc::Vector::new()),
         ]);
 
         let comps = xs.0.iter().next().unwrap().prepare_computations(&r, &xs);
@@ -459,8 +459,8 @@ mod tests {
             Vector::new(0.0, 1.0, 0.0),
         );
         let xs = Intersections::new([
-            Intersection::new(-(2.0_f64.sqrt()) / 2.0, shape, im::Vector::new()),
-            Intersection::new(2.0_f64.sqrt() / 2.0, shape, im::Vector::new()),
+            Intersection::new(-(2.0_f64.sqrt()) / 2.0, shape, im_rc::Vector::new()),
+            Intersection::new(2.0_f64.sqrt() / 2.0, shape, im_rc::Vector::new()),
         ]);
 
         let comps = xs.0.iter().nth(1).unwrap().prepare_computations(&r, &xs);
@@ -478,10 +478,10 @@ mod tests {
 
         let r = Ray::new(Point::new(0.0, 0.0, 0.1), Vector::new(0.0, 1.0, 0.0));
         let xs = Intersections::new([
-            Intersection::new(-0.9899, &w.shapes[0], im::Vector::new()),
-            Intersection::new(-0.4899, &w.shapes[1], im::Vector::new()),
-            Intersection::new(0.4899, &w.shapes[1], im::Vector::new()),
-            Intersection::new(0.9899, &w.shapes[0], im::Vector::new()),
+            Intersection::new(-0.9899, &w.shapes[0], im_rc::Vector::new()),
+            Intersection::new(-0.4899, &w.shapes[1], im_rc::Vector::new()),
+            Intersection::new(0.4899, &w.shapes[1], im_rc::Vector::new()),
+            Intersection::new(0.9899, &w.shapes[0], im_rc::Vector::new()),
         ]);
 
         let comps = xs.0.iter().nth(2).unwrap().prepare_computations(&r, &xs);
@@ -518,7 +518,11 @@ mod tests {
             Point::new(0.0, 0.0, -3.0),
             Vector::new(0.0, -(2.0_f64.sqrt()) / 2.0, 2.0_f64.sqrt() / 2.0),
         );
-        let xs = Intersections::new([Intersection::new(2.0_f64.sqrt(), &floor, im::Vector::new())]);
+        let xs = Intersections::new([Intersection::new(
+            2.0_f64.sqrt(),
+            &floor,
+            im_rc::Vector::new(),
+        )]);
 
         let comps = xs.0.iter().next().unwrap().prepare_computations(&r, &xs);
 
@@ -555,7 +559,11 @@ mod tests {
             Point::new(0.0, 0.0, -3.0),
             Vector::new(0.0, -(2.0_f64.sqrt()) / 2.0, 2.0_f64.sqrt() / 2.0),
         );
-        let xs = Intersections::new([Intersection::new(2.0_f64.sqrt(), &floor, im::Vector::new())]);
+        let xs = Intersections::new([Intersection::new(
+            2.0_f64.sqrt(),
+            &floor,
+            im_rc::Vector::new(),
+        )]);
 
         let comps = xs.0.iter().next().unwrap().prepare_computations(&r, &xs);
 

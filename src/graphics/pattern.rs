@@ -138,7 +138,7 @@ mod tests {
         let shape = Shape::new_sphere().with_transform(Matrix::scaling(2.0, 2.0, 2.0));
         let pattern = Pattern::new_test();
 
-        let object_point = shape.world_to_object(&Point::new(2.0, 3.0, 4.0), &im::Vector::new());
+        let object_point = shape.world_to_object(&Point::new(2.0, 3.0, 4.0), &im_rc::Vector::new());
 
         assert_abs_diff_eq!(
             pattern.pattern_at_object_point(&object_point),
@@ -152,7 +152,7 @@ mod tests {
         let pattern =
             Pattern::new(PatternKind::Test).with_transform(Matrix::scaling(2.0, 2.0, 2.0));
 
-        let object_point = shape.world_to_object(&Point::new(2.0, 3.0, 4.0), &im::Vector::new());
+        let object_point = shape.world_to_object(&Point::new(2.0, 3.0, 4.0), &im_rc::Vector::new());
 
         assert_abs_diff_eq!(
             pattern.pattern_at_object_point(&object_point),
@@ -166,7 +166,7 @@ mod tests {
         let pattern =
             Pattern::new(PatternKind::Test).with_transform(Matrix::translation(0.5, 1.0, 1.5));
 
-        let object_point = shape.world_to_object(&Point::new(2.5, 3.0, 3.5), &im::Vector::new());
+        let object_point = shape.world_to_object(&Point::new(2.5, 3.0, 3.5), &im_rc::Vector::new());
 
         assert_abs_diff_eq!(
             pattern.pattern_at_object_point(&object_point),
