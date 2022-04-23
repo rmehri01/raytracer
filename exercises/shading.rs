@@ -50,7 +50,7 @@ fn render_shaded_sphere(path: &str) {
                 );
                 let eye = -r.direction;
                 let object_point = sphere.world_to_object(&point, &im_rc::Vector::new());
-                let color = hit.object.material.lighting(
+                let color = hit.object.properties.material.lighting(
                     &object_point,
                     &point,
                     &light,

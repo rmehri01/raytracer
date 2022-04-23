@@ -53,7 +53,7 @@ impl World {
 
     fn shade_hit(&self, comps: &Computations, remaining_recursions: u8) -> Color {
         let is_shadowed = self.is_shadowed(&comps.over_point);
-        let surface = comps.shape.material.lighting(
+        let surface = comps.shape.properties.material.lighting(
             &comps.shape.world_to_object(&comps.over_point, &comps.trail),
             &comps.over_point,
             &self.light.expect("world should have light"),
@@ -65,7 +65,7 @@ impl World {
         let reflected = self.reflected_color(comps, remaining_recursions);
         let refracted = self.refracted_color(comps, remaining_recursions);
 
-        let material = comps.shape.material;
+        let material = comps.shape.properties.material;
         if material.reflective > 0.0 && material.transparency > 0.0 {
             let reflectance = comps.schlick();
             surface + reflected * reflectance + refracted * (1.0 - reflectance)
@@ -86,13 +86,13 @@ impl World {
     }
 
     fn reflected_color(&self, comps: &Computations, remaining_recursions: u8) -> Color {
-        if comps.shape.material.reflective == 0.0 || remaining_recursions == 0 {
+        if comps.shape.properties.material.reflective == 0.0 || remaining_recursions == 0 {
             Color::BLACK
         } else {
             let reflect_ray = Ray::new(comps.over_point, comps.reflect_v);
             let color = self.color_at(&reflect_ray, remaining_recursions - 1);
 
-            color * comps.shape.material.reflective
+            color * comps.shape.properties.material.reflective
         }
     }
 
@@ -101,7 +101,10 @@ impl World {
         let cos_i = comps.eye_v.dot(&comps.normal_v);
         let sin2_t = n_ratio.powi(2) * (1.0 - cos_i.powi(2));
 
-        if comps.shape.material.transparency == 0.0 || remaining_recursions == 0 || sin2_t > 1.0 {
+        if comps.shape.properties.material.transparency == 0.0
+            || remaining_recursions == 0
+            || sin2_t > 1.0
+        {
             Color::BLACK
         } else {
             let cos_t = (1.0 - sin2_t).sqrt();
@@ -109,7 +112,7 @@ impl World {
             let refract_ray = Ray::new(comps.under_point, direction);
 
             self.color_at(&refract_ray, remaining_recursions - 1)
-                * comps.shape.material.transparency
+                * comps.shape.properties.material.transparency
         }
     }
 }
@@ -239,14 +242,14 @@ mod tests {
     #[test]
     fn color_intersection_behind_ray() {
         let mut world = World::default();
-        world.shapes[0].material.ambient = 1.0;
-        world.shapes[1].material.ambient = 1.0;
+        world.shapes[0].properties.material.ambient = 1.0;
+        world.shapes[1].properties.material.ambient = 1.0;
 
         let r = Ray::new(Point::new(0.0, 0.0, 0.75), Vector::new(0.0, 0.0, -1.0));
 
         let color = world.color_at(&r, 5);
 
-        assert_abs_diff_eq!(color, world.shapes[1].material.color);
+        assert_abs_diff_eq!(color, world.shapes[1].properties.material.color);
     }
 
     #[test]
@@ -301,7 +304,7 @@ mod tests {
     #[test]
     fn reflected_color_nonreflective_material() {
         let mut w = World::default();
-        w.shapes[1].material.ambient = 1.0;
+        w.shapes[1].properties.material.ambient = 1.0;
 
         let r = Ray::new(Point::new(0.0, 0.0, 0.0), Vector::new(0.0, 0.0, 1.0));
         let i = Intersection::new(1.0, &w.shapes[1], im_rc::Vector::new());
@@ -430,8 +433,8 @@ mod tests {
     #[test]
     fn refracted_color_at_max_recursion_depth() {
         let mut w = World::default();
-        w.shapes[0].material.transparency = 1.0;
-        w.shapes[0].material.refractive_index = 1.5;
+        w.shapes[0].properties.material.transparency = 1.0;
+        w.shapes[0].properties.material.refractive_index = 1.5;
 
         let shape = &w.shapes[0];
 
@@ -449,8 +452,8 @@ mod tests {
     #[test]
     fn refracted_color_under_total_internal_refraction() {
         let mut w = World::default();
-        w.shapes[0].material.transparency = 1.0;
-        w.shapes[0].material.refractive_index = 1.5;
+        w.shapes[0].properties.material.transparency = 1.0;
+        w.shapes[0].properties.material.refractive_index = 1.5;
 
         let shape = &w.shapes[0];
 
@@ -471,10 +474,10 @@ mod tests {
     #[test]
     fn refracted_color_with_refracted_ray() {
         let mut w = World::default();
-        w.shapes[0].material.ambient = 1.0;
-        w.shapes[0].material.pattern = Some(Pattern::new_test());
-        w.shapes[1].material.transparency = 1.0;
-        w.shapes[1].material.refractive_index = 1.5;
+        w.shapes[0].properties.material.ambient = 1.0;
+        w.shapes[0].properties.material.pattern = Some(Pattern::new_test());
+        w.shapes[1].properties.material.transparency = 1.0;
+        w.shapes[1].properties.material.refractive_index = 1.5;
 
         let r = Ray::new(Point::new(0.0, 0.0, 0.1), Vector::new(0.0, 1.0, 0.0));
         let xs = Intersections::new([

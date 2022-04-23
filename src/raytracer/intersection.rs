@@ -54,7 +54,7 @@ impl<'shape> Intersection<'shape> {
             if i == self {
                 n1 = containers
                     .last()
-                    .map(|shape| shape.material.refractive_index);
+                    .map(|shape| shape.properties.material.refractive_index);
             }
 
             match containers.iter().position(|shape| *shape == i.object) {
@@ -67,7 +67,7 @@ impl<'shape> Intersection<'shape> {
             if i == self {
                 n2 = containers
                     .last()
-                    .map(|shape| shape.material.refractive_index);
+                    .map(|shape| shape.properties.material.refractive_index);
                 break;
             }
         }

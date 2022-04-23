@@ -17,18 +17,14 @@ use super::{
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Shape {
-    pub transform: Transformation,
-    transform_inversed: Transformation,
-    pub material: Material,
+    pub properties: Properties,
     pub kind: ShapeKind,
 }
 
 impl Shape {
     fn new(kind: ShapeKind) -> Self {
         Self {
-            transform: Matrix::identity(),
-            transform_inversed: Matrix::identity(),
-            material: Material::default(),
+            properties: Properties::default(),
             kind,
         }
     }
@@ -101,18 +97,18 @@ impl Shape {
     }
 
     pub fn with_transform(mut self, transform: Transformation) -> Self {
-        self.transform = transform;
-        self.transform_inversed = transform.inverse();
+        self.properties.transform = transform;
+        self.properties.transform_inversed = transform.inverse();
         self
     }
 
     pub fn with_material(mut self, material: Material) -> Self {
-        self.material = material;
+        self.properties.material = material;
         self
     }
 
     pub fn intersect(&self, ray: &Ray, trail: &im_rc::Vector<Transformation>) -> Intersections {
-        let local_ray = ray.transform(&self.transform_inversed);
+        let local_ray = ray.transform(&self.properties.transform_inversed);
 
         match &self.kind {
             ShapeKind::Single(single) => {
@@ -127,7 +123,7 @@ impl Shape {
             ShapeKind::Group(children) => {
                 if self.bounds().intersects(&local_ray) {
                     let mut new_trail = trail.clone();
-                    new_trail.push_front(self.transform);
+                    new_trail.push_front(self.properties.transform);
                     let intersections = children
                         .iter()
                         .flat_map(|child| child.intersect(&local_ray, &new_trail).0)
@@ -155,7 +151,7 @@ impl Shape {
             } => {
                 // TODO: could be cleaner?
                 let mut new_trail = trail.clone();
-                new_trail.push_front(self.transform);
+                new_trail.push_front(self.properties.transform);
                 let mut left_intersections = left.intersect(&local_ray, &new_trail).0;
                 let mut right_intersections = right.intersect(&local_ray, &new_trail).0;
                 left_intersections.append(&mut right_intersections);
@@ -172,7 +168,7 @@ impl Shape {
                 children
                     .iter()
                     .fold(Bounds::default(), |mut bounds, child| {
-                        bounds.transform(&child.transform);
+                        bounds.transform(&child.properties.transform);
                         bounds
                     })
             }
@@ -180,8 +176,8 @@ impl Shape {
             ShapeKind::CSG { left, right, .. } => {
                 let mut bounds = Bounds::default();
 
-                bounds.transform(&left.transform);
-                bounds.transform(&right.transform);
+                bounds.transform(&left.properties.transform);
+                bounds.transform(&right.properties.transform);
 
                 bounds
             }
@@ -219,11 +215,11 @@ impl Shape {
     ) -> Point {
         let trail_point = trail.iter().rev().fold(*world_point, |acc, &mat| mat * acc);
 
-        self.transform_inversed * trail_point
+        self.properties.transform_inversed * trail_point
     }
 
     fn normal_to_world(&self, normal: &Vector, trail: &im_rc::Vector<Transformation>) -> Vector {
-        let normal = self.transform_inversed.transpose() * *normal;
+        let normal = self.properties.transform_inversed.transpose() * *normal;
         let normal = normal.normalize();
 
         trail.iter().fold(normal, |acc, mat| {
@@ -237,6 +233,23 @@ impl Shape {
             ShapeKind::Group(children) => children.iter().any(|child| child.includes(other)),
             ShapeKind::CSG { left, right, .. } => left.includes(other) || right.includes(other),
             _ => self == other,
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct Properties {
+    pub transform: Transformation,
+    transform_inversed: Transformation,
+    pub material: Material,
+}
+
+impl Default for Properties {
+    fn default() -> Self {
+        Self {
+            transform: Matrix::identity(),
+            transform_inversed: Matrix::identity(),
+            material: Material::default(),
         }
     }
 }
@@ -679,21 +692,24 @@ mod tests {
     fn default_transformation() {
         let shape = Shape::new_sphere();
 
-        assert_eq!(shape.transform, Matrix::identity());
+        assert_eq!(shape.properties.transform, Matrix::identity());
     }
 
     #[test]
     fn change_transformation() {
         let shape = Shape::new_sphere().with_transform(Matrix::translation(2.0, 3.0, 4.0));
 
-        assert_eq!(shape.transform, Matrix::translation(2.0, 3.0, 4.0));
+        assert_eq!(
+            shape.properties.transform,
+            Matrix::translation(2.0, 3.0, 4.0)
+        );
     }
 
     #[test]
     fn default_material() {
         let shape = Shape::new_sphere();
 
-        assert_eq!(shape.material, Material::default());
+        assert_eq!(shape.properties.material, Material::default());
     }
 
     #[test]
@@ -705,23 +721,23 @@ mod tests {
 
         let shape = Shape::new_sphere().with_material(material);
 
-        assert_eq!(shape.material, material);
+        assert_eq!(shape.properties.material, material);
     }
 
     #[test]
     fn glass_sphere() {
         let shape = Shape::new_glass_sphere();
 
-        assert_eq!(shape.transform, Matrix::identity());
-        assert_abs_diff_eq!(shape.material.transparency, 1.0);
-        assert_abs_diff_eq!(shape.material.refractive_index, 1.5);
+        assert_eq!(shape.properties.transform, Matrix::identity());
+        assert_abs_diff_eq!(shape.properties.material.transparency, 1.0);
+        assert_abs_diff_eq!(shape.properties.material.refractive_index, 1.5);
     }
 
     #[test]
     fn create_group() {
         let group = Shape::new_group(Vec::new());
 
-        assert_eq!(group.transform, Matrix::identity());
+        assert_eq!(group.properties.transform, Matrix::identity());
         if let ShapeKind::Group(children) = group.kind {
             assert!(children.is_empty());
         } else {
@@ -734,7 +750,7 @@ mod tests {
         let sphere = Shape::new_sphere();
         let group = Shape::new_group(vec![sphere.clone()]);
 
-        assert_eq!(group.transform, Matrix::identity());
+        assert_eq!(group.properties.transform, Matrix::identity());
         if let ShapeKind::Group(children) = group.kind {
             assert_eq!(children.len(), 1);
             assert_eq!(children[0], sphere);
@@ -1467,7 +1483,10 @@ mod tests {
         let n = s.normal_at(
             &Point::new(1.7321, 1.1547, -5.5774),
             &Intersection::new(0.0, &s, im_rc::Vector::new()),
-            &im_rc::vector![g2.transform_inversed, g1.transform_inversed],
+            &im_rc::vector![
+                g2.properties.transform_inversed,
+                g1.properties.transform_inversed
+            ],
         );
 
         assert_abs_diff_eq!(n, Vector::new(0.2857, 0.4286, -0.8571));
@@ -1532,7 +1551,10 @@ mod tests {
         assert_eq!(
             s.world_to_object(
                 &Point::new(-2.0, 0.0, -10.0),
-                &im_rc::vector![g2.transform_inversed, g1.transform_inversed]
+                &im_rc::vector![
+                    g2.properties.transform_inversed,
+                    g1.properties.transform_inversed
+                ]
             ),
             Point::new(0.0, 0.0, -1.0)
         );
@@ -1550,7 +1572,10 @@ mod tests {
                 3.0_f64.sqrt() / 3.0,
                 3.0_f64.sqrt() / 3.0,
             ),
-            &im_rc::vector![g2.transform_inversed, g1.transform_inversed],
+            &im_rc::vector![
+                g2.properties.transform_inversed,
+                g1.properties.transform_inversed
+            ],
         );
 
         assert_eq!(n, Vector::new(0.2857, 0.4286, -0.8571));
