@@ -129,13 +129,13 @@ impl PatternKind {
 mod tests {
     use approx::assert_abs_diff_eq;
 
-    use crate::raytracer::shape::Shape;
+    use crate::raytracer::shapes::{SetProperties, Single};
 
     use super::*;
 
     #[test]
     fn pattern_with_shape_transformation() {
-        let shape = Shape::new_sphere().with_transform(Matrix::scaling(2.0, 2.0, 2.0));
+        let shape = Single::new_sphere().with_transform(Matrix::scaling(2.0, 2.0, 2.0));
         let pattern = Pattern::new_test();
 
         let object_point = shape.world_to_object(&Point::new(2.0, 3.0, 4.0), &im_rc::Vector::new());
@@ -148,7 +148,7 @@ mod tests {
 
     #[test]
     fn pattern_with_pattern_transformation() {
-        let shape = Shape::new_sphere();
+        let shape = Single::new_sphere();
         let pattern =
             Pattern::new(PatternKind::Test).with_transform(Matrix::scaling(2.0, 2.0, 2.0));
 
@@ -162,7 +162,7 @@ mod tests {
 
     #[test]
     fn pattern_with_both_transformations() {
-        let shape = Shape::new_sphere().with_transform(Matrix::scaling(2.0, 2.0, 2.0));
+        let shape = Single::new_sphere().with_transform(Matrix::scaling(2.0, 2.0, 2.0));
         let pattern =
             Pattern::new(PatternKind::Test).with_transform(Matrix::translation(0.5, 1.0, 1.5));
 

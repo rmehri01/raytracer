@@ -2,6 +2,10 @@ use crate::core::{matrix::Transformation, point::Point};
 
 use super::ray::Ray;
 
+pub trait Bounded {
+    fn bounds(&self) -> Bounds;
+}
+
 /// An axis-aligned bounding box that can be used to quickly determine if a ray
 /// might intersect with anything in the box.
 pub struct Bounds {
@@ -97,7 +101,5 @@ impl Default for Bounds {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     // TODO: tests
 }

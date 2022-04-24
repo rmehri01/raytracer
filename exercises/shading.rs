@@ -2,8 +2,11 @@ use raytracer::{
     core::point::Point,
     graphics::{canvas::Canvas, color::Color},
     raytracer::{
-        intersection::Intersection, material::Material, point_light::PointLight, ray::Ray,
-        shape::Shape,
+        intersection::Intersection,
+        material::Material,
+        point_light::PointLight,
+        ray::Ray,
+        shapes::{Intersect, SetProperties, Single},
     },
 };
 
@@ -22,7 +25,7 @@ fn render_shaded_sphere(path: &str) {
     let pixel_size = wall_size / side_len as f64;
     let half = wall_size / 2.0;
 
-    let sphere = Shape::new_sphere().with_material(Material {
+    let sphere = Single::new_sphere().with_material(Material {
         color: Color::new(1.0, 0.2, 1.0),
         ..Material::default()
     });
@@ -46,7 +49,6 @@ fn render_shaded_sphere(path: &str) {
                 let normal = sphere.normal_at(
                     &point,
                     &Intersection::new(0.0, &sphere, im_rc::Vector::new()),
-                    &im_rc::Vector::new(),
                 );
                 let eye = -r.direction;
                 let object_point = sphere.world_to_object(&point, &im_rc::Vector::new());

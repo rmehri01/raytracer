@@ -108,7 +108,7 @@ impl AbsDiffEq for Material {
 mod tests {
     use approx::assert_abs_diff_eq;
 
-    use crate::raytracer::shape::Shape;
+    use crate::raytracer::shapes::Single;
 
     use super::*;
 
@@ -140,7 +140,7 @@ mod tests {
         let eye_v = Vector::new(0.0, 0.0, -1.0);
         let normal_v = Vector::new(0.0, 0.0, -1.0);
         let light = PointLight::new(Point::new(0.0, 0.0, -10.0), Color::WHITE);
-        let shape = Shape::new_sphere();
+        let shape = Single::new_sphere();
 
         let object_point = shape.world_to_object(&position, &im_rc::Vector::new());
         let result = material.lighting(&object_point, &position, &light, &eye_v, &normal_v, false);
@@ -156,7 +156,7 @@ mod tests {
         let eye_v = Vector::new(0.0, 2_f64.sqrt() / 2.0, -(2_f64.sqrt()) / 2.0);
         let normal_v = Vector::new(0.0, 0.0, -1.0);
         let light = PointLight::new(Point::new(0.0, 0.0, -10.0), Color::WHITE);
-        let shape = Shape::new_sphere();
+        let shape = Single::new_sphere();
 
         let object_point = shape.world_to_object(&position, &im_rc::Vector::new());
         let result = material.lighting(&object_point, &position, &light, &eye_v, &normal_v, false);
@@ -172,7 +172,7 @@ mod tests {
         let eye_v = Vector::new(0.0, 0.0, -1.0);
         let normal_v = Vector::new(0.0, 0.0, -1.0);
         let light = PointLight::new(Point::new(0.0, 10.0, -10.0), Color::WHITE);
-        let shape = Shape::new_sphere();
+        let shape = Single::new_sphere();
 
         let object_point = shape.world_to_object(&position, &im_rc::Vector::new());
         let result = material.lighting(&object_point, &position, &light, &eye_v, &normal_v, false);
@@ -188,7 +188,7 @@ mod tests {
         let eye_v = Vector::new(0.0, -(2_f64.sqrt()) / 2.0, -(2_f64.sqrt()) / 2.0);
         let normal_v = Vector::new(0.0, 0.0, -1.0);
         let light = PointLight::new(Point::new(0.0, 10.0, -10.0), Color::WHITE);
-        let shape = Shape::new_sphere();
+        let shape = Single::new_sphere();
 
         let object_point = shape.world_to_object(&position, &im_rc::Vector::new());
         let result = material.lighting(&object_point, &position, &light, &eye_v, &normal_v, false);
@@ -204,7 +204,7 @@ mod tests {
         let eye_v = Vector::new(0.0, 0.0, -1.0);
         let normal_v = Vector::new(0.0, 0.0, -1.0);
         let light = PointLight::new(Point::new(0.0, 0.0, 10.0), Color::WHITE);
-        let shape = Shape::new_sphere();
+        let shape = Single::new_sphere();
 
         let object_point = shape.world_to_object(&position, &im_rc::Vector::new());
         let result = material.lighting(&object_point, &position, &light, &eye_v, &normal_v, false);
@@ -220,7 +220,7 @@ mod tests {
         let eye_v = Vector::new(0.0, 0.0, -1.0);
         let normal_v = Vector::new(0.0, 0.0, -1.0);
         let light = PointLight::new(Point::new(0.0, 0.0, -10.0), Color::WHITE);
-        let shape = Shape::new_sphere();
+        let shape = Single::new_sphere();
 
         let object_point = shape.world_to_object(&position, &im_rc::Vector::new());
         assert_abs_diff_eq!(
@@ -242,7 +242,7 @@ mod tests {
         let eye_v = Vector::new(0.0, 0.0, -1.0);
         let normal_v = Vector::new(0.0, 0.0, -1.0);
         let light = PointLight::new(Point::new(0.0, 0.0, -10.0), Color::WHITE);
-        let shape = Shape::new_sphere();
+        let shape = Single::new_sphere();
 
         let position = Point::new(0.9, 0.0, 0.0);
         let object_point = shape.world_to_object(&position, &im_rc::Vector::new());

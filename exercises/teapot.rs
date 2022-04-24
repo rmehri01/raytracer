@@ -5,7 +5,11 @@ use raytracer::{
     graphics::{color::Color, pattern::Pattern},
     io::obj,
     raytracer::{
-        camera::Camera, material::Material, point_light::PointLight, shape::Shape, world::World,
+        camera::Camera,
+        material::Material,
+        point_light::PointLight,
+        shapes::{SetProperties, Single},
+        world::World,
     },
 };
 
@@ -21,7 +25,7 @@ fn render_teapot(path: &str) {
         ..Material::default()
     };
 
-    let floor = Shape::new_plane().with_material(floor_material);
+    let floor = Single::new_plane().with_material(floor_material).as_shape();
     let teapot = obj::parse_file("exercises/resources/teapot.obj").unwrap();
 
     let world = World {

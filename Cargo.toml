@@ -13,6 +13,7 @@ approx = "0.5.1"
 itertools = "0.10.3"
 im-rc = "15.0.0"
 rayon = "1.5.2"
+enum_dispatch = "0.3.8"
 
 [[bin]]
 name = "circle"

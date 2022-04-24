@@ -31,6 +31,16 @@ pub mod raytracer {
     pub mod material;
     pub mod point_light;
     pub mod ray;
-    pub mod shape;
     pub mod world;
+
+    pub mod shapes {
+        // TODO: sort these out
+        pub use compound::*;
+        pub use shape::*;
+        pub use single::*;
+
+        pub mod compound;
+        pub mod shape;
+        pub mod single;
+    }
 }
