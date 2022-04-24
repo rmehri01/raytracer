@@ -1,4 +1,4 @@
-use std::collections::BTreeSet;
+use std::{collections::BTreeSet, ptr};
 
 use approx::{AbsDiffEq, UlpsEq};
 
@@ -9,21 +9,20 @@ use super::{
     shapes::{HasProperties, Single},
 };
 
-// TODO: rename lifetimes in this file to 'object or other apropraite name
 /// Describes where an intersection occurs and on what object.
 #[derive(Debug, Clone)]
 pub struct Intersection<'shape> {
     pub t: f64,
-    pub object: &'shape Single,
+    pub shape: &'shape Single,
     pub u_v: Option<(f64, f64)>,
     pub trail: im_rc::Vector<Transformation>,
 }
 
 impl<'shape> Intersection<'shape> {
-    pub fn new(t: f64, object: &'shape Single, trail: im_rc::Vector<Transformation>) -> Self {
+    pub fn new(t: f64, shape: &'shape Single, trail: im_rc::Vector<Transformation>) -> Self {
         Self {
             t,
-            object,
+            shape,
             u_v: None,
             trail,
         }
@@ -31,13 +30,13 @@ impl<'shape> Intersection<'shape> {
 
     pub fn new_with_uv(
         t: f64,
-        object: &'shape Single,
+        shape: &'shape Single,
         u_v: Option<(f64, f64)>,
         trail: im_rc::Vector<Transformation>,
     ) -> Self {
         Self {
             t,
-            object,
+            shape,
             u_v,
             trail,
         }
@@ -56,11 +55,11 @@ impl<'shape> Intersection<'shape> {
                     .map(|shape| shape.properties().material.refractive_index);
             }
 
-            match containers.iter().position(|shape| *shape == i.object) {
+            match containers.iter().position(|&shape| ptr::eq(shape, i.shape)) {
                 Some(shape_idx) => {
                     containers.remove(shape_idx);
                 }
-                None => containers.push(i.object),
+                None => containers.push(i.shape),
             }
 
             if i == self {
@@ -74,13 +73,13 @@ impl<'shape> Intersection<'shape> {
         let point = ray.position(self.t);
         let eye_v = -ray.direction;
 
-        let normal_v = self.object.normal_at(&point, self);
+        let normal_v = self.shape.normal_at(&point, self);
         let inside = normal_v.dot(&eye_v) < 0.0;
         let normal_v = if inside { -normal_v } else { normal_v };
 
         Computations {
             t: self.t,
-            shape: self.object,
+            shape: self.shape,
             trail: self.trail.clone(),
             point,
             over_point: point + normal_v * Point::default_epsilon(),
@@ -210,7 +209,7 @@ mod tests {
         let intersection = Intersection::new(3.5, &shape, im_rc::Vector::new());
 
         assert_relative_eq!(intersection.t, 3.5);
-        assert_eq!(intersection.object, &shape);
+        assert_eq!(intersection.shape, &shape);
     }
 
     #[test]
@@ -272,7 +271,7 @@ mod tests {
         let comps = i.prepare_computations(&r, &Intersections::new([i.clone()]));
 
         assert_abs_diff_eq!(comps.t, i.t);
-        assert_eq!(comps.shape, i.object);
+        assert_eq!(comps.shape, i.shape);
         assert_abs_diff_eq!(comps.point, Point::new(0.0, 0.0, -1.0));
         assert_abs_diff_eq!(comps.eye_v, Vector::new(0.0, 0.0, -1.0));
         assert_abs_diff_eq!(comps.normal_v, Vector::new(0.0, 0.0, -1.0));

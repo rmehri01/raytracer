@@ -152,7 +152,7 @@ impl Operation {
             .0
             .into_iter()
             .filter(|i| {
-                let l_hit = left.includes(i.object);
+                let l_hit = left.includes(i.shape);
                 let allowed = self.intersection_allowed(l_hit, in_l, in_r);
 
                 if l_hit {
@@ -245,7 +245,7 @@ mod tests {
             .intersect(&r, &im_rc::Vector::new())
             .0
             .iter()
-            .map(|i| i.object)
+            .map(|i| i.shape)
             .collect::<Vec<_>>();
 
         assert_eq!(xs.len(), 4);
@@ -362,8 +362,8 @@ mod tests {
 
         assert_eq!(xs.len(), 2);
         assert_abs_diff_eq!(xs[0].t, 4.0);
-        assert_eq!(*xs[0].object, s1);
+        assert_eq!(*xs[0].shape, s1);
         assert_abs_diff_eq!(xs[1].t, 6.5);
-        assert_eq!(*xs[1].object, s2);
+        assert_eq!(*xs[1].shape, s2);
     }
 }

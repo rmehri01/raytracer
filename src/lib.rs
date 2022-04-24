@@ -25,7 +25,7 @@ pub mod io {
 }
 
 pub mod raytracer {
-    pub mod bounds;
+    mod bounds;
     pub mod camera;
     pub mod intersection;
     pub mod material;
@@ -34,13 +34,12 @@ pub mod raytracer {
     pub mod world;
 
     pub mod shapes {
-        // TODO: sort these out
         pub use compound::*;
         pub use shape::*;
         pub use single::*;
 
-        pub mod compound;
-        pub mod shape;
-        pub mod single;
+        mod compound;
+        mod shape;
+        mod single;
     }
 }

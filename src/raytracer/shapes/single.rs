@@ -717,7 +717,7 @@ mod tests {
             .intersect(&r, &im_rc::Vector::new())
             .0
             .iter()
-            .map(|i| i.object)
+            .map(|i| i.shape)
             .collect::<Vec<_>>();
 
         assert_eq!(shapes[0], &shape);
