@@ -1,3 +1,5 @@
+use std::collections::BTreeSet;
+
 use crate::{
     core::{matrix::Matrix, point::Point},
     graphics::color::Color,
@@ -42,11 +44,10 @@ impl World {
 
     fn intersections(&self, ray: &Ray) -> Intersections {
         let trail = im_rc::Vector::new();
-        let intersects = self
-            .shapes
-            .iter()
-            .flat_map(|shape| shape.intersect(ray, &trail).0)
-            .collect();
+        let intersects = self.shapes.iter().fold(BTreeSet::new(), |mut acc, shape| {
+            acc.append(&mut shape.intersect(ray, &trail).0);
+            acc
+        });
 
         Intersections(intersects)
     }

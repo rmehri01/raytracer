@@ -67,10 +67,10 @@ impl Intersect for Compound {
         match &self.kind {
             CompoundKind::Group(children) => {
                 if self.bounds().intersects(ray) {
-                    let intersections = children
-                        .iter()
-                        .flat_map(|child| child.intersect(ray, &new_trail).0)
-                        .collect();
+                    let intersections = children.iter().fold(BTreeSet::new(), |mut acc, child| {
+                        acc.append(&mut child.intersect(ray, &new_trail).0);
+                        acc
+                    });
 
                     Intersections(intersections)
                 } else {
