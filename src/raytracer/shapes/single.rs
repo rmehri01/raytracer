@@ -81,7 +81,17 @@ impl Single {
 
     pub fn normal_at(&self, point: &Point, hit: &Intersection) -> Vector {
         let local_point = self.world_to_object(point, &hit.trail);
-        let local_normal = self.kind.normal_at(&local_point, hit);
+        let local_normal = match &self.kind {
+            SingleKind::Sphere => SingleKind::sphere_normal_at(&local_point),
+            SingleKind::Plane => SingleKind::plane_normal_at(),
+            SingleKind::Cube => SingleKind::cube_normal_at(&local_point),
+            SingleKind::Cylinder(conic) => SingleKind::cylinder_normal_at(&local_point, conic),
+            SingleKind::Cone(conic) => SingleKind::cone_normal_at(&local_point, conic),
+            SingleKind::Triangle { normal, .. } => *normal,
+            SingleKind::SmoothTriangle { n1, n2, n3, .. } => {
+                SingleKind::smooth_triangle_normal_at(n1, n2, n3, hit)
+            }
+        };
 
         self.normal_to_world(&local_normal, &hit.trail)
     }
@@ -127,7 +137,22 @@ impl HasProperties for Single {
 
 impl Intersect for Single {
     fn local_intersect(&self, ray: &Ray, trail: &im_rc::Vector<Transformation>) -> Intersections {
-        let (ts, u_v) = self.kind.intersect(ray);
+        let mut u_v = None;
+        let ts = match &self.kind {
+            SingleKind::Sphere => SingleKind::sphere_intersect(ray),
+            SingleKind::Plane => SingleKind::plane_intersect(ray),
+            SingleKind::Cube => SingleKind::cube_intersect(ray),
+            SingleKind::Cylinder(conic) => SingleKind::cylinder_intersect(ray, conic),
+            SingleKind::Cone(conic) => SingleKind::cone_intersect(ray, conic),
+            SingleKind::Triangle { triangular, .. } => triangular.intersect(ray),
+            SingleKind::SmoothTriangle { triangular, .. } => {
+                let (ts, u, v) = triangular.intersect_uv(ray);
+
+                u_v = Some((u, v));
+                ts
+            }
+        };
+
         let intersections = ts
             .iter()
             .map(|t| Intersection::new_with_uv(*t, self, u_v, trail.clone()))
@@ -187,23 +212,6 @@ pub enum SingleKind {
 }
 
 impl SingleKind {
-    // TODO: should this be moved up to single
-    fn intersect(&self, ray: &Ray) -> (Vec<f64>, Option<(f64, f64)>) {
-        match self {
-            Self::Sphere => (Self::sphere_intersect(ray), None),
-            Self::Plane => (Self::plane_intersect(ray), None),
-            Self::Cube => (Self::cube_intersect(ray), None),
-            Self::Cylinder(conic) => (Self::cylinder_intersect(ray, conic), None),
-            Self::Cone(conic) => (Self::cone_intersect(ray, conic), None),
-            Self::Triangle { triangular, .. } => (triangular.intersect(ray), None),
-            Self::SmoothTriangle { triangular, .. } => {
-                let (ts, u, v) = triangular.intersect_uv(ray);
-
-                (ts, Some((u, v)))
-            }
-        }
-    }
-
     fn sphere_intersect(ray: &Ray) -> Vec<f64> {
         let sphere_to_ray = ray.origin - Point::new(0.0, 0.0, 0.0);
 
@@ -275,21 +283,6 @@ impl SingleKind {
         let c = ray.origin.x.powi(2) - ray.origin.y.powi(2) + ray.origin.z.powi(2);
 
         conic.intersect(ray, a, b, c, f64::abs)
-    }
-
-    // TODO: should this be moved up to single
-    fn normal_at(&self, point: &Point, hit: &Intersection) -> Vector {
-        match self {
-            Self::Sphere => Self::sphere_normal_at(point),
-            Self::Plane => Self::plane_normal_at(),
-            Self::Cube => Self::cube_normal_at(point),
-            Self::Cylinder(conic) => Self::cylinder_normal_at(point, conic),
-            Self::Cone(conic) => Self::cone_normal_at(point, conic),
-            Self::Triangle { normal, .. } => *normal,
-            Self::SmoothTriangle { n1, n2, n3, .. } => {
-                Self::smooth_triangle_normal_at(n1, n2, n3, hit)
-            }
-        }
     }
 
     fn sphere_normal_at(object_point: &Point) -> Vector {
@@ -602,13 +595,17 @@ mod tests {
     #[test]
     fn ray_tangent_to_sphere() {
         let r = Ray::new(Point::new(0.0, 1.0, -5.0), Vector::new(0.0, 0.0, 1.0));
-        let s = SingleKind::Sphere;
+        let s = Single::new_sphere();
 
-        let (xs, _) = s.intersect(&r);
+        let xs = s
+            .intersect(&r, &im_rc::Vector::new())
+            .0
+            .iter()
+            .map(|i| i.t)
+            .collect::<Vec<_>>();
 
-        assert_eq!(xs.len(), 2);
+        assert_eq!(xs.len(), 1);
         assert_abs_diff_eq!(xs[0], 5.0);
-        assert_abs_diff_eq!(xs[1], 5.0);
     }
 
     #[test]
@@ -842,32 +839,35 @@ mod tests {
             (
                 Point::new(1.0, 0.0, -5.0),
                 Vector::new(0.0, 0.0, 1.0),
-                5.0,
-                5.0,
+                vec![5.0],
             ),
             (
                 Point::new(0.0, 0.0, -5.0),
                 Vector::new(0.0, 0.0, 1.0),
-                4.0,
-                6.0,
+                vec![4.0, 6.0],
             ),
             (
                 Point::new(0.5, 0.0, -5.0),
                 Vector::new(0.1, 1.0, 1.0),
-                6.80798,
-                7.08872,
+                vec![6.80798, 7.08872],
             ),
         ];
 
-        for (origin, direction, t0, t1) in scenarios {
-            let c = SingleKind::Cylinder(Conic::default());
+        for (origin, direction, ts) in scenarios {
+            let c = Single::new_cylinder(Conic::default());
             let r = Ray::new(origin, direction.normalize());
 
-            let (xs, _) = c.intersect(&r);
+            let xs = c
+                .intersect(&r, &im_rc::Vector::new())
+                .0
+                .iter()
+                .map(|i| i.t)
+                .collect::<Vec<_>>();
 
-            assert_eq!(xs.len(), 2);
-            assert_abs_diff_eq!(xs[0], t0, epsilon = Point::default_epsilon());
-            assert_abs_diff_eq!(xs[1], t1, epsilon = Point::default_epsilon());
+            assert_eq!(xs.len(), ts.len());
+            for (x_t, t) in xs.iter().zip(ts.iter()) {
+                assert_abs_diff_eq!(x_t, t, epsilon = Point::default_epsilon());
+            }
         }
     }
 
@@ -918,32 +918,35 @@ mod tests {
             (
                 Point::new(0.0, 0.0, -5.0),
                 Vector::new(0.0, 0.0, 1.0),
-                5.0,
-                5.0,
+                vec![5.0],
             ),
             (
                 Point::new(0.0, 0.0, -5.0),
                 Vector::new(1.0, 1.0, 1.0),
-                8.66025,
-                8.66025,
+                vec![8.66025],
             ),
             (
                 Point::new(1.0, 1.0, -5.0),
                 Vector::new(-0.5, -1.0, 1.0),
-                4.55006,
-                49.44994,
+                vec![4.55006, 49.44994],
             ),
         ];
 
-        for (origin, direction, t0, t1) in scenarios {
-            let shape = SingleKind::Cone(Conic::default());
+        for (origin, direction, ts) in scenarios {
+            let shape = Single::new_cone(Conic::default());
 
             let r = Ray::new(origin, direction.normalize());
-            let (xs, _) = shape.intersect(&r);
+            let xs = shape
+                .intersect(&r, &im_rc::Vector::new())
+                .0
+                .iter()
+                .map(|i| i.t)
+                .collect::<Vec<_>>();
 
-            assert_eq!(xs.len(), 2);
-            assert_abs_diff_eq!(xs[0], t0, epsilon = Point::default_epsilon());
-            assert_abs_diff_eq!(xs[1], t1, epsilon = Point::default_epsilon());
+            assert_eq!(xs.len(), ts.len());
+            for (x_t, t) in xs.iter().zip(ts.iter()) {
+                assert_abs_diff_eq!(x_t, t, epsilon = Point::default_epsilon());
+            }
         }
     }
 

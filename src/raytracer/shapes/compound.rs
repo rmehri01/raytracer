@@ -61,11 +61,12 @@ impl HasProperties for Compound {
 
 impl Intersect for Compound {
     fn local_intersect(&self, ray: &Ray, trail: &im_rc::Vector<Transformation>) -> Intersections {
+        let mut new_trail = trail.clone();
+        new_trail.push_front(self.properties.transform);
+
         match &self.kind {
             CompoundKind::Group(children) => {
                 if self.bounds().intersects(ray) {
-                    let mut new_trail = trail.clone();
-                    new_trail.push_front(self.properties.transform);
                     let intersections = children
                         .iter()
                         .flat_map(|child| child.intersect(ray, &new_trail).0)
@@ -82,8 +83,6 @@ impl Intersect for Compound {
                 right,
             } => {
                 // TODO: could be cleaner?
-                let mut new_trail = trail.clone();
-                new_trail.push_front(self.properties.transform);
                 let mut left_intersections = left.intersect(ray, &new_trail).0;
                 let mut right_intersections = right.intersect(ray, &new_trail).0;
                 left_intersections.append(&mut right_intersections);
