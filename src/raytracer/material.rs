@@ -100,6 +100,10 @@ impl AbsDiffEq for Material {
             && self.specular.abs_diff_eq(&other.specular, epsilon)
             && self.shininess.abs_diff_eq(&other.shininess, epsilon)
             && self.reflective.abs_diff_eq(&other.reflective, epsilon)
+            && self.transparency.abs_diff_eq(&other.transparency, epsilon)
+            && self
+                .refractive_index
+                .abs_diff_eq(&other.refractive_index, epsilon)
             && self.pattern == other.pattern
     }
 }

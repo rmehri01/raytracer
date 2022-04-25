@@ -75,6 +75,7 @@ impl Canvas {
                         line_len <= Self::PPM_MAX_LINE_LEN as usize
                     })
                     .join(" ");
+
                 ppm.push_str(&line);
                 ppm.push('\n');
             }
@@ -84,11 +85,10 @@ impl Canvas {
     }
 
     fn scale_to_ppm_data(color_scale: f64) -> u8 {
-        let scaled_data = color_scale * f64::from(Self::PPM_MAX_COLOR_VALUE);
+        let max_color_val = f64::from(Self::PPM_MAX_COLOR_VALUE);
+        let scaled_data = color_scale * max_color_val;
 
-        scaled_data
-            .clamp(0.0, f64::from(Self::PPM_MAX_COLOR_VALUE))
-            .round() as u8
+        scaled_data.clamp(0.0, max_color_val).round() as u8
     }
 }
 

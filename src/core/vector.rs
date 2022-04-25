@@ -16,14 +16,14 @@ impl Vector {
         Self { x, y, z }
     }
 
-    pub fn magnitude(&self) -> f64 {
-        (self.x.powi(2) + self.y.powi(2) + self.z.powi(2)).sqrt()
-    }
-
     pub fn normalize(&self) -> Self {
         let m = self.magnitude();
 
         Self::new(self.x / m, self.y / m, self.z / m)
+    }
+
+    pub fn magnitude(&self) -> f64 {
+        (self.x.powi(2) + self.y.powi(2) + self.z.powi(2)).sqrt()
     }
 
     pub fn dot(&self, other: &Self) -> f64 {
