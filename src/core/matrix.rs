@@ -10,8 +10,10 @@ pub type Transformation = Matrix<4>;
 pub struct Matrix<const N: usize>([[f64; N]; N]);
 
 impl<const N: usize> Matrix<N> {
+    const ZERO: Self = Self([[0.0; N]; N]);
+
     pub fn identity() -> Self {
-        let mut m = Self::zero();
+        let mut m = Self::ZERO;
 
         for i in 0..N {
             m[i][i] = 1.0;
@@ -20,12 +22,8 @@ impl<const N: usize> Matrix<N> {
         m
     }
 
-    fn zero() -> Self {
-        Self([[0.0; N]; N])
-    }
-
     pub fn transpose(&self) -> Self {
-        let mut m = Self::zero();
+        let mut m = Self::ZERO;
 
         for i in 0..N {
             for j in 0..N {
@@ -38,14 +36,34 @@ impl<const N: usize> Matrix<N> {
 }
 
 impl Matrix<2> {
-    pub fn determinant(&self) -> f64 {
+    fn determinant(&self) -> f64 {
         self[0][0] * self[1][1] - self[0][1] * self[1][0]
     }
 }
 
 impl Matrix<3> {
-    pub fn submatrix(&self, row: usize, col: usize) -> Matrix<2> {
-        let mut m = Matrix::<2>::zero();
+    fn determinant(&self) -> f64 {
+        let mut det = 0.0;
+
+        for column in 0..3 {
+            det += self[0][column] * self.cofactor(0, column);
+        }
+
+        det
+    }
+
+    fn cofactor(&self, row: usize, col: usize) -> f64 {
+        let sign = if (row + col) % 2 == 0 { 1.0 } else { -1.0 };
+
+        sign * self.minor(row, col)
+    }
+
+    fn minor(&self, row: usize, col: usize) -> f64 {
+        self.submatrix(row, col).determinant()
+    }
+
+    fn submatrix(&self, row: usize, col: usize) -> Matrix<2> {
+        let mut m = Matrix::ZERO;
 
         let mut i = 0;
         for r in 0..3 {
@@ -68,31 +86,47 @@ impl Matrix<3> {
 
         m
     }
+}
 
-    pub fn minor(&self, row: usize, col: usize) -> f64 {
-        self.submatrix(row, col).determinant()
+impl Matrix<4> {
+    pub fn inverse(&self) -> Self {
+        let determinant = self.determinant();
+        assert!(!(determinant == 0.0), "matrix is not invertible");
+
+        let mut m = Self::ZERO;
+
+        for row in 0..4 {
+            for col in 0..4 {
+                let cofactor = self.cofactor(row, col);
+                m[col][row] = cofactor / determinant;
+            }
+        }
+
+        m
     }
 
-    pub fn cofactor(&self, row: usize, col: usize) -> f64 {
-        let sign = if (row + col) % 2 == 0 { 1.0 } else { -1.0 };
-
-        sign * self.minor(row, col)
-    }
-
-    pub fn determinant(&self) -> f64 {
+    fn determinant(&self) -> f64 {
         let mut det = 0.0;
 
-        for column in 0..3 {
+        for column in 0..4 {
             det += self[0][column] * self.cofactor(0, column);
         }
 
         det
     }
-}
 
-impl Matrix<4> {
-    pub fn submatrix(&self, row: usize, col: usize) -> Matrix<3> {
-        let mut m = Matrix::<3>::zero();
+    fn cofactor(&self, row: usize, col: usize) -> f64 {
+        let sign = if (row + col) % 2 == 0 { 1.0 } else { -1.0 };
+
+        sign * self.minor(row, col)
+    }
+
+    fn minor(&self, row: usize, col: usize) -> f64 {
+        self.submatrix(row, col).determinant()
+    }
+
+    fn submatrix(&self, row: usize, col: usize) -> Matrix<3> {
+        let mut m = Matrix::ZERO;
 
         let mut i = 0;
         for r in 0..4 {
@@ -111,42 +145,6 @@ impl Matrix<4> {
             }
 
             i += 1;
-        }
-
-        m
-    }
-
-    pub fn minor(&self, row: usize, col: usize) -> f64 {
-        self.submatrix(row, col).determinant()
-    }
-
-    pub fn cofactor(&self, row: usize, col: usize) -> f64 {
-        let sign = if (row + col) % 2 == 0 { 1.0 } else { -1.0 };
-
-        sign * self.minor(row, col)
-    }
-
-    pub fn determinant(&self) -> f64 {
-        let mut det = 0.0;
-
-        for column in 0..4 {
-            det += self[0][column] * self.cofactor(0, column);
-        }
-
-        det
-    }
-
-    pub fn inverse(&self) -> Self {
-        let determinant = self.determinant();
-        assert!(!(determinant == 0.0), "matrix is not invertible");
-
-        let mut m = Self::zero();
-
-        for row in 0..4 {
-            for col in 0..4 {
-                let cofactor = self.cofactor(row, col);
-                m[col][row] = cofactor / determinant;
-            }
         }
 
         m
