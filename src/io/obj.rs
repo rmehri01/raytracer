@@ -25,7 +25,7 @@ fn parse_string(obj_string: &str) -> Shape {
     let mut current_group = None;
 
     for line in obj_string.lines() {
-        match &line.trim().split(' ').collect::<Vec<&str>>()[..] {
+        match &line.trim().split(' ').collect::<Vec<_>>()[..] {
             ["v", v1, v2, v3] => {
                 if let Ok(p) = parse_vertex(v1, v2, v3) {
                     vertices.push(p);
@@ -65,17 +65,17 @@ fn parse_string(obj_string: &str) -> Shape {
 }
 
 fn parse_vertex(v1: &str, v2: &str, v3: &str) -> Result<Point, ParseFloatError> {
-    let v1 = v1.parse::<f64>()?;
-    let v2 = v2.parse::<f64>()?;
-    let v3 = v3.parse::<f64>()?;
+    let v1 = v1.parse()?;
+    let v2 = v2.parse()?;
+    let v3 = v3.parse()?;
 
     Ok(Point::new(v1, v2, v3))
 }
 
 fn parse_normal(v1: &str, v2: &str, v3: &str) -> Result<Vector, ParseFloatError> {
-    let v1 = v1.parse::<f64>()?;
-    let v2 = v2.parse::<f64>()?;
-    let v3 = v3.parse::<f64>()?;
+    let v1 = v1.parse()?;
+    let v2 = v2.parse()?;
+    let v3 = v3.parse()?;
 
     Ok(Vector::new(v1, v2, v3))
 }
@@ -114,7 +114,7 @@ fn parse_vertex_ref(
     vertices: &[Point],
     normals: &[Vector],
 ) -> Result<(Point, Option<Vector>), ParseIntError> {
-    match v.split('/').collect::<Vec<&str>>()[..] {
+    match v.split('/').collect::<Vec<_>>()[..] {
         [v, _, n] => {
             let v = v.parse::<usize>()? - 1;
             let n = n.parse::<usize>()? - 1;
@@ -262,7 +262,10 @@ mod tests {
         .as_shape();
         let g2 = Compound::new_group(vec![t2]).as_shape();
 
-        assert_eq!(shape, Compound::new_group(vec![g1, g2]).as_shape());
+        assert!(
+            shape == Compound::new_group(vec![g1.clone(), g2.clone()]).as_shape()
+                || shape == Compound::new_group(vec![g2, g1]).as_shape()
+        );
     }
 
     #[test]

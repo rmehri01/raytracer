@@ -43,7 +43,7 @@ impl<'shape> Intersection<'shape> {
     }
 
     pub fn prepare_computations(&self, ray: &Ray, xs: &Intersections<'shape>) -> Computations {
-        let mut containers: Vec<&'shape Single> = Vec::new();
+        let mut containers: Vec<&Single> = Vec::new();
 
         let mut n1 = None;
         let mut n2 = None;
