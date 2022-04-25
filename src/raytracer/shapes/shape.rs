@@ -80,7 +80,7 @@ mod tests {
     fn default_transformation() {
         let shape = Single::new_sphere();
 
-        assert_eq!(shape.properties.transform, Matrix::identity());
+        assert_eq!(shape.properties().transform, Matrix::identity());
     }
 
     #[test]
@@ -88,7 +88,7 @@ mod tests {
         let shape = Single::new_sphere().with_transform(Matrix::translation(2.0, 3.0, 4.0));
 
         assert_eq!(
-            shape.properties.transform,
+            shape.properties().transform,
             Matrix::translation(2.0, 3.0, 4.0)
         );
     }
@@ -97,7 +97,7 @@ mod tests {
     fn default_material() {
         let shape = Single::new_sphere();
 
-        assert_eq!(shape.properties.material, Material::default());
+        assert_eq!(shape.properties().material, Material::default());
     }
 
     #[test]
@@ -109,6 +109,6 @@ mod tests {
 
         let shape = Single::new_sphere().with_material(material);
 
-        assert_eq!(shape.properties.material, material);
+        assert_eq!(shape.properties().material, material);
     }
 }

@@ -134,9 +134,6 @@ fn parse_vertex_ref(
 
 #[cfg(test)]
 mod tests {
-
-    use crate::raytracer::shapes::CompoundKind;
-
     use super::*;
 
     #[test]
@@ -173,33 +170,24 @@ mod tests {
 
         let shape = parse_string(&obj_string);
 
-        if let Shape::Compound(compound) = &shape {
-            if let CompoundKind::Group(group) = &compound.kind {
-                assert_eq!(group.len(), 2);
-                assert_eq!(
-                    group[0],
-                    Single::new_triangle(
-                        Point::new(-1.0, 1.0, 0.0),
-                        Point::new(-1.0, 0.0, 0.0),
-                        Point::new(1.0, 0.0, 0.0),
-                    )
-                    .as_shape()
-                );
-                assert_eq!(
-                    group[1],
-                    Single::new_triangle(
-                        Point::new(-1.0, 1.0, 0.0),
-                        Point::new(1.0, 0.0, 0.0),
-                        Point::new(1.0, 1.0, 0.0),
-                    )
-                    .as_shape()
-                );
-            } else {
-                panic!("expected a group of two triangles");
-            }
-        } else {
-            panic!("expected a group");
-        }
+        assert_eq!(
+            shape,
+            Compound::new_group(vec![
+                Single::new_triangle(
+                    Point::new(-1.0, 1.0, 0.0),
+                    Point::new(-1.0, 0.0, 0.0),
+                    Point::new(1.0, 0.0, 0.0),
+                )
+                .as_shape(),
+                Single::new_triangle(
+                    Point::new(-1.0, 1.0, 0.0),
+                    Point::new(1.0, 0.0, 0.0),
+                    Point::new(1.0, 1.0, 0.0),
+                )
+                .as_shape()
+            ])
+            .as_shape()
+        );
     }
 
     #[test]
@@ -216,42 +204,30 @@ mod tests {
 
         let shape = parse_string(&obj_string);
 
-        if let Shape::Compound(compound) = &shape {
-            if let CompoundKind::Group(group) = &compound.kind {
-                assert_eq!(group.len(), 3);
-                assert_eq!(
-                    group[0],
-                    Single::new_triangle(
-                        Point::new(-1.0, 1.0, 0.0),
-                        Point::new(-1.0, 0.0, 0.0),
-                        Point::new(1.0, 0.0, 0.0),
-                    )
-                    .as_shape()
-                );
-                assert_eq!(
-                    group[1],
-                    Single::new_triangle(
-                        Point::new(-1.0, 1.0, 0.0),
-                        Point::new(1.0, 0.0, 0.0),
-                        Point::new(1.0, 1.0, 0.0),
-                    )
-                    .as_shape()
-                );
-                assert_eq!(
-                    group[2],
-                    Single::new_triangle(
-                        Point::new(-1.0, 1.0, 0.0),
-                        Point::new(1.0, 1.0, 0.0),
-                        Point::new(0.0, 2.0, 0.0),
-                    )
-                    .as_shape()
-                );
-            } else {
-                panic!("expected a group of three triangles");
-            }
-        } else {
-            panic!("expected a group");
-        }
+        assert_eq!(
+            shape,
+            Compound::new_group(vec![
+                Single::new_triangle(
+                    Point::new(-1.0, 1.0, 0.0),
+                    Point::new(-1.0, 0.0, 0.0),
+                    Point::new(1.0, 0.0, 0.0),
+                )
+                .as_shape(),
+                Single::new_triangle(
+                    Point::new(-1.0, 1.0, 0.0),
+                    Point::new(1.0, 0.0, 0.0),
+                    Point::new(1.0, 1.0, 0.0),
+                )
+                .as_shape(),
+                Single::new_triangle(
+                    Point::new(-1.0, 1.0, 0.0),
+                    Point::new(1.0, 1.0, 0.0),
+                    Point::new(0.0, 2.0, 0.0),
+                )
+                .as_shape()
+            ])
+            .as_shape()
+        );
     }
 
     #[test]
@@ -270,32 +246,23 @@ mod tests {
 
         let shape = parse_string(&obj_string);
 
-        if let Shape::Compound(compound) = &shape {
-            if let CompoundKind::Group(group) = &compound.kind {
-                assert_eq!(group.len(), 2);
-                let t1 = Single::new_triangle(
-                    Point::new(-1.0, 1.0, 0.0),
-                    Point::new(-1.0, 0.0, 0.0),
-                    Point::new(1.0, 0.0, 0.0),
-                )
-                .as_shape();
-                let g1 = Compound::new_group(vec![t1]).as_shape();
-                assert!(group.contains(&g1));
+        let t1 = Single::new_triangle(
+            Point::new(-1.0, 1.0, 0.0),
+            Point::new(-1.0, 0.0, 0.0),
+            Point::new(1.0, 0.0, 0.0),
+        )
+        .as_shape();
+        let g1 = Compound::new_group(vec![t1]).as_shape();
 
-                let t2 = Single::new_triangle(
-                    Point::new(-1.0, 1.0, 0.0),
-                    Point::new(1.0, 0.0, 0.0),
-                    Point::new(1.0, 1.0, 0.0),
-                )
-                .as_shape();
-                let g2 = Compound::new_group(vec![t2]).as_shape();
-                assert!(group.contains(&g2));
-            } else {
-                panic!("expected a group of two triangles");
-            }
-        } else {
-            panic!("expected a group");
-        }
+        let t2 = Single::new_triangle(
+            Point::new(-1.0, 1.0, 0.0),
+            Point::new(1.0, 0.0, 0.0),
+            Point::new(1.0, 1.0, 0.0),
+        )
+        .as_shape();
+        let g2 = Compound::new_group(vec![t2]).as_shape();
+
+        assert_eq!(shape, Compound::new_group(vec![g1, g2]).as_shape());
     }
 
     #[test]
@@ -313,30 +280,16 @@ mod tests {
         .join("\n");
 
         let shape = parse_string(&obj_string);
-        if let Shape::Compound(compound) = &shape {
-            if let CompoundKind::Group(group) = &compound.kind {
-                let t1 = &group[0];
 
-                assert_eq!(
-                    t1,
-                    &Single::new_smooth_triangle(
-                        Point::new(0.0, 1.0, 0.0),
-                        Point::new(-1.0, 0.0, 0.0),
-                        Point::new(1.0, 0.0, 0.0),
-                        Vector::new(0.0, 1.0, 0.0),
-                        Vector::new(-1.0, 0.0, 0.0),
-                        Vector::new(1.0, 0.0, 0.0),
-                    )
-                    .as_shape()
-                );
-
-                let t2 = &group[1];
-                assert_eq!(t1, t2);
-            } else {
-                panic!("expected a group of two triangles");
-            }
-        } else {
-            panic!("expected a group");
-        }
+        let t1 = Single::new_smooth_triangle(
+            Point::new(0.0, 1.0, 0.0),
+            Point::new(-1.0, 0.0, 0.0),
+            Point::new(1.0, 0.0, 0.0),
+            Vector::new(0.0, 1.0, 0.0),
+            Vector::new(-1.0, 0.0, 0.0),
+            Vector::new(1.0, 0.0, 0.0),
+        )
+        .as_shape();
+        assert_eq!(shape, Compound::new_group(vec![t1.clone(), t1]).as_shape());
     }
 }

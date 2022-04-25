@@ -14,12 +14,12 @@ use super::{HasProperties, Intersect, Properties, SetProperties, Shape};
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Single {
-    pub properties: Properties,
-    pub kind: SingleKind,
+    properties: Properties,
+    kind: SingleKind,
 }
 
 impl Single {
-    pub fn new(kind: SingleKind) -> Self {
+    fn new(kind: SingleKind) -> Self {
         Self {
             properties: Properties::default(),
             kind,
@@ -180,7 +180,7 @@ impl Bounded for Single {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub enum SingleKind {
+enum SingleKind {
     /// A unit sphere with center at the origin.
     Sphere,
     /// A perfectly flat surface that extends infinitely in x and z.
@@ -333,16 +333,16 @@ impl SingleKind {
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
-pub struct Triangular {
-    pub p1: Point,
-    pub p2: Point,
-    pub p3: Point,
+struct Triangular {
+    p1: Point,
+    p2: Point,
+    p3: Point,
     e1: Vector,
     e2: Vector,
 }
 
 impl Triangular {
-    pub fn new(p1: Point, p2: Point, p3: Point) -> Self {
+    fn new(p1: Point, p2: Point, p3: Point) -> Self {
         let e1 = p2 - p1;
         let e2 = p3 - p1;
 
@@ -1254,8 +1254,8 @@ mod tests {
                 0.0,
                 &s,
                 im_rc::vector![
-                    g2.properties.transform_inversed,
-                    g1.properties.transform_inversed
+                    g2.properties().transform_inversed,
+                    g1.properties().transform_inversed
                 ],
             ),
         );
@@ -1314,8 +1314,8 @@ mod tests {
             s.world_to_object(
                 &Point::new(-2.0, 0.0, -10.0),
                 &im_rc::vector![
-                    g2.properties.transform_inversed,
-                    g1.properties.transform_inversed
+                    g2.properties().transform_inversed,
+                    g1.properties().transform_inversed
                 ]
             ),
             Point::new(0.0, 0.0, -1.0)
@@ -1337,8 +1337,8 @@ mod tests {
                 3.0_f64.sqrt() / 3.0,
             ),
             &im_rc::vector![
-                g2.properties.transform_inversed,
-                g1.properties.transform_inversed
+                g2.properties().transform_inversed,
+                g1.properties().transform_inversed
             ],
         );
 

@@ -13,12 +13,12 @@ use super::{HasProperties, Intersect, Properties, Shape, Single};
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Compound {
-    pub properties: Properties,
-    pub kind: CompoundKind,
+    properties: Properties,
+    kind: CompoundKind,
 }
 
 impl Compound {
-    pub fn new(kind: CompoundKind) -> Self {
+    fn new(kind: CompoundKind) -> Self {
         Self {
             properties: Properties::default(),
             kind,
@@ -30,7 +30,7 @@ impl Compound {
     }
 
     pub fn new_csg(operation: Operation, left: Shape, right: Shape) -> Self {
-        Self::new(CompoundKind::CSG {
+        Self::new(CompoundKind::Csg {
             operation,
             left: Box::new(left),
             right: Box::new(right),
@@ -40,7 +40,7 @@ impl Compound {
     pub fn includes(&self, other: &Single) -> bool {
         match &self.kind {
             CompoundKind::Group(children) => children.iter().any(|child| child.includes(other)),
-            CompoundKind::CSG { left, right, .. } => left.includes(other) || right.includes(other),
+            CompoundKind::Csg { left, right, .. } => left.includes(other) || right.includes(other),
         }
     }
 
@@ -77,7 +77,7 @@ impl Intersect for Compound {
                     Intersections(BTreeSet::new())
                 }
             }
-            CompoundKind::CSG {
+            CompoundKind::Csg {
                 operation,
                 left,
                 right,
@@ -103,7 +103,7 @@ impl Bounded for Compound {
                         bounds
                     })
             }
-            CompoundKind::CSG { left, right, .. } => {
+            CompoundKind::Csg { left, right, .. } => {
                 let mut bounds = Bounds::default();
 
                 bounds.transform(&left.properties().transform);
@@ -116,12 +116,12 @@ impl Bounded for Compound {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub enum CompoundKind {
+enum CompoundKind {
     /// A collection of shapes that are transformed as a unit.
     Group(Vec<Shape>),
     /// A constructive solid geometry shape that is composed of an operation
     /// and two operand shapes.
-    CSG {
+    Csg {
         operation: Operation,
         left: Box<Shape>,
         right: Box<Shape>,
