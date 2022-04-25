@@ -16,17 +16,17 @@ use super::{
 /// A collection of all objects in a scene.
 #[derive(Debug, PartialEq)]
 pub struct World {
-    pub shapes: Vec<Shape>,
-    // TODO: does this need to be optional
-    pub light: Option<PointLight>,
+    shapes: Vec<Shape>,
+    lights: Vec<PointLight>,
 }
 
 impl World {
+    pub fn new(shapes: Vec<Shape>, lights: Vec<PointLight>) -> Self {
+        Self { shapes, lights }
+    }
+
     pub fn empty() -> Self {
-        Self {
-            shapes: Vec::new(),
-            light: None,
-        }
+        Self::new(Vec::new(), Vec::new())
     }
 
     pub fn color_at(&self, ray: &Ray, remaining_recursions: u8) -> Color {
@@ -53,15 +53,22 @@ impl World {
     }
 
     fn shade_hit(&self, comps: &Computations, remaining_recursions: u8) -> Color {
-        let is_shadowed = self.is_shadowed(&comps.over_point);
-        let surface = comps.shape.properties().material.lighting(
-            &comps.shape.world_to_object(&comps.over_point, &comps.trail),
-            &comps.over_point,
-            &self.light.expect("world should have light"),
-            &comps.eye_v,
-            &comps.normal_v,
-            is_shadowed,
-        );
+        let surface: Color = self
+            .lights
+            .iter()
+            .map(|light| {
+                let is_shadowed = self.is_shadowed(&comps.over_point, &light.position);
+
+                comps.shape.properties().material.lighting(
+                    &comps.shape.world_to_object(&comps.over_point, &comps.trail),
+                    &comps.over_point,
+                    light,
+                    &comps.eye_v,
+                    &comps.normal_v,
+                    is_shadowed,
+                )
+            })
+            .sum();
 
         let reflected = self.reflected_color(comps, remaining_recursions);
         let refracted = self.refracted_color(comps, remaining_recursions);
@@ -75,8 +82,8 @@ impl World {
         }
     }
 
-    fn is_shadowed(&self, point: &Point) -> bool {
-        let v = self.light.expect("world should have light").position - *point;
+    fn is_shadowed(&self, point: &Point, light_position: &Point) -> bool {
+        let v = *light_position - *point;
         let distance = v.magnitude();
         let direction = v.normalize();
 
@@ -120,10 +127,7 @@ impl World {
 
 impl Default for World {
     fn default() -> Self {
-        let light = Some(PointLight::new(
-            Point::new(-10.0, 10.0, -10.0),
-            Color::WHITE,
-        ));
+        let light = PointLight::new(Point::new(-10.0, 10.0, -10.0), Color::WHITE);
 
         let s1 = Single::new_sphere().with_material(Material {
             color: Color::new(0.8, 1.0, 0.6),
@@ -134,10 +138,7 @@ impl Default for World {
 
         let s2 = Single::new_sphere().with_transform(Matrix::scaling(0.5, 0.5, 0.5));
 
-        Self {
-            shapes: vec![s1.as_shape(), s2.as_shape()],
-            light,
-        }
+        Self::new(vec![s1.as_shape(), s2.as_shape()], vec![light])
     }
 }
 
@@ -156,7 +157,7 @@ mod tests {
         let world = World::empty();
 
         assert_eq!(world.shapes.len(), 0);
-        assert_eq!(world.light, None);
+        assert_eq!(world.lights, Vec::new());
     }
 
     #[test]
@@ -165,8 +166,11 @@ mod tests {
 
         assert_eq!(world.shapes.len(), 2);
         assert_eq!(
-            world.light.expect("light exists"),
-            PointLight::new(Point::new(-10.0, 10.0, -10.0), Color::WHITE)
+            world.lights,
+            vec![PointLight::new(
+                Point::new(-10.0, 10.0, -10.0),
+                Color::WHITE
+            )]
         );
     }
 
@@ -212,7 +216,7 @@ mod tests {
     #[test]
     fn shade_intersection_from_inside() {
         let world = World {
-            light: Some(PointLight::new(Point::new(0.0, 0.25, 0.0), Color::WHITE)),
+            lights: vec![PointLight::new(Point::new(0.0, 0.25, 0.0), Color::WHITE)],
             ..World::default()
         };
 
@@ -264,7 +268,7 @@ mod tests {
         let w = World::default();
         let p = Point::new(0.0, 10.0, 0.0);
 
-        assert!(!w.is_shadowed(&p));
+        assert!(!w.is_shadowed(&p, &Point::new(-10.0, 10.0, -10.0)));
     }
 
     #[test]
@@ -272,7 +276,7 @@ mod tests {
         let w = World::default();
         let p = Point::new(10.0, -10.0, 10.0);
 
-        assert!(w.is_shadowed(&p));
+        assert!(w.is_shadowed(&p, &Point::new(-10.0, 10.0, -10.0)));
     }
 
     #[test]
@@ -280,7 +284,7 @@ mod tests {
         let w = World::default();
         let p = Point::new(-20.0, 20.0, -20.0);
 
-        assert!(!w.is_shadowed(&p));
+        assert!(!w.is_shadowed(&p, &Point::new(-10.0, 10.0, -10.0)));
     }
 
     #[test]
@@ -288,7 +292,7 @@ mod tests {
         let w = World::default();
         let p = Point::new(-2.0, 2.0, -2.0);
 
-        assert!(!w.is_shadowed(&p));
+        assert!(!w.is_shadowed(&p, &Point::new(-10.0, 10.0, -10.0)));
     }
 
     #[test]
@@ -296,10 +300,10 @@ mod tests {
         let s1 = Single::new_sphere();
         let s2 = Single::new_sphere().with_transform(Matrix::translation(0.0, 0.0, 10.0));
 
-        let w = World {
-            light: Some(PointLight::new(Point::new(0.0, 0.0, -10.0), Color::WHITE)),
-            shapes: vec![s1.as_shape(), s2.clone().as_shape()],
-        };
+        let w = World::new(
+            vec![s1.as_shape(), s2.clone().as_shape()],
+            vec![PointLight::new(Point::new(0.0, 0.0, -10.0), Color::WHITE)],
+        );
 
         let r = Ray::new(Point::new(0.0, 0.0, 5.0), Vector::new(0.0, 0.0, 1.0));
         let i = Intersection::new(4.0, &s2, im_rc::Vector::new());

@@ -82,10 +82,8 @@ impl Intersect for Compound {
                 left,
                 right,
             } => {
-                // TODO: could be cleaner?
                 let mut left_intersections = left.intersect(ray, &new_trail).0;
-                let mut right_intersections = right.intersect(ray, &new_trail).0;
-                left_intersections.append(&mut right_intersections);
+                left_intersections.append(&mut right.intersect(ray, &new_trail).0);
 
                 operation.filter_intersections(left, Intersections(left_intersections))
             }

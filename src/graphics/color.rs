@@ -1,4 +1,4 @@
-use std::ops;
+use std::{iter, ops};
 
 use approx::AbsDiffEq;
 
@@ -36,6 +36,12 @@ impl ops::Add for Color {
             green: self.green + other.green,
             blue: self.blue + other.blue,
         }
+    }
+}
+
+impl iter::Sum for Color {
+    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
+        iter.fold(Self::BLACK, |acc, x| acc + x)
     }
 }
 

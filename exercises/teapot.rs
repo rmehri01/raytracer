@@ -28,13 +28,13 @@ fn render_teapot(path: &str) {
     let floor = Single::new_plane().with_material(floor_material).as_shape();
     let teapot = obj::parse_file("exercises/resources/teapot.obj").unwrap();
 
-    let world = World {
-        light: Some(PointLight::new(
+    let world = World::new(
+        vec![floor, teapot],
+        vec![PointLight::new(
             Point::new(-10.0, 10.0, -10.0),
             Color::WHITE,
-        )),
-        shapes: vec![floor, teapot],
-    };
+        )],
+    );
 
     let camera = Camera::new(500, 500, FRAC_PI_3).with_transform(Matrix::view_transform(
         Point::new(0.0, 1.5, -5.0),

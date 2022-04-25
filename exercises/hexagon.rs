@@ -33,13 +33,13 @@ fn render_hexagon(path: &str) {
         )
         .as_shape();
 
-    let world = World {
-        light: Some(PointLight::new(
+    let world = World::new(
+        vec![floor, hexagon],
+        vec![PointLight::new(
             Point::new(-10.0, 10.0, -10.0),
             Color::WHITE,
-        )),
-        shapes: vec![floor, hexagon],
-    };
+        )],
+    );
 
     let camera = Camera::new(2000, 1000, FRAC_PI_3).with_transform(Matrix::view_transform(
         Point::new(0.0, 1.5, -5.0),
