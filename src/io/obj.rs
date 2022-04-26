@@ -27,63 +27,88 @@ type Result<T> = std::result::Result<T, ParseError>;
 
 impl Error for ParseError {}
 
+#[derive(Debug, Default)]
+struct Parser<'a> {
+    ignored_lines: usize,
+    shapes: Vec<Shape>,
+    vertices: Vec<Point>,
+    normals: Vec<Vector>,
+    groups: HashMap<&'a str, Vec<Single>>,
+}
+
+impl Parser<'_> {
+    fn make_shape(mut self) -> Result<Shape> {
+        for (_, group) in self.groups {
+            self.shapes.push(
+                Compound::new_group(group.into_iter().map(|t| t.as_shape()).collect()).as_shape(),
+            );
+        }
+
+        match self.shapes.len() {
+            0 => Err(ParseError::Logic("no shapes found".to_string())),
+            1 => Ok(self.shapes.pop().unwrap()),
+            _ => Ok(Compound::new_group(self.shapes).as_shape()),
+        }
+    }
+}
+
 pub fn parse_file(path: &str) -> Result<Shape> {
     let obj_string = fs::read_to_string(path).map_err(ParseError::Io)?;
-    let group = parse_string(&obj_string)?;
+    let shape = parse_shape(&obj_string)?;
 
-    Ok(group)
+    Ok(shape)
+}
+
+fn parse_shape(obj_string: &str) -> Result<Shape> {
+    let parser = parse_string(obj_string)?;
+    let shape = parser.make_shape()?;
+
+    Ok(shape)
 }
 
 /// Parses a string representation of an OBJ file, deliberately ignoring
 /// any lines that aren't recognized.
-fn parse_string(obj_string: &str) -> Result<Shape> {
-    let mut shapes = Vec::new();
-    let mut vertices = Vec::new();
-    let mut normals = Vec::new();
-    let mut groups = HashMap::new();
+fn parse_string(obj_string: &str) -> Result<Parser> {
+    let mut parser = Parser::default();
     let mut current_group = None;
 
     for line in obj_string.lines() {
         match &line.trim().split(' ').collect::<Vec<_>>()[..] {
             ["v", x, y, z] => {
                 let p = parse_vertex(x, y, z)?;
-                vertices.push(p);
+                parser.vertices.push(p);
             }
             ["vn", x, y, z] => {
                 let v = parse_normal(x, y, z)?;
-                normals.push(v);
+                parser.normals.push(v);
             }
             ["f", vs @ ..] if vs.len() >= 3 => {
-                let mut ts = fan_triangulation(vs, &vertices, &normals)?;
+                let mut ts = fan_triangulation(vs, &parser.vertices, &parser.normals)?;
 
                 match current_group {
                     Some(group) => {
-                        groups.entry(group).or_insert_with(Vec::new).append(&mut ts);
+                        parser
+                            .groups
+                            .entry(group)
+                            .or_insert_with(Vec::new)
+                            .append(&mut ts);
                     }
                     None => {
                         let mut triangle_shapes = ts.into_iter().map(|t| t.as_shape()).collect();
-                        shapes.append(&mut triangle_shapes);
+                        parser.shapes.append(&mut triangle_shapes);
                     }
                 };
             }
             ["g", group_name] => {
                 current_group = Some(*group_name);
             }
-            _ => {}
+            _ => {
+                parser.ignored_lines += 1;
+            }
         }
     }
 
-    for (_, group) in groups {
-        shapes.push(
-            Compound::new_group(group.into_iter().map(|t| t.as_shape()).collect()).as_shape(),
-        );
-    }
-
-    match shapes.len() {
-        0 => Err(ParseError::Logic("no shapes found".to_string())),
-        1 => Ok(shapes.pop().unwrap()),
-        _ => Ok(Compound::new_group(shapes).as_shape()),
-    }
+    Ok(parser)
 }
 
 fn parse_vertex(x: &str, y: &str, z: &str) -> Result<Point> {
@@ -169,7 +194,7 @@ mod tests {
         ]
         .join("\n");
 
-        parse_string(&obj_string);
+        assert_eq!(parse_string(&obj_string).unwrap().ignored_lines, 5);
     }
 
     #[test]
@@ -190,7 +215,7 @@ mod tests {
         ]
         .join("\n");
 
-        let shape = parse_string(&obj_string).unwrap();
+        let shape = parse_shape(&obj_string).unwrap();
 
         assert_eq!(
             shape,
@@ -224,7 +249,7 @@ mod tests {
         ]
         .join("\n");
 
-        let shape = parse_string(&obj_string).unwrap();
+        let shape = parse_shape(&obj_string).unwrap();
 
         assert_eq!(
             shape,
@@ -266,7 +291,7 @@ mod tests {
         ]
         .join("\n");
 
-        let shape = parse_string(&obj_string).unwrap();
+        let shape = parse_shape(&obj_string).unwrap();
 
         let t1 = Single::new_triangle(
             Point::new(-1.0, 1.0, 0.0),
@@ -304,7 +329,7 @@ mod tests {
         ]
         .join("\n");
 
-        let shape = parse_string(&obj_string).unwrap();
+        let shape = parse_shape(&obj_string).unwrap();
 
         let t1 = Single::new_smooth_triangle(
             Point::new(0.0, 1.0, 0.0),
