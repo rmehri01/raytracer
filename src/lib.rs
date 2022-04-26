@@ -35,11 +35,11 @@ pub mod raytracer {
 
     pub mod shapes {
         pub use compound::*;
+        pub use primitive::*;
         pub use shape::*;
-        pub use single::*;
 
         mod compound;
+        mod primitive;
         mod shape;
-        mod single;
     }
 }

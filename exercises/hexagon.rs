@@ -7,7 +7,7 @@ use raytracer::{
         camera::Camera,
         material::Material,
         point_light::PointLight,
-        shapes::{Compound, Conic, SetProperties, Single},
+        shapes::{Compound, Conic, Primitive, SetProperties},
         world::World,
     },
 };
@@ -24,7 +24,9 @@ fn render_hexagon(path: &str) {
         ..Material::default()
     };
 
-    let floor = Single::new_plane().with_material(floor_material).as_shape();
+    let floor = Primitive::new_plane()
+        .with_material(floor_material)
+        .as_shape();
     let hexagon = hexagon()
         .with_transform(
             Matrix::translation(0.0, 1.0, 0.0)
@@ -67,13 +69,13 @@ fn hexagon_side() -> Compound {
     Compound::new_group(vec![hexagon_corner().as_shape(), hexagon_edge().as_shape()])
 }
 
-fn hexagon_corner() -> Single {
-    Single::new_sphere()
+fn hexagon_corner() -> Primitive {
+    Primitive::new_sphere()
         .with_transform(Matrix::translation(0.0, 0.0, -1.0) * Matrix::scaling(0.25, 0.25, 0.25))
 }
 
-fn hexagon_edge() -> Single {
-    Single::new_cylinder(Conic::new(0.0, 1.0, false)).with_transform(
+fn hexagon_edge() -> Primitive {
+    Primitive::new_cylinder(Conic::new(0.0, 1.0, false)).with_transform(
         Matrix::translation(0.0, 0.0, -1.0)
             * Matrix::rotation_y(-FRAC_PI_6)
             * Matrix::rotation_z(-FRAC_PI_2)

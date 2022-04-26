@@ -5,19 +5,19 @@ use crate::{
     raytracer::{intersection::Intersections, material::Material, ray::Ray},
 };
 
-use super::{Compound, Single};
+use super::{Compound, Primitive};
 
 #[enum_dispatch]
 #[derive(Debug, PartialEq, Clone)]
 pub enum Shape {
-    Single,
+    Primitive,
     Compound,
 }
 
 impl Shape {
-    pub fn includes(&self, other: &Single) -> bool {
+    pub fn includes(&self, other: &Primitive) -> bool {
         match self {
-            Shape::Single(s) => s == other,
+            Shape::Primitive(p) => p == other,
             Shape::Compound(c) => c.includes(other),
         }
     }
@@ -78,14 +78,14 @@ mod tests {
 
     #[test]
     fn default_transformation() {
-        let shape = Single::new_sphere();
+        let shape = Primitive::new_sphere();
 
         assert_eq!(shape.properties().transform, Matrix::identity());
     }
 
     #[test]
     fn change_transformation() {
-        let shape = Single::new_sphere().with_transform(Matrix::translation(2.0, 3.0, 4.0));
+        let shape = Primitive::new_sphere().with_transform(Matrix::translation(2.0, 3.0, 4.0));
 
         assert_eq!(
             shape.properties().transform,
@@ -95,7 +95,7 @@ mod tests {
 
     #[test]
     fn default_material() {
-        let shape = Single::new_sphere();
+        let shape = Primitive::new_sphere();
 
         assert_eq!(shape.properties().material, Material::default());
     }
@@ -107,7 +107,7 @@ mod tests {
             ..Material::default()
         };
 
-        let shape = Single::new_sphere().with_material(material);
+        let shape = Primitive::new_sphere().with_material(material);
 
         assert_eq!(shape.properties().material, material);
     }

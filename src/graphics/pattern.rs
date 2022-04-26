@@ -9,11 +9,11 @@ use super::color::Color;
 pub struct Pattern {
     transform: Transformation,
     transform_inversed: Transformation,
-    kind: PatternKind,
+    kind: Kind,
 }
 
 impl Pattern {
-    fn new(kind: PatternKind) -> Self {
+    fn new(kind: Kind) -> Self {
         Self {
             transform: Matrix::identity(),
             transform_inversed: Matrix::identity(),
@@ -22,24 +22,24 @@ impl Pattern {
     }
 
     pub fn new_stripe(a: Color, b: Color) -> Self {
-        Self::new(PatternKind::Stripe { a, b })
+        Self::new(Kind::Stripe { a, b })
     }
 
     pub fn new_gradient(start: Color, end: Color) -> Self {
-        Self::new(PatternKind::Gradient { start, end })
+        Self::new(Kind::Gradient { start, end })
     }
 
     pub fn new_ring(a: Color, b: Color) -> Self {
-        Self::new(PatternKind::Ring { a, b })
+        Self::new(Kind::Ring { a, b })
     }
 
     pub fn new_checker(a: Color, b: Color) -> Self {
-        Self::new(PatternKind::Checker { a, b })
+        Self::new(Kind::Checker { a, b })
     }
 
     #[cfg(test)]
     pub fn new_test() -> Self {
-        Self::new(PatternKind::Test)
+        Self::new(Kind::Test)
     }
 
     pub fn with_transform(mut self, transform: Transformation) -> Self {
@@ -56,7 +56,7 @@ impl Pattern {
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
-enum PatternKind {
+enum Kind {
     Stripe {
         a: Color,
         b: Color,
@@ -77,7 +77,7 @@ enum PatternKind {
     Test,
 }
 
-impl PatternKind {
+impl Kind {
     fn pattern_at(&self, pattern_point: &Point) -> Color {
         match self {
             Self::Stripe { a, b } => Self::stripe_at(pattern_point, *a, *b),
@@ -129,13 +129,13 @@ impl PatternKind {
 mod tests {
     use approx::assert_abs_diff_eq;
 
-    use crate::raytracer::shapes::{SetProperties, Single};
+    use crate::raytracer::shapes::{Primitive, SetProperties};
 
     use super::*;
 
     #[test]
     fn pattern_with_shape_transformation() {
-        let shape = Single::new_sphere().with_transform(Matrix::scaling(2.0, 2.0, 2.0));
+        let shape = Primitive::new_sphere().with_transform(Matrix::scaling(2.0, 2.0, 2.0));
         let pattern = Pattern::new_test();
 
         let object_point = shape.world_to_object(&Point::new(2.0, 3.0, 4.0), &im_rc::Vector::new());
@@ -148,9 +148,8 @@ mod tests {
 
     #[test]
     fn pattern_with_pattern_transformation() {
-        let shape = Single::new_sphere();
-        let pattern =
-            Pattern::new(PatternKind::Test).with_transform(Matrix::scaling(2.0, 2.0, 2.0));
+        let shape = Primitive::new_sphere();
+        let pattern = Pattern::new(Kind::Test).with_transform(Matrix::scaling(2.0, 2.0, 2.0));
 
         let object_point = shape.world_to_object(&Point::new(2.0, 3.0, 4.0), &im_rc::Vector::new());
 
@@ -162,9 +161,8 @@ mod tests {
 
     #[test]
     fn pattern_with_both_transformations() {
-        let shape = Single::new_sphere().with_transform(Matrix::scaling(2.0, 2.0, 2.0));
-        let pattern =
-            Pattern::new(PatternKind::Test).with_transform(Matrix::translation(0.5, 1.0, 1.5));
+        let shape = Primitive::new_sphere().with_transform(Matrix::scaling(2.0, 2.0, 2.0));
+        let pattern = Pattern::new(Kind::Test).with_transform(Matrix::translation(0.5, 1.0, 1.5));
 
         let object_point = shape.world_to_object(&Point::new(2.5, 3.0, 3.5), &im_rc::Vector::new());
 
@@ -176,7 +174,7 @@ mod tests {
 
     #[test]
     fn stripe_constant_in_y() {
-        let stripe = PatternKind::Stripe {
+        let stripe = Kind::Stripe {
             a: Color::WHITE,
             b: Color::BLACK,
         };
@@ -188,7 +186,7 @@ mod tests {
 
     #[test]
     fn stripe_constant_in_z() {
-        let stripe = PatternKind::Stripe {
+        let stripe = Kind::Stripe {
             a: Color::WHITE,
             b: Color::BLACK,
         };
@@ -200,7 +198,7 @@ mod tests {
 
     #[test]
     fn stripe_alternates_in_x() {
-        let stripe = PatternKind::Stripe {
+        let stripe = Kind::Stripe {
             a: Color::WHITE,
             b: Color::BLACK,
         };
@@ -215,7 +213,7 @@ mod tests {
 
     #[test]
     fn linearly_interpolates_between_colors() {
-        let gradient = PatternKind::Gradient {
+        let gradient = Kind::Gradient {
             start: Color::WHITE,
             end: Color::BLACK,
         };
@@ -240,7 +238,7 @@ mod tests {
 
     #[test]
     fn ring_extends_in_x_and_z() {
-        let ring = PatternKind::Ring {
+        let ring = Kind::Ring {
             a: Color::WHITE,
             b: Color::BLACK,
         };
@@ -256,7 +254,7 @@ mod tests {
 
     #[test]
     fn checkers_repeat_in_x() {
-        let pattern = PatternKind::Checker {
+        let pattern = Kind::Checker {
             a: Color::WHITE,
             b: Color::BLACK,
         };
@@ -271,7 +269,7 @@ mod tests {
 
     #[test]
     fn checkers_repeat_in_y() {
-        let pattern = PatternKind::Checker {
+        let pattern = Kind::Checker {
             a: Color::WHITE,
             b: Color::BLACK,
         };
@@ -289,7 +287,7 @@ mod tests {
 
     #[test]
     fn checkers_repeat_in_z() {
-        let pattern = PatternKind::Checker {
+        let pattern = Kind::Checker {
             a: Color::WHITE,
             b: Color::BLACK,
         };

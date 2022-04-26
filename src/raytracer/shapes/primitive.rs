@@ -13,13 +13,13 @@ use crate::{
 use super::{HasProperties, Intersect, Properties, SetProperties, Shape};
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct Single {
+pub struct Primitive {
     properties: Properties,
-    kind: SingleKind,
+    kind: Kind,
 }
 
-impl Single {
-    fn new(kind: SingleKind) -> Self {
+impl Primitive {
+    fn new(kind: Kind) -> Self {
         Self {
             properties: Properties::default(),
             kind,
@@ -27,7 +27,7 @@ impl Single {
     }
 
     pub fn new_sphere() -> Self {
-        Self::new(SingleKind::Sphere)
+        Self::new(Kind::Sphere)
     }
 
     pub fn new_glass_sphere() -> Self {
@@ -39,26 +39,26 @@ impl Single {
     }
 
     pub fn new_plane() -> Self {
-        Self::new(SingleKind::Plane)
+        Self::new(Kind::Plane)
     }
 
     pub fn new_cube() -> Self {
-        Self::new(SingleKind::Cube)
+        Self::new(Kind::Cube)
     }
 
     pub fn new_cylinder(conic: Conic) -> Self {
-        Self::new(SingleKind::Cylinder(conic))
+        Self::new(Kind::Cylinder(conic))
     }
 
     pub fn new_cone(conic: Conic) -> Self {
-        Self::new(SingleKind::Cone(conic))
+        Self::new(Kind::Cone(conic))
     }
 
     pub fn new_triangle(p1: Point, p2: Point, p3: Point) -> Self {
         let triangular = Triangular::new(p1, p2, p3);
         let normal = triangular.e1.cross(&triangular.e2).normalize();
 
-        Self::new(SingleKind::Triangle { triangular, normal })
+        Self::new(Kind::Triangle { triangular, normal })
     }
 
     pub fn new_smooth_triangle(
@@ -71,7 +71,7 @@ impl Single {
     ) -> Self {
         let triangular = Triangular::new(p1, p2, p3);
 
-        Self::new(SingleKind::SmoothTriangle {
+        Self::new(Kind::SmoothTriangle {
             triangular,
             n1,
             n2,
@@ -82,14 +82,14 @@ impl Single {
     pub fn normal_at(&self, point: &Point, hit: &Intersection) -> Vector {
         let local_point = self.world_to_object(point, &hit.trail);
         let local_normal = match &self.kind {
-            SingleKind::Sphere => SingleKind::sphere_normal_at(&local_point),
-            SingleKind::Plane => SingleKind::plane_normal_at(),
-            SingleKind::Cube => SingleKind::cube_normal_at(&local_point),
-            SingleKind::Cylinder(conic) => SingleKind::cylinder_normal_at(&local_point, conic),
-            SingleKind::Cone(conic) => SingleKind::cone_normal_at(&local_point, conic),
-            SingleKind::Triangle { normal, .. } => *normal,
-            SingleKind::SmoothTriangle { n1, n2, n3, .. } => {
-                SingleKind::smooth_triangle_normal_at(n1, n2, n3, hit)
+            Kind::Sphere => Kind::sphere_normal_at(&local_point),
+            Kind::Plane => Kind::plane_normal_at(),
+            Kind::Cube => Kind::cube_normal_at(&local_point),
+            Kind::Cylinder(conic) => Kind::cylinder_normal_at(&local_point, conic),
+            Kind::Cone(conic) => Kind::cone_normal_at(&local_point, conic),
+            Kind::Triangle { normal, .. } => *normal,
+            Kind::SmoothTriangle { n1, n2, n3, .. } => {
+                Kind::smooth_triangle_normal_at(n1, n2, n3, hit)
             }
         };
 
@@ -121,11 +121,11 @@ impl Single {
     }
 
     pub fn as_shape(self) -> Shape {
-        Shape::Single(self)
+        Shape::Primitive(self)
     }
 }
 
-impl HasProperties for Single {
+impl HasProperties for Primitive {
     fn properties(&self) -> &Properties {
         &self.properties
     }
@@ -135,17 +135,17 @@ impl HasProperties for Single {
     }
 }
 
-impl Intersect for Single {
+impl Intersect for Primitive {
     fn local_intersect(&self, ray: &Ray, trail: &im_rc::Vector<Transformation>) -> Intersections {
         let mut u_v = None;
         let ts = match &self.kind {
-            SingleKind::Sphere => SingleKind::sphere_intersect(ray),
-            SingleKind::Plane => SingleKind::plane_intersect(ray),
-            SingleKind::Cube => SingleKind::cube_intersect(ray),
-            SingleKind::Cylinder(conic) => SingleKind::cylinder_intersect(ray, conic),
-            SingleKind::Cone(conic) => SingleKind::cone_intersect(ray, conic),
-            SingleKind::Triangle { triangular, .. } => triangular.intersect(ray),
-            SingleKind::SmoothTriangle { triangular, .. } => {
+            Kind::Sphere => Kind::sphere_intersect(ray),
+            Kind::Plane => Kind::plane_intersect(ray),
+            Kind::Cube => Kind::cube_intersect(ray),
+            Kind::Cylinder(conic) => Kind::cylinder_intersect(ray, conic),
+            Kind::Cone(conic) => Kind::cone_intersect(ray, conic),
+            Kind::Triangle { triangular, .. } => triangular.intersect(ray),
+            Kind::SmoothTriangle { triangular, .. } => {
                 let (ts, u, v) = triangular.intersect_uv(ray);
 
                 u_v = Some((u, v));
@@ -162,25 +162,26 @@ impl Intersect for Single {
     }
 }
 
-impl Bounded for Single {
+impl Bounded for Primitive {
     fn bounds(&self) -> Bounds {
         match &self.kind {
-            SingleKind::Cube | SingleKind::Sphere => {
+            Kind::Cube | Kind::Sphere => {
                 Bounds::new(Point::new(-1.0, -1.0, -1.0), Point::new(1.0, 1.0, 1.0))
             }
-            SingleKind::Plane => Bounds::new(
+            Kind::Plane => Bounds::new(
                 Point::new(f64::NEG_INFINITY, 0.0, f64::NEG_INFINITY),
                 Point::new(f64::INFINITY, 0.0, f64::INFINITY),
             ),
-            SingleKind::Cylinder(conic) | SingleKind::Cone(conic) => conic.bounds(),
-            SingleKind::Triangle { triangular, .. }
-            | SingleKind::SmoothTriangle { triangular, .. } => triangular.bounds(),
+            Kind::Cylinder(conic) | Kind::Cone(conic) => conic.bounds(),
+            Kind::Triangle { triangular, .. } | Kind::SmoothTriangle { triangular, .. } => {
+                triangular.bounds()
+            }
         }
     }
 }
 
 #[derive(Debug, PartialEq, Clone)]
-enum SingleKind {
+enum Kind {
     /// A unit sphere with center at the origin.
     Sphere,
     /// A perfectly flat surface that extends infinitely in x and z.
@@ -211,7 +212,7 @@ enum SingleKind {
     },
 }
 
-impl SingleKind {
+impl Kind {
     fn sphere_intersect(ray: &Ray) -> Vec<f64> {
         let sphere_to_ray = ray.origin - Point::new(0.0, 0.0, 0.0);
 
@@ -524,7 +525,7 @@ mod tests {
 
     #[test]
     fn glass_sphere() {
-        let shape = Single::new_glass_sphere();
+        let shape = Primitive::new_glass_sphere();
 
         assert_eq!(shape.properties.transform, Matrix::identity());
         assert_abs_diff_eq!(shape.properties.material.transparency, 1.0);
@@ -536,9 +537,9 @@ mod tests {
         let p1 = Point::new(0.0, 1.0, 0.0);
         let p2 = Point::new(-1.0, 0.0, 0.0);
         let p3 = Point::new(1.0, 0.0, 0.0);
-        let triangle = Single::new_triangle(p1, p2, p3);
+        let triangle = Primitive::new_triangle(p1, p2, p3);
 
-        if let SingleKind::Triangle { triangular, normal } = triangle.kind {
+        if let Kind::Triangle { triangular, normal } = triangle.kind {
             assert_eq!(p1, triangular.p1);
             assert_eq!(p2, triangular.p2);
             assert_eq!(p3, triangular.p3);
@@ -553,7 +554,7 @@ mod tests {
     #[test]
     fn intersect_scaled_sphere_with_ray() {
         let r = Ray::new(Point::new(0.0, 0.0, -5.0), Vector::new(0.0, 0.0, 1.0));
-        let shape = Single::new_sphere().with_transform(Matrix::scaling(2.0, 2.0, 2.0));
+        let shape = Primitive::new_sphere().with_transform(Matrix::scaling(2.0, 2.0, 2.0));
 
         let xs = shape
             .intersect(&r, &im_rc::Vector::new())
@@ -570,7 +571,7 @@ mod tests {
     #[test]
     fn intersect_translated_sphere_with_ray() {
         let r = Ray::new(Point::new(0.0, 0.0, -5.0), Vector::new(0.0, 0.0, 1.0));
-        let shape = Single::new_sphere().with_transform(Matrix::translation(5.0, 0.0, 0.0));
+        let shape = Primitive::new_sphere().with_transform(Matrix::translation(5.0, 0.0, 0.0));
 
         assert!(shape.intersect(&r, &im_rc::Vector::new()).0.is_empty());
     }
@@ -578,7 +579,7 @@ mod tests {
     #[test]
     fn ray_intersects_sphere() {
         let r = Ray::new(Point::new(0.0, 0.0, -5.0), Vector::new(0.0, 0.0, 1.0));
-        let s = Single::new_sphere();
+        let s = Primitive::new_sphere();
 
         let xs = s
             .intersect(&r, &im_rc::Vector::new())
@@ -595,7 +596,7 @@ mod tests {
     #[test]
     fn ray_tangent_to_sphere() {
         let r = Ray::new(Point::new(0.0, 1.0, -5.0), Vector::new(0.0, 0.0, 1.0));
-        let s = Single::new_sphere();
+        let s = Primitive::new_sphere();
 
         let xs = s
             .intersect(&r, &im_rc::Vector::new())
@@ -611,7 +612,7 @@ mod tests {
     #[test]
     fn ray_misses_sphere() {
         let r = Ray::new(Point::new(0.0, 2.0, -5.0), Vector::new(0.0, 0.0, 1.0));
-        let s = Single::new_sphere();
+        let s = Primitive::new_sphere();
 
         let intersects = s.intersect(&r, &im_rc::Vector::new());
 
@@ -621,7 +622,7 @@ mod tests {
     #[test]
     fn ray_originates_inside_sphere() {
         let r = Ray::new(Point::new(0.0, 0.0, 0.0), Vector::new(0.0, 0.0, 1.0));
-        let s = Single::new_sphere();
+        let s = Primitive::new_sphere();
 
         let xs = s
             .intersect(&r, &im_rc::Vector::new())
@@ -638,7 +639,7 @@ mod tests {
     #[test]
     fn sphere_behind_ray() {
         let r = Ray::new(Point::new(0.0, 0.0, 5.0), Vector::new(0.0, 0.0, 1.0));
-        let s = Single::new_sphere();
+        let s = Primitive::new_sphere();
 
         let xs = s
             .intersect(&r, &im_rc::Vector::new())
@@ -654,7 +655,7 @@ mod tests {
 
     #[test]
     fn intersecting_a_ray_parallel_to_the_plane() {
-        let plane = Single::new_plane();
+        let plane = Primitive::new_plane();
         let r = Ray::new(Point::new(0.0, 10.0, 0.0), Vector::new(0.0, 0.0, 1.0));
 
         let xs = plane.intersect(&r, &im_rc::Vector::new());
@@ -664,7 +665,7 @@ mod tests {
 
     #[test]
     fn intersecting_a_coplanar_ray() {
-        let plane = Single::new_plane();
+        let plane = Primitive::new_plane();
         let r = Ray::new(Point::new(0.0, 0.0, 0.0), Vector::new(0.0, 0.0, 1.0));
 
         let xs = plane.intersect(&r, &im_rc::Vector::new());
@@ -674,7 +675,7 @@ mod tests {
 
     #[test]
     fn ray_intersecting_from_above() {
-        let plane = Single::new_plane();
+        let plane = Primitive::new_plane();
         let r = Ray::new(Point::new(0.0, 1.0, 0.0), Vector::new(0.0, -1.0, 0.0));
 
         let xs = plane
@@ -690,7 +691,7 @@ mod tests {
 
     #[test]
     fn ray_intersecting_from_below() {
-        let plane = Single::new_plane();
+        let plane = Primitive::new_plane();
         let r = Ray::new(Point::new(0.0, -1.0, 0.0), Vector::new(0.0, 1.0, 0.0));
 
         let xs = plane
@@ -707,7 +708,7 @@ mod tests {
     #[test]
     fn intersect_sets_shape() {
         let r = Ray::new(Point::new(0.0, 0.0, -5.0), Vector::new(0.0, 0.0, 1.0));
-        let shape = Single::new_sphere();
+        let shape = Primitive::new_sphere();
 
         let shape_clone = shape.clone();
         let shapes = shape_clone
@@ -769,7 +770,7 @@ mod tests {
         ];
 
         for (origin, direction, t0, t1) in scenarios {
-            let c = Single::new_cube();
+            let c = Primitive::new_cube();
             let r = Ray::new(origin, direction);
 
             let xs = c
@@ -806,7 +807,7 @@ mod tests {
         ];
 
         for (origin, direction) in scenarios {
-            let c = Single::new_cube();
+            let c = Primitive::new_cube();
             let r = Ray::new(origin, direction);
 
             let xs = c.intersect(&r, &im_rc::Vector::new());
@@ -824,7 +825,7 @@ mod tests {
         ];
 
         for (origin, direction) in scenarios {
-            let c = Single::new_cylinder(Conic::default());
+            let c = Primitive::new_cylinder(Conic::default());
             let r = Ray::new(origin, direction);
 
             let xs = c.intersect(&r, &im_rc::Vector::new());
@@ -854,7 +855,7 @@ mod tests {
         ];
 
         for (origin, direction, ts) in scenarios {
-            let c = Single::new_cylinder(Conic::default());
+            let c = Primitive::new_cylinder(Conic::default());
             let r = Ray::new(origin, direction.normalize());
 
             let xs = c
@@ -883,7 +884,7 @@ mod tests {
         ];
 
         for (point, direction, count) in scenarios {
-            let cyl = Single::new_cylinder(Conic::new(1.0, 2.0, false));
+            let cyl = Primitive::new_cylinder(Conic::new(1.0, 2.0, false));
 
             let r = Ray::new(point, direction.normalize());
             let xs = cyl.intersect(&r, &im_rc::Vector::new());
@@ -903,7 +904,7 @@ mod tests {
         ];
 
         for (point, direction, count) in scenarios {
-            let cyl = Single::new_cylinder(Conic::new(1.0, 2.0, true));
+            let cyl = Primitive::new_cylinder(Conic::new(1.0, 2.0, true));
 
             let r = Ray::new(point, direction.normalize());
             let xs = cyl.intersect(&r, &im_rc::Vector::new());
@@ -933,7 +934,7 @@ mod tests {
         ];
 
         for (origin, direction, ts) in scenarios {
-            let shape = Single::new_cone(Conic::default());
+            let shape = Primitive::new_cone(Conic::default());
 
             let r = Ray::new(origin, direction.normalize());
             let xs = shape
@@ -952,7 +953,7 @@ mod tests {
 
     #[test]
     fn intersect_cone_with_ray_parallel_to_one_half() {
-        let shape = Single::new_cone(Conic::default());
+        let shape = Primitive::new_cone(Conic::default());
 
         let direction = Vector::new(0.0, 1.0, 1.0).normalize();
         let r = Ray::new(Point::new(0.0, 0.0, -1.0), direction);
@@ -977,7 +978,7 @@ mod tests {
         ];
 
         for (origin, direction, count) in scenarios {
-            let shape = Single::new_cone(Conic::new(-0.5, 0.5, true));
+            let shape = Primitive::new_cone(Conic::new(-0.5, 0.5, true));
 
             let r = Ray::new(origin, direction.normalize());
             let xs = shape.intersect(&r, &im_rc::Vector::new());
@@ -988,7 +989,7 @@ mod tests {
 
     #[test]
     fn intersect_ray_parallel_to_triangle() {
-        let t = Single::new_triangle(
+        let t = Primitive::new_triangle(
             Point::new(0.0, 1.0, 0.0),
             Point::new(-1.0, 0.0, 0.0),
             Point::new(1.0, 0.0, 0.0),
@@ -1002,7 +1003,7 @@ mod tests {
 
     #[test]
     fn ray_misses_p1_p3_edge() {
-        let t = Single::new_triangle(
+        let t = Primitive::new_triangle(
             Point::new(0.0, 1.0, 0.0),
             Point::new(-1.0, 0.0, 0.0),
             Point::new(1.0, 0.0, 0.0),
@@ -1016,7 +1017,7 @@ mod tests {
 
     #[test]
     fn ray_misses_p1_p2_edge() {
-        let t = Single::new_triangle(
+        let t = Primitive::new_triangle(
             Point::new(0.0, 1.0, 0.0),
             Point::new(-1.0, 0.0, 0.0),
             Point::new(1.0, 0.0, 0.0),
@@ -1030,7 +1031,7 @@ mod tests {
 
     #[test]
     fn ray_misses_p2_p3_edge() {
-        let t = Single::new_triangle(
+        let t = Primitive::new_triangle(
             Point::new(0.0, 1.0, 0.0),
             Point::new(-1.0, 0.0, 0.0),
             Point::new(1.0, 0.0, 0.0),
@@ -1044,7 +1045,7 @@ mod tests {
 
     #[test]
     fn ray_strikes_triangle() {
-        let t = Single::new_triangle(
+        let t = Primitive::new_triangle(
             Point::new(0.0, 1.0, 0.0),
             Point::new(-1.0, 0.0, 0.0),
             Point::new(1.0, 0.0, 0.0),
@@ -1071,7 +1072,7 @@ mod tests {
         let n2 = Vector::new(-1.0, 0.0, 0.0);
         let n3 = Vector::new(1.0, 0.0, 0.0);
 
-        let tri = Single::new_smooth_triangle(p1, p2, p3, n1, n2, n3);
+        let tri = Primitive::new_smooth_triangle(p1, p2, p3, n1, n2, n3);
         let r = Ray::new(Point::new(-0.2, 0.3, -2.0), Vector::new(0.0, 0.0, 1.0));
         let intersections = tri.intersect(&r, &im_rc::Vector::new());
         let xs = intersections.0.iter().collect::<Vec<_>>();
@@ -1084,7 +1085,7 @@ mod tests {
 
     #[test]
     fn normal_on_translated_sphere() {
-        let shape = Single::new_sphere().with_transform(Matrix::translation(0.0, 1.0, 0.0));
+        let shape = Primitive::new_sphere().with_transform(Matrix::translation(0.0, 1.0, 0.0));
         let n = shape.normal_at(
             &Point::new(0.0, 1.70711, -FRAC_1_SQRT_2),
             &Intersection::new(0.0, &shape, im_rc::Vector::new()),
@@ -1095,7 +1096,7 @@ mod tests {
 
     #[test]
     fn normal_on_transformed_sphere() {
-        let shape = Single::new_sphere()
+        let shape = Primitive::new_sphere()
             .with_transform(Matrix::scaling(1.0, 0.5, 1.0) * Matrix::rotation_z(FRAC_PI_4));
         let n = shape.normal_at(
             &Point::new(0.0, 2.0_f64.sqrt() / 2.0, -(2.0_f64.sqrt()) / 2.0),
@@ -1107,28 +1108,28 @@ mod tests {
 
     #[test]
     fn sphere_normal_x_axis() {
-        let n = SingleKind::sphere_normal_at(&Point::new(1.0, 0.0, 0.0));
+        let n = Kind::sphere_normal_at(&Point::new(1.0, 0.0, 0.0));
 
         assert_abs_diff_eq!(n, Vector::new(1.0, 0.0, 0.0));
     }
 
     #[test]
     fn sphere_normal_y_axis() {
-        let n = SingleKind::sphere_normal_at(&Point::new(0.0, 1.0, 0.0));
+        let n = Kind::sphere_normal_at(&Point::new(0.0, 1.0, 0.0));
 
         assert_abs_diff_eq!(n, Vector::new(0.0, 1.0, 0.0));
     }
 
     #[test]
     fn sphere_normal_z_axis() {
-        let n = SingleKind::sphere_normal_at(&Point::new(0.0, 0.0, 1.0));
+        let n = Kind::sphere_normal_at(&Point::new(0.0, 0.0, 1.0));
 
         assert_abs_diff_eq!(n, Vector::new(0.0, 0.0, 1.0));
     }
 
     #[test]
     fn sphere_normal_non_axial_point() {
-        let n = SingleKind::sphere_normal_at(&Point::new(
+        let n = Kind::sphere_normal_at(&Point::new(
             3.0_f64.sqrt() / 3.0,
             3.0_f64.sqrt() / 3.0,
             3.0_f64.sqrt() / 3.0,
@@ -1146,7 +1147,7 @@ mod tests {
 
     #[test]
     fn normal_is_normalized() {
-        let n = SingleKind::sphere_normal_at(&Point::new(
+        let n = Kind::sphere_normal_at(&Point::new(
             3.0_f64.sqrt() / 3.0,
             3.0_f64.sqrt() / 3.0,
             3.0_f64.sqrt() / 3.0,
@@ -1157,7 +1158,7 @@ mod tests {
 
     #[test]
     fn normal_of_plane_is_constant() {
-        let plane = Single::new_plane();
+        let plane = Primitive::new_plane();
         let hit = Intersection::new(0.0, &plane, im_rc::Vector::new());
         let n1 = plane.normal_at(&Point::new(0.0, 0.0, 0.0), &hit);
         let n2 = plane.normal_at(&Point::new(10.0, 0.0, -10.0), &hit);
@@ -1182,7 +1183,7 @@ mod tests {
         ];
 
         for (point, normal) in scenarios {
-            let n = SingleKind::cube_normal_at(&point);
+            let n = Kind::cube_normal_at(&point);
 
             assert_abs_diff_eq!(n, normal);
         }
@@ -1198,7 +1199,7 @@ mod tests {
         ];
 
         for (point, normal) in scenarios {
-            let n = SingleKind::cylinder_normal_at(&point, &Conic::default());
+            let n = Kind::cylinder_normal_at(&point, &Conic::default());
 
             assert_abs_diff_eq!(n, normal);
         }
@@ -1216,7 +1217,7 @@ mod tests {
         ];
 
         for (point, normal) in scenarios {
-            let n = SingleKind::cylinder_normal_at(&point, &Conic::new(1.0, 2.0, true));
+            let n = Kind::cylinder_normal_at(&point, &Conic::new(1.0, 2.0, true));
 
             assert_abs_diff_eq!(n, normal);
         }
@@ -1234,7 +1235,7 @@ mod tests {
         ];
 
         for (point, normal) in scenarios {
-            let n = SingleKind::cone_normal_at(&point, &Conic::default());
+            let n = Kind::cone_normal_at(&point, &Conic::default());
 
             assert_abs_diff_eq!(n, normal);
         }
@@ -1242,7 +1243,7 @@ mod tests {
 
     #[test]
     fn normal_on_child_object() {
-        let s = Single::new_sphere().with_transform(Matrix::translation(5.0, 0.0, 0.0));
+        let s = Primitive::new_sphere().with_transform(Matrix::translation(5.0, 0.0, 0.0));
         let g2 = Compound::new_group(vec![s.clone().as_shape()])
             .with_transform(Matrix::scaling(1.0, 2.0, 3.0));
         let g1 = Compound::new_group(vec![g2.clone().as_shape()])
@@ -1265,7 +1266,7 @@ mod tests {
 
     #[test]
     fn normal_on_triangle() {
-        let t = Single::new_triangle(
+        let t = Primitive::new_triangle(
             Point::new(0.0, 1.0, 0.0),
             Point::new(-1.0, 0.0, 0.0),
             Point::new(1.0, 0.0, 0.0),
@@ -1295,7 +1296,7 @@ mod tests {
         let n2 = Vector::new(-1.0, 0.0, 0.0);
         let n3 = Vector::new(1.0, 0.0, 0.0);
 
-        let tri = Single::new_smooth_triangle(p1, p2, p3, n1, n2, n3);
+        let tri = Primitive::new_smooth_triangle(p1, p2, p3, n1, n2, n3);
         let i = Intersection::new_with_uv(1.0, &tri, Some((0.45, 0.25)), im_rc::Vector::new());
         let n = tri.normal_at(&Point::new(0.0, 0.0, 0.0), &i);
 
@@ -1304,7 +1305,7 @@ mod tests {
 
     #[test]
     fn convert_point_world_to_object() {
-        let s = Single::new_sphere().with_transform(Matrix::translation(5.0, 0.0, 0.0));
+        let s = Primitive::new_sphere().with_transform(Matrix::translation(5.0, 0.0, 0.0));
         let g2 = Compound::new_group(vec![s.clone().as_shape()])
             .with_transform(Matrix::scaling(2.0, 2.0, 2.0));
         let g1 = Compound::new_group(vec![g2.clone().as_shape()])
@@ -1324,7 +1325,7 @@ mod tests {
 
     #[test]
     fn convert_normal_object_to_world() {
-        let s = Single::new_sphere().with_transform(Matrix::translation(5.0, 0.0, 0.0));
+        let s = Primitive::new_sphere().with_transform(Matrix::translation(5.0, 0.0, 0.0));
         let g2 = Compound::new_group(vec![s.clone().as_shape()])
             .with_transform(Matrix::scaling(1.0, 2.0, 3.0));
         let g1 = Compound::new_group(vec![g2.clone().as_shape()])

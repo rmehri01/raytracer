@@ -8,7 +8,7 @@ use raytracer::{
         camera::Camera,
         material::Material,
         point_light::PointLight,
-        shapes::{SetProperties, Single},
+        shapes::{Primitive, SetProperties},
         world::World,
     },
 };
@@ -25,7 +25,9 @@ fn render_teapot(path: &str) {
         ..Material::default()
     };
 
-    let floor = Single::new_plane().with_material(floor_material).as_shape();
+    let floor = Primitive::new_plane()
+        .with_material(floor_material)
+        .as_shape();
     let teapot = obj::parse_file("exercises/resources/teapot.obj").unwrap();
 
     let world = World::new(

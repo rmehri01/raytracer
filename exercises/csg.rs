@@ -7,7 +7,7 @@ use raytracer::{
         camera::Camera,
         material::Material,
         point_light::PointLight,
-        shapes::{Compound, Operation, SetProperties, Single},
+        shapes::{Compound, Operation, Primitive, SetProperties},
         world::World,
     },
 };
@@ -24,14 +24,16 @@ fn render_csg(path: &str) {
         ..Material::default()
     };
 
-    let floor = Single::new_plane().with_material(floor_material).as_shape();
-    let cube = Single::new_cube()
+    let floor = Primitive::new_plane()
+        .with_material(floor_material)
+        .as_shape();
+    let cube = Primitive::new_cube()
         .with_material(Material {
             color: Color::new(0.0, 0.0, 1.0),
             ..Material::default()
         })
         .as_shape();
-    let sphere = Single::new_sphere()
+    let sphere = Primitive::new_sphere()
         .with_material(Material {
             color: Color::new(1.0, 0.0, 0.0),
             ..Material::default()

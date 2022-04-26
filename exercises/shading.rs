@@ -6,7 +6,7 @@ use raytracer::{
         material::Material,
         point_light::PointLight,
         ray::Ray,
-        shapes::{HasProperties, Intersect, SetProperties, Single},
+        shapes::{HasProperties, Intersect, Primitive, SetProperties},
     },
 };
 
@@ -25,7 +25,7 @@ fn render_shaded_sphere(path: &str) {
     let pixel_size = wall_size / side_len as f64;
     let half = wall_size / 2.0;
 
-    let sphere = Single::new_sphere().with_material(Material {
+    let sphere = Primitive::new_sphere().with_material(Material {
         color: Color::new(1.0, 0.2, 1.0),
         ..Material::default()
     });

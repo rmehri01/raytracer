@@ -9,16 +9,16 @@ use crate::{
     },
 };
 
-use super::{HasProperties, Intersect, Properties, Shape, Single};
+use super::{HasProperties, Intersect, Primitive, Properties, Shape};
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Compound {
     properties: Properties,
-    kind: CompoundKind,
+    kind: Kind,
 }
 
 impl Compound {
-    fn new(kind: CompoundKind) -> Self {
+    fn new(kind: Kind) -> Self {
         Self {
             properties: Properties::default(),
             kind,
@@ -26,21 +26,21 @@ impl Compound {
     }
 
     pub fn new_group(children: Vec<Shape>) -> Self {
-        Self::new(CompoundKind::Group(children))
+        Self::new(Kind::Group(children))
     }
 
     pub fn new_csg(operation: Operation, left: Shape, right: Shape) -> Self {
-        Self::new(CompoundKind::Csg {
+        Self::new(Kind::Csg {
             operation,
             left: Box::new(left),
             right: Box::new(right),
         })
     }
 
-    pub fn includes(&self, other: &Single) -> bool {
+    pub fn includes(&self, other: &Primitive) -> bool {
         match &self.kind {
-            CompoundKind::Group(children) => children.iter().any(|child| child.includes(other)),
-            CompoundKind::Csg { left, right, .. } => left.includes(other) || right.includes(other),
+            Kind::Group(children) => children.iter().any(|child| child.includes(other)),
+            Kind::Csg { left, right, .. } => left.includes(other) || right.includes(other),
         }
     }
 
@@ -65,7 +65,7 @@ impl Intersect for Compound {
         new_trail.push_front(self.properties.transform);
 
         match &self.kind {
-            CompoundKind::Group(children) => {
+            Kind::Group(children) => {
                 if self.bounds().intersects(ray) {
                     let intersections = children.iter().fold(BTreeSet::new(), |mut acc, child| {
                         acc.append(&mut child.intersect(ray, &new_trail).0);
@@ -77,7 +77,7 @@ impl Intersect for Compound {
                     Intersections(BTreeSet::new())
                 }
             }
-            CompoundKind::Csg {
+            Kind::Csg {
                 operation,
                 left,
                 right,
@@ -95,7 +95,7 @@ impl Bounded for Compound {
     fn bounds(&self) -> Bounds {
         match &self.kind {
             // TODO: recursively combine
-            CompoundKind::Group(children) => {
+            Kind::Group(children) => {
                 children
                     .iter()
                     .fold(Bounds::default(), |mut bounds, child| {
@@ -103,7 +103,7 @@ impl Bounded for Compound {
                         bounds
                     })
             }
-            CompoundKind::Csg { left, right, .. } => {
+            Kind::Csg { left, right, .. } => {
                 let mut bounds = Bounds::default();
 
                 bounds.transform(&left.properties().transform);
@@ -116,7 +116,7 @@ impl Bounded for Compound {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-enum CompoundKind {
+enum Kind {
     /// A collection of shapes that are transformed as a unit.
     Group(Vec<Shape>),
     /// A constructive solid geometry shape that is composed of an operation
@@ -195,7 +195,7 @@ mod tests {
         let group = Compound::new_group(Vec::new());
 
         assert_eq!(group.properties.transform, Matrix::identity());
-        if let CompoundKind::Group(children) = group.kind {
+        if let Kind::Group(children) = group.kind {
             assert!(children.is_empty());
         } else {
             panic!("expected a group");
@@ -204,11 +204,11 @@ mod tests {
 
     #[test]
     fn create_group_with_children() {
-        let sphere = Single::new_sphere().as_shape();
+        let sphere = Primitive::new_sphere().as_shape();
         let group = Compound::new_group(vec![sphere.clone()]);
 
         assert_eq!(group.properties.transform, Matrix::identity());
-        if let CompoundKind::Group(children) = group.kind {
+        if let Kind::Group(children) = group.kind {
             assert_eq!(children.len(), 1);
             assert_eq!(children[0], sphere);
         } else {
@@ -228,9 +228,9 @@ mod tests {
 
     #[test]
     fn intersect_ray_with_group_of_shapes() {
-        let s1 = Single::new_sphere();
-        let s2 = Single::new_sphere().with_transform(Matrix::translation(0.0, 0.0, -3.0));
-        let s3 = Single::new_sphere().with_transform(Matrix::translation(5.0, 0.0, 0.0));
+        let s1 = Primitive::new_sphere();
+        let s2 = Primitive::new_sphere().with_transform(Matrix::translation(0.0, 0.0, -3.0));
+        let s3 = Primitive::new_sphere().with_transform(Matrix::translation(5.0, 0.0, 0.0));
         let group = Compound::new_group(vec![
             s1.clone().as_shape(),
             s2.clone().as_shape(),
@@ -254,7 +254,7 @@ mod tests {
 
     #[test]
     fn intersect_ray_with_transformed_group() {
-        let s = Single::new_sphere()
+        let s = Primitive::new_sphere()
             .with_transform(Matrix::translation(5.0, 0.0, 0.0))
             .as_shape();
         let group = Compound::new_group(vec![s]).with_transform(Matrix::scaling(2.0, 2.0, 2.0));
@@ -308,8 +308,8 @@ mod tests {
         ];
 
         for (operation, x0, x1) in scenarios {
-            let s1 = Single::new_sphere();
-            let s2 = Single::new_cube();
+            let s1 = Primitive::new_sphere();
+            let s2 = Primitive::new_cube();
             let xs = Intersections::new([
                 Intersection::new(1.0, &s1, im_rc::Vector::new()),
                 Intersection::new(2.0, &s2, im_rc::Vector::new()),
@@ -334,8 +334,8 @@ mod tests {
     fn ray_misses_csg_object() {
         let c = Compound::new_csg(
             Operation::Union,
-            Single::new_sphere().as_shape(),
-            Single::new_cube().as_shape(),
+            Primitive::new_sphere().as_shape(),
+            Primitive::new_cube().as_shape(),
         );
         let r = Ray::new(Point::new(0.0, 2.0, -5.0), Vector::new(0.0, 0.0, 1.0));
         let xs = c.intersect(&r, &im_rc::Vector::new());
@@ -345,8 +345,8 @@ mod tests {
 
     #[test]
     fn ray_hits_csg_object() {
-        let s1 = Single::new_sphere();
-        let s2 = Single::new_sphere().with_transform(Matrix::translation(0.0, 0.0, 0.5));
+        let s1 = Primitive::new_sphere();
+        let s2 = Primitive::new_sphere().with_transform(Matrix::translation(0.0, 0.0, 0.5));
 
         let c = Compound::new_csg(
             Operation::Union,

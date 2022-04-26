@@ -6,20 +6,20 @@ use crate::core::{matrix::Transformation, point::Point, vector::Vector};
 
 use super::{
     ray::Ray,
-    shapes::{HasProperties, Single},
+    shapes::{HasProperties, Primitive},
 };
 
 /// Describes where an intersection occurs and on what object.
 #[derive(Debug, Clone)]
 pub struct Intersection<'shape> {
     pub t: f64,
-    pub shape: &'shape Single,
+    pub shape: &'shape Primitive,
     pub u_v: Option<(f64, f64)>,
     pub trail: im_rc::Vector<Transformation>,
 }
 
 impl<'shape> Intersection<'shape> {
-    pub fn new(t: f64, shape: &'shape Single, trail: im_rc::Vector<Transformation>) -> Self {
+    pub fn new(t: f64, shape: &'shape Primitive, trail: im_rc::Vector<Transformation>) -> Self {
         Self {
             t,
             shape,
@@ -30,7 +30,7 @@ impl<'shape> Intersection<'shape> {
 
     pub fn new_with_uv(
         t: f64,
-        shape: &'shape Single,
+        shape: &'shape Primitive,
         u_v: Option<(f64, f64)>,
         trail: im_rc::Vector<Transformation>,
     ) -> Self {
@@ -43,7 +43,7 @@ impl<'shape> Intersection<'shape> {
     }
 
     pub fn prepare_computations(&self, ray: &Ray, xs: &Intersections<'shape>) -> Computations {
-        let mut containers: Vec<&Single> = Vec::new();
+        let mut containers: Vec<&Primitive> = Vec::new();
 
         let mut n1 = None;
         let mut n2 = None;
@@ -154,7 +154,7 @@ impl<'shape> Intersections<'shape> {
 /// Encapsulates precomputed information for an intersection.
 pub struct Computations<'shape> {
     pub t: f64,
-    pub shape: &'shape Single,
+    pub shape: &'shape Primitive,
     pub trail: im_rc::Vector<Transformation>,
     pub point: Point,
     pub over_point: Point,
@@ -205,7 +205,7 @@ mod tests {
 
     #[test]
     fn test_intersection_new() {
-        let shape = Single::new_sphere();
+        let shape = Primitive::new_sphere();
         let intersection = Intersection::new(3.5, &shape, im_rc::Vector::new());
 
         assert_relative_eq!(intersection.t, 3.5);
@@ -214,7 +214,7 @@ mod tests {
 
     #[test]
     fn hit_all_positive() {
-        let shape = Single::new_sphere();
+        let shape = Primitive::new_sphere();
         let i1 = Intersection::new(1.0, &shape, im_rc::Vector::new());
         let i2 = Intersection::new(2.0, &shape, im_rc::Vector::new());
 
@@ -226,7 +226,7 @@ mod tests {
 
     #[test]
     fn hit_some_negative() {
-        let shape = Single::new_sphere();
+        let shape = Primitive::new_sphere();
         let i1 = Intersection::new(-1.0, &shape, im_rc::Vector::new());
         let i2 = Intersection::new(1.0, &shape, im_rc::Vector::new());
 
@@ -238,7 +238,7 @@ mod tests {
 
     #[test]
     fn hit_all_negative() {
-        let shape = Single::new_sphere();
+        let shape = Primitive::new_sphere();
         let i1 = Intersection::new(-2.0, &shape, im_rc::Vector::new());
         let i2 = Intersection::new(-1.0, &shape, im_rc::Vector::new());
 
@@ -250,7 +250,7 @@ mod tests {
 
     #[test]
     fn hit_lowest_nonnegative() {
-        let shape = Single::new_sphere();
+        let shape = Primitive::new_sphere();
         let i1 = Intersection::new(5.0, &shape, im_rc::Vector::new());
         let i2 = Intersection::new(7.0, &shape, im_rc::Vector::new());
         let i3 = Intersection::new(-3.0, &shape, im_rc::Vector::new());
@@ -265,7 +265,7 @@ mod tests {
     #[test]
     fn precomputing_state_of_intersection() {
         let r = Ray::new(Point::new(0.0, 0.0, -5.0), Vector::new(0.0, 0.0, 1.0));
-        let shape = Single::new_sphere();
+        let shape = Primitive::new_sphere();
         let i = Intersection::new(4.0, &shape, im_rc::Vector::new());
 
         let comps = i.prepare_computations(&r, &Intersections::new([i.clone()]));
@@ -279,7 +279,7 @@ mod tests {
 
     #[test]
     fn precomputing_reflection_vector() {
-        let shape = Single::new_plane();
+        let shape = Primitive::new_plane();
         let r = Ray::new(
             Point::new(0.0, 1.0, -1.0),
             Vector::new(0.0, -(2.0_f64.sqrt()) / 2.0, 2.0_f64.sqrt() / 2.0),
@@ -297,7 +297,7 @@ mod tests {
     #[test]
     fn hit_when_intersection_outside() {
         let r = Ray::new(Point::new(0.0, 0.0, -5.0), Vector::new(0.0, 0.0, 1.0));
-        let shape = Single::new_sphere();
+        let shape = Primitive::new_sphere();
         let i = Intersection::new(4.0, &shape, im_rc::Vector::new());
 
         let comps = i.prepare_computations(&r, &Intersections::new([i.clone()]));
@@ -308,7 +308,7 @@ mod tests {
     #[test]
     fn hit_when_intersection_inside() {
         let r = Ray::new(Point::new(0.0, 0.0, 0.0), Vector::new(0.0, 0.0, 1.0));
-        let shape = Single::new_sphere();
+        let shape = Primitive::new_sphere();
         let i = Intersection::new(1.0, &shape, im_rc::Vector::new());
 
         let comps = i.prepare_computations(&r, &Intersections::new([i.clone()]));
@@ -322,7 +322,7 @@ mod tests {
     #[test]
     fn hit_should_offset_the_point() {
         let r = Ray::new(Point::new(0.0, 0.0, -5.0), Vector::new(0.0, 0.0, 1.0));
-        let shape = Single::new_sphere().with_transform(Matrix::translation(0.0, 0.0, 1.0));
+        let shape = Primitive::new_sphere().with_transform(Matrix::translation(0.0, 0.0, 1.0));
 
         let i = Intersection::new(5.0, &shape, im_rc::Vector::new());
         let comps = i.prepare_computations(&r, &Intersections::new([i.clone()]));
@@ -334,21 +334,21 @@ mod tests {
 
     #[test]
     fn finding_n1_and_n2_at_various_intersections() {
-        let a = Single::new_glass_sphere()
+        let a = Primitive::new_glass_sphere()
             .with_transform(Matrix::scaling(2.0, 2.0, 2.0))
             .with_material(Material {
                 refractive_index: 1.5,
                 ..Material::default()
             });
 
-        let b = Single::new_glass_sphere()
+        let b = Primitive::new_glass_sphere()
             .with_transform(Matrix::translation(0.0, 0.0, -0.25))
             .with_material(Material {
                 refractive_index: 2.0,
                 ..Material::default()
             });
 
-        let c = Single::new_glass_sphere()
+        let c = Primitive::new_glass_sphere()
             .with_transform(Matrix::translation(0.0, 0.0, 0.25))
             .with_material(Material {
                 refractive_index: 2.5,
@@ -388,7 +388,8 @@ mod tests {
 
     #[test]
     fn under_point_offset_below_surface() {
-        let shape = Single::new_glass_sphere().with_transform(Matrix::translation(0.0, 0.0, -1.0));
+        let shape =
+            Primitive::new_glass_sphere().with_transform(Matrix::translation(0.0, 0.0, -1.0));
 
         let r = Ray::new(Point::new(0.0, 0.0, -5.0), Vector::new(0.0, 0.0, 1.0));
         let i = Intersection::new(5.0, &shape, im_rc::Vector::new());
@@ -402,7 +403,7 @@ mod tests {
 
     #[test]
     fn schlick_approximation_for_total_internal_reflection() {
-        let shape = Single::new_glass_sphere();
+        let shape = Primitive::new_glass_sphere();
 
         let r = Ray::new(
             Point::new(0.0, 0.0, 2.0_f64.sqrt() / 2.0),
@@ -420,7 +421,7 @@ mod tests {
 
     #[test]
     fn schlick_approximation_perpendicular_viewing_angle() {
-        let shape = Single::new_glass_sphere();
+        let shape = Primitive::new_glass_sphere();
 
         let r = Ray::new(Point::new(0.0, 0.0, 0.0), Vector::new(0.0, 1.0, 0.0));
         let xs = Intersections::new([
@@ -435,7 +436,7 @@ mod tests {
 
     #[test]
     fn schlick_approximation_small_angle_n2_greater_than_n1() {
-        let shape = Single::new_glass_sphere();
+        let shape = Primitive::new_glass_sphere();
 
         let r = Ray::new(Point::new(0.0, 0.99, -2.0), Vector::new(0.0, 0.0, 1.0));
         let i = Intersection::new(1.8589, &shape, im_rc::Vector::new());
@@ -455,7 +456,7 @@ mod tests {
         let n2 = Vector::new(-1.0, 0.0, 0.0);
         let n3 = Vector::new(1.0, 0.0, 0.0);
 
-        let tri = Single::new_smooth_triangle(p1, p2, p3, n1, n2, n3);
+        let tri = Primitive::new_smooth_triangle(p1, p2, p3, n1, n2, n3);
         let i = Intersection::new_with_uv(1.0, &tri, Some((0.45, 0.25)), im_rc::Vector::new());
         let r = Ray::new(Point::new(-0.2, 0.3, -2.0), Vector::new(0.0, 0.0, 1.0));
         let xs = Intersections::new([i.clone()]);

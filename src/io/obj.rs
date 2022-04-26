@@ -3,7 +3,7 @@ use std::{collections::HashMap, error::Error, fs, io};
 
 use crate::{
     core::{point::Point, vector::Vector},
-    raytracer::shapes::{Compound, Shape, Single},
+    raytracer::shapes::{Compound, Primitive, Shape},
 };
 
 #[derive(Debug)]
@@ -33,7 +33,7 @@ struct Parser<'a> {
     shapes: Vec<Shape>,
     vertices: Vec<Point>,
     normals: Vec<Vector>,
-    groups: HashMap<&'a str, Vec<Single>>,
+    groups: HashMap<&'a str, Vec<Primitive>>,
 }
 
 impl Parser<'_> {
@@ -129,7 +129,11 @@ fn parse_normal(x: &str, y: &str, z: &str) -> Result<Vector> {
     Ok(Vector::new(x, y, z))
 }
 
-fn fan_triangulation(vs: &[&str], vertices: &[Point], normals: &[Vector]) -> Result<Vec<Single>> {
+fn fan_triangulation(
+    vs: &[&str],
+    vertices: &[Point],
+    normals: &[Vector],
+) -> Result<Vec<Primitive>> {
     (2..vs.len())
         .map(|i| parse_triangle(vs[0], vs[i - 1], vs[i], vertices, normals))
         .collect()
@@ -141,14 +145,16 @@ fn parse_triangle(
     v3: &str,
     vertices: &[Point],
     normals: &[Vector],
-) -> Result<Single> {
+) -> Result<Primitive> {
     let (p1, n1) = parse_vertex_ref(v1, vertices, normals)?;
     let (p2, n2) = parse_vertex_ref(v2, vertices, normals)?;
     let (p3, n3) = parse_vertex_ref(v3, vertices, normals)?;
 
     match (n1, n2, n3) {
-        (Some(n1), Some(n2), Some(n3)) => Ok(Single::new_smooth_triangle(p1, p2, p3, n1, n2, n3)),
-        (None, None, None) => Ok(Single::new_triangle(p1, p2, p3)),
+        (Some(n1), Some(n2), Some(n3)) => {
+            Ok(Primitive::new_smooth_triangle(p1, p2, p3, n1, n2, n3))
+        }
+        (None, None, None) => Ok(Primitive::new_triangle(p1, p2, p3)),
         _ => Err(ParseError::Syntax(format!(
             "invalid triangle: {} {} {}",
             v1, v2, v3
@@ -220,13 +226,13 @@ mod tests {
         assert_eq!(
             shape,
             Compound::new_group(vec![
-                Single::new_triangle(
+                Primitive::new_triangle(
                     Point::new(-1.0, 1.0, 0.0),
                     Point::new(-1.0, 0.0, 0.0),
                     Point::new(1.0, 0.0, 0.0),
                 )
                 .as_shape(),
-                Single::new_triangle(
+                Primitive::new_triangle(
                     Point::new(-1.0, 1.0, 0.0),
                     Point::new(1.0, 0.0, 0.0),
                     Point::new(1.0, 1.0, 0.0),
@@ -254,19 +260,19 @@ mod tests {
         assert_eq!(
             shape,
             Compound::new_group(vec![
-                Single::new_triangle(
+                Primitive::new_triangle(
                     Point::new(-1.0, 1.0, 0.0),
                     Point::new(-1.0, 0.0, 0.0),
                     Point::new(1.0, 0.0, 0.0),
                 )
                 .as_shape(),
-                Single::new_triangle(
+                Primitive::new_triangle(
                     Point::new(-1.0, 1.0, 0.0),
                     Point::new(1.0, 0.0, 0.0),
                     Point::new(1.0, 1.0, 0.0),
                 )
                 .as_shape(),
-                Single::new_triangle(
+                Primitive::new_triangle(
                     Point::new(-1.0, 1.0, 0.0),
                     Point::new(1.0, 1.0, 0.0),
                     Point::new(0.0, 2.0, 0.0),
@@ -293,7 +299,7 @@ mod tests {
 
         let shape = parse_shape(&obj_string).unwrap();
 
-        let t1 = Single::new_triangle(
+        let t1 = Primitive::new_triangle(
             Point::new(-1.0, 1.0, 0.0),
             Point::new(-1.0, 0.0, 0.0),
             Point::new(1.0, 0.0, 0.0),
@@ -301,7 +307,7 @@ mod tests {
         .as_shape();
         let g1 = Compound::new_group(vec![t1]).as_shape();
 
-        let t2 = Single::new_triangle(
+        let t2 = Primitive::new_triangle(
             Point::new(-1.0, 1.0, 0.0),
             Point::new(1.0, 0.0, 0.0),
             Point::new(1.0, 1.0, 0.0),
@@ -331,7 +337,7 @@ mod tests {
 
         let shape = parse_shape(&obj_string).unwrap();
 
-        let t1 = Single::new_smooth_triangle(
+        let t1 = Primitive::new_smooth_triangle(
             Point::new(0.0, 1.0, 0.0),
             Point::new(-1.0, 0.0, 0.0),
             Point::new(1.0, 0.0, 0.0),

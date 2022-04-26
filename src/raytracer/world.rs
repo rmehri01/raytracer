@@ -10,7 +10,7 @@ use super::{
     material::Material,
     point_light::PointLight,
     ray::Ray,
-    shapes::{HasProperties, Intersect, SetProperties, Shape, Single},
+    shapes::{HasProperties, Intersect, Primitive, SetProperties, Shape},
 };
 
 /// A collection of all objects in a scene.
@@ -129,14 +129,14 @@ impl Default for World {
     fn default() -> Self {
         let light = PointLight::new(Point::new(-10.0, 10.0, -10.0), Color::WHITE);
 
-        let s1 = Single::new_sphere().with_material(Material {
+        let s1 = Primitive::new_sphere().with_material(Material {
             color: Color::new(0.8, 1.0, 0.6),
             diffuse: 0.7,
             specular: 0.2,
             ..Material::default()
         });
 
-        let s2 = Single::new_sphere().with_transform(Matrix::scaling(0.5, 0.5, 0.5));
+        let s2 = Primitive::new_sphere().with_transform(Matrix::scaling(0.5, 0.5, 0.5));
 
         Self::new(vec![s1.as_shape(), s2.as_shape()], vec![light])
     }
@@ -198,7 +198,7 @@ mod tests {
     fn shade_intersection() {
         let world = World::default();
         let r = Ray::new(Point::new(0.0, 0.0, -5.0), Vector::new(0.0, 0.0, 1.0));
-        let shape = Single::new_sphere().with_material(Material {
+        let shape = Primitive::new_sphere().with_material(Material {
             color: Color::new(0.8, 1.0, 0.6),
             diffuse: 0.7,
             specular: 0.2,
@@ -221,7 +221,7 @@ mod tests {
         };
 
         let r = Ray::new(Point::new(0.0, 0.0, 0.0), Vector::new(0.0, 0.0, 1.0));
-        let shape = Single::new_sphere().with_transform(Matrix::scaling(0.5, 0.5, 0.5));
+        let shape = Primitive::new_sphere().with_transform(Matrix::scaling(0.5, 0.5, 0.5));
         let i = Intersection::new(0.5, &shape, im_rc::Vector::new());
         let comps = i.prepare_computations(&r, &Intersections::new([i.clone()]));
 
@@ -297,8 +297,8 @@ mod tests {
 
     #[test]
     fn shade_hit_given_intersection_in_shadow() {
-        let s1 = Single::new_sphere();
-        let s2 = Single::new_sphere().with_transform(Matrix::translation(0.0, 0.0, 10.0));
+        let s1 = Primitive::new_sphere();
+        let s2 = Primitive::new_sphere().with_transform(Matrix::translation(0.0, 0.0, 10.0));
 
         let w = World::new(
             vec![s1.as_shape(), s2.clone().as_shape()],
@@ -314,7 +314,7 @@ mod tests {
 
     #[test]
     fn reflected_color_nonreflective_material() {
-        let s = Single::new_sphere()
+        let s = Primitive::new_sphere()
             .with_transform(Matrix::scaling(0.5, 0.5, 0.5))
             .with_material(Material {
                 ambient: 1.0,
@@ -333,7 +333,7 @@ mod tests {
 
     #[test]
     fn reflected_color_reflective_material() {
-        let shape = Single::new_plane()
+        let shape = Primitive::new_plane()
             .with_transform(Matrix::translation(0.0, -1.0, 0.0))
             .with_material(Material {
                 reflective: 0.5,
@@ -359,7 +359,7 @@ mod tests {
 
     #[test]
     fn shade_hit_with_reflective_material() {
-        let shape = Single::new_plane()
+        let shape = Primitive::new_plane()
             .with_transform(Matrix::translation(0.0, -1.0, 0.0))
             .with_material(Material {
                 reflective: 0.5,
@@ -385,14 +385,14 @@ mod tests {
 
     #[test]
     fn mutually_reflective_surfaces() {
-        let lower = Single::new_plane()
+        let lower = Primitive::new_plane()
             .with_transform(Matrix::translation(0.0, -1.0, 0.0))
             .with_material(Material {
                 reflective: 1.0,
                 ..Material::default()
             });
 
-        let upper = Single::new_plane()
+        let upper = Primitive::new_plane()
             .with_transform(Matrix::translation(0.0, 1.0, 0.0))
             .with_material(Material {
                 reflective: 1.0,
@@ -410,7 +410,7 @@ mod tests {
 
     #[test]
     fn reflected_color_at_maximum_recursion_depth() {
-        let shape = Single::new_sphere()
+        let shape = Primitive::new_sphere()
             .with_transform(Matrix::translation(0.0, -1.0, 0.0))
             .with_material(Material {
                 reflective: 0.5,
@@ -434,7 +434,7 @@ mod tests {
     #[test]
     fn refracted_color_of_opaque_surface() {
         let w = World::default();
-        let shape = Single::new_sphere().with_material(Material {
+        let shape = Primitive::new_sphere().with_material(Material {
             color: Color::new(0.8, 1.0, 0.6),
             diffuse: 0.7,
             specular: 0.2,
@@ -454,7 +454,7 @@ mod tests {
 
     #[test]
     fn refracted_color_at_max_recursion_depth() {
-        let shape = Single::new_sphere().with_material(Material {
+        let shape = Primitive::new_sphere().with_material(Material {
             color: Color::new(0.8, 1.0, 0.6),
             diffuse: 0.7,
             specular: 0.2,
@@ -479,7 +479,7 @@ mod tests {
 
     #[test]
     fn refracted_color_under_total_internal_refraction() {
-        let shape = Single::new_sphere().with_material(Material {
+        let shape = Primitive::new_sphere().with_material(Material {
             color: Color::new(0.8, 1.0, 0.6),
             diffuse: 0.7,
             specular: 0.2,
@@ -507,7 +507,7 @@ mod tests {
 
     #[test]
     fn refracted_color_with_refracted_ray() {
-        let s1 = Single::new_sphere().with_material(Material {
+        let s1 = Primitive::new_sphere().with_material(Material {
             color: Color::new(0.8, 1.0, 0.6),
             ambient: 1.0,
             diffuse: 0.7,
@@ -516,7 +516,7 @@ mod tests {
             ..Material::default()
         });
 
-        let s2 = Single::new_sphere()
+        let s2 = Primitive::new_sphere()
             .with_transform(Matrix::scaling(0.5, 0.5, 0.5))
             .with_material(Material {
                 transparency: 1.0,
@@ -546,7 +546,7 @@ mod tests {
 
     #[test]
     fn shade_hit_with_transparent_material() {
-        let floor = Single::new_plane()
+        let floor = Primitive::new_plane()
             .with_transform(Matrix::translation(0.0, -1.0, 0.0))
             .with_material(Material {
                 transparency: 0.5,
@@ -554,7 +554,7 @@ mod tests {
                 ..Material::default()
             });
 
-        let ball = Single::new_sphere()
+        let ball = Primitive::new_sphere()
             .with_transform(Matrix::translation(0.0, -3.5, -0.5))
             .with_material(Material {
                 color: Color::new(1.0, 0.0, 0.0),
@@ -583,7 +583,7 @@ mod tests {
 
     #[test]
     fn shade_hit_with_reflective_transparent_material() {
-        let floor = Single::new_plane()
+        let floor = Primitive::new_plane()
             .with_transform(Matrix::translation(0.0, -1.0, 0.0))
             .with_material(Material {
                 reflective: 0.5,
@@ -592,7 +592,7 @@ mod tests {
                 ..Material::default()
             });
 
-        let ball = Single::new_sphere()
+        let ball = Primitive::new_sphere()
             .with_transform(Matrix::translation(0.0, -3.5, -0.5))
             .with_material(Material {
                 color: Color::new(1.0, 0.0, 0.0),
