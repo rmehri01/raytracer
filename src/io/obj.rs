@@ -1,24 +1,43 @@
-use std::{
-    collections::HashMap,
-    fs, io,
-    num::{ParseFloatError, ParseIntError},
-};
+use core::fmt;
+use std::{collections::HashMap, error::Error, fs, io};
 
 use crate::{
     core::{point::Point, vector::Vector},
     raytracer::shapes::{Compound, Shape, Single},
 };
 
-pub fn parse_file(path: &str) -> io::Result<Shape> {
-    let obj_string = fs::read_to_string(path)?;
+#[derive(Debug)]
+pub enum ParseError {
+    Logic(String),
+    Syntax(String),
+    Io(io::Error),
+}
 
-    Ok(parse_string(&obj_string))
+impl fmt::Display for ParseError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            ParseError::Logic(s) => write!(f, "Logic error, {}", s),
+            ParseError::Syntax(s) => write!(f, "Syntax error, {}", s),
+            ParseError::Io(e) => write!(f, "IO error, {}", e),
+        }
+    }
+}
+
+type Result<T> = std::result::Result<T, ParseError>;
+
+impl Error for ParseError {}
+
+pub fn parse_file(path: &str) -> Result<Shape> {
+    let obj_string = fs::read_to_string(path).map_err(ParseError::Io)?;
+    let group = parse_string(&obj_string)?;
+
+    Ok(group)
 }
 
 /// Parses a string representation of an OBJ file, deliberately ignoring
 /// any lines that aren't recognized.
-fn parse_string(obj_string: &str) -> Shape {
-    let mut triangles = Vec::new();
+fn parse_string(obj_string: &str) -> Result<Shape> {
+    let mut shapes = Vec::new();
     let mut vertices = Vec::new();
     let mut normals = Vec::new();
     let mut groups = HashMap::new();
@@ -26,27 +45,26 @@ fn parse_string(obj_string: &str) -> Shape {
 
     for line in obj_string.lines() {
         match &line.trim().split(' ').collect::<Vec<_>>()[..] {
-            ["v", v1, v2, v3] => {
-                if let Ok(p) = parse_vertex(v1, v2, v3) {
-                    vertices.push(p);
-                }
+            ["v", x, y, z] => {
+                let p = parse_vertex(x, y, z)?;
+                vertices.push(p);
             }
-            ["vn", v1, v2, v3] => {
-                if let Ok(p) = parse_normal(v1, v2, v3) {
-                    normals.push(p);
-                }
+            ["vn", x, y, z] => {
+                let v = parse_normal(x, y, z)?;
+                normals.push(v);
             }
             ["f", vs @ ..] if vs.len() >= 3 => {
-                if let Ok(mut t) = fan_triangulation(vs, &vertices, &normals) {
-                    match current_group {
-                        Some(group) => {
-                            groups.entry(group).or_insert_with(Vec::new).append(&mut t);
-                        }
-                        None => {
-                            triangles.append(&mut t.into_iter().map(|t| t.as_shape()).collect());
-                        }
+                let mut ts = fan_triangulation(vs, &vertices, &normals)?;
+
+                match current_group {
+                    Some(group) => {
+                        groups.entry(group).or_insert_with(Vec::new).append(&mut ts);
                     }
-                }
+                    None => {
+                        let mut triangle_shapes = ts.into_iter().map(|t| t.as_shape()).collect();
+                        shapes.append(&mut triangle_shapes);
+                    }
+                };
             }
             ["g", group_name] => {
                 current_group = Some(*group_name);
@@ -56,35 +74,37 @@ fn parse_string(obj_string: &str) -> Shape {
     }
 
     for (_, group) in groups {
-        triangles.push(
+        shapes.push(
             Compound::new_group(group.into_iter().map(|t| t.as_shape()).collect()).as_shape(),
         );
     }
 
-    Compound::new_group(triangles).as_shape()
+    match shapes.len() {
+        0 => Err(ParseError::Logic("no shapes found".to_string())),
+        1 => Ok(shapes.pop().unwrap()),
+        _ => Ok(Compound::new_group(shapes).as_shape()),
+    }
 }
 
-fn parse_vertex(v1: &str, v2: &str, v3: &str) -> Result<Point, ParseFloatError> {
-    let v1 = v1.parse()?;
-    let v2 = v2.parse()?;
-    let v3 = v3.parse()?;
+fn parse_vertex(x: &str, y: &str, z: &str) -> Result<Point> {
+    let err_fn = |_| ParseError::Syntax(format!("invalid vertex: {} {} {}", x, y, z));
+    let x = x.parse().map_err(err_fn)?;
+    let y = y.parse().map_err(err_fn)?;
+    let z = z.parse().map_err(err_fn)?;
 
-    Ok(Point::new(v1, v2, v3))
+    Ok(Point::new(x, y, z))
 }
 
-fn parse_normal(v1: &str, v2: &str, v3: &str) -> Result<Vector, ParseFloatError> {
-    let v1 = v1.parse()?;
-    let v2 = v2.parse()?;
-    let v3 = v3.parse()?;
+fn parse_normal(x: &str, y: &str, z: &str) -> Result<Vector> {
+    let err_fn = |_| ParseError::Syntax(format!("invalid normal: {} {} {}", x, y, z));
+    let x = x.parse().map_err(err_fn)?;
+    let y = y.parse().map_err(err_fn)?;
+    let z = z.parse().map_err(err_fn)?;
 
-    Ok(Vector::new(v1, v2, v3))
+    Ok(Vector::new(x, y, z))
 }
 
-fn fan_triangulation(
-    vs: &[&str],
-    vertices: &[Point],
-    normals: &[Vector],
-) -> Result<Vec<Single>, ParseIntError> {
+fn fan_triangulation(vs: &[&str], vertices: &[Point], normals: &[Vector]) -> Result<Vec<Single>> {
     (2..vs.len())
         .map(|i| parse_triangle(vs[0], vs[i - 1], vs[i], vertices, normals))
         .collect()
@@ -96,16 +116,18 @@ fn parse_triangle(
     v3: &str,
     vertices: &[Point],
     normals: &[Vector],
-) -> Result<Single, ParseIntError> {
-    let (v1, n1) = parse_vertex_ref(v1, vertices, normals)?;
-    let (v2, n2) = parse_vertex_ref(v2, vertices, normals)?;
-    let (v3, n3) = parse_vertex_ref(v3, vertices, normals)?;
+) -> Result<Single> {
+    let (p1, n1) = parse_vertex_ref(v1, vertices, normals)?;
+    let (p2, n2) = parse_vertex_ref(v2, vertices, normals)?;
+    let (p3, n3) = parse_vertex_ref(v3, vertices, normals)?;
 
     match (n1, n2, n3) {
-        (Some(n1), Some(n2), Some(n3)) => Ok(Single::new_smooth_triangle(v1, v2, v3, n1, n2, n3)),
-        (None, None, None) => Ok(Single::new_triangle(v1, v2, v3)),
-        // TODO: real error type
-        _ => todo!("other error"),
+        (Some(n1), Some(n2), Some(n3)) => Ok(Single::new_smooth_triangle(p1, p2, p3, n1, n2, n3)),
+        (None, None, None) => Ok(Single::new_triangle(p1, p2, p3)),
+        _ => Err(ParseError::Syntax(format!(
+            "invalid triangle: {} {} {}",
+            v1, v2, v3
+        ))),
     }
 }
 
@@ -113,24 +135,24 @@ fn parse_vertex_ref(
     v: &str,
     vertices: &[Point],
     normals: &[Vector],
-) -> Result<(Point, Option<Vector>), ParseIntError> {
+) -> Result<(Point, Option<Vector>)> {
+    let err_fn = |_| ParseError::Syntax(format!("indices must be natural numbers, given: {}", v));
+
     match v.split('/').collect::<Vec<_>>()[..] {
         [v, _, n] => {
-            let v = v.parse::<usize>()? - 1;
-            let n = n.parse::<usize>()? - 1;
+            let v = v.parse::<usize>().map_err(err_fn)?;
+            let n = n.parse::<usize>().map_err(err_fn)?;
 
-            Ok((vertices[v], Some(normals[n])))
+            Ok((vertices[v - 1], Some(normals[n - 1])))
         }
         [v] | [v, _] => {
-            let v = v.parse::<usize>()? - 1;
+            let v = v.parse::<usize>().map_err(err_fn)?;
 
-            Ok((vertices[v], None))
+            Ok((vertices[v - 1], None))
         }
-        _ => todo!("other error"),
+        _ => Err(ParseError::Syntax(format!("invalid vertex ref: {}", v))),
     }
 }
-
-// TODO: helper or newtype for 1-based indexing
 
 #[cfg(test)]
 mod tests {
@@ -168,7 +190,7 @@ mod tests {
         ]
         .join("\n");
 
-        let shape = parse_string(&obj_string);
+        let shape = parse_string(&obj_string).unwrap();
 
         assert_eq!(
             shape,
@@ -202,7 +224,7 @@ mod tests {
         ]
         .join("\n");
 
-        let shape = parse_string(&obj_string);
+        let shape = parse_string(&obj_string).unwrap();
 
         assert_eq!(
             shape,
@@ -244,7 +266,7 @@ mod tests {
         ]
         .join("\n");
 
-        let shape = parse_string(&obj_string);
+        let shape = parse_string(&obj_string).unwrap();
 
         let t1 = Single::new_triangle(
             Point::new(-1.0, 1.0, 0.0),
@@ -282,7 +304,7 @@ mod tests {
         ]
         .join("\n");
 
-        let shape = parse_string(&obj_string);
+        let shape = parse_string(&obj_string).unwrap();
 
         let t1 = Single::new_smooth_triangle(
             Point::new(0.0, 1.0, 0.0),
