@@ -1,13 +1,10 @@
 use crate::core::{matrix::Transformation, point::Point};
 
-use super::ray::Ray;
-
-pub trait Bounded {
-    fn bounds(&self) -> Bounds;
-}
+use super::{ray::Ray, shapes::Primitive};
 
 /// An axis-aligned bounding box that can be used to quickly determine if a ray
 /// might intersect with anything in the box.
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Bounds {
     minimum: Point,
     maximum: Point,
@@ -20,7 +17,6 @@ impl Bounds {
 
     /// Extends the bounding box to include all points in the transformed box.
     pub fn transform(&mut self, transform: &Transformation) {
-        let mut bounds = Self::default();
         let corners = [
             self.minimum,
             Point::new(self.minimum.x, self.minimum.y, self.maximum.z),
@@ -32,10 +28,16 @@ impl Bounds {
             self.maximum,
         ];
 
-        for corner in &corners {
-            let transformed_point = *transform * *corner;
-            bounds.add_point(&transformed_point);
+        for corner in corners {
+            let transformed_point = *transform * corner;
+            self.add_point(&transformed_point);
         }
+    }
+
+    /// Combines this bounding box with another bounding box.
+    pub fn union(&mut self, other: &Self) {
+        self.add_point(&other.minimum);
+        self.add_point(&other.maximum);
     }
 
     /// Extends the bounding box to include the given point.
@@ -48,21 +50,20 @@ impl Bounds {
         self.maximum.z = self.maximum.z.max(point.z);
     }
 
-    // TODO: duplicated
     pub fn intersects(&self, ray: &Ray) -> bool {
-        let (x_t_min, x_t_max) = Self::check_axis(
+        let (x_t_min, x_t_max) = Primitive::check_axis(
             ray.origin.x,
             ray.direction.x,
             self.minimum.x,
             self.maximum.x,
         );
-        let (y_t_min, y_t_max) = Self::check_axis(
+        let (y_t_min, y_t_max) = Primitive::check_axis(
             ray.origin.y,
             ray.direction.y,
             self.minimum.y,
             self.maximum.y,
         );
-        let (z_t_min, z_t_max) = Self::check_axis(
+        let (z_t_min, z_t_max) = Primitive::check_axis(
             ray.origin.z,
             ray.direction.z,
             self.minimum.z,
@@ -73,20 +74,6 @@ impl Bounds {
         let t_max = x_t_max.min(y_t_max).min(z_t_max);
 
         t_min <= t_max
-    }
-
-    fn check_axis(origin: f64, direction: f64, min: f64, max: f64) -> (f64, f64) {
-        let t_min_numerator = min - origin;
-        let t_max_numerator = max - origin;
-
-        let t_min = t_min_numerator / direction;
-        let t_max = t_max_numerator / direction;
-
-        if t_min > t_max {
-            (t_max, t_min)
-        } else {
-            (t_min, t_max)
-        }
     }
 }
 

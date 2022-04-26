@@ -2,11 +2,7 @@ use std::collections::BTreeSet;
 
 use crate::{
     core::matrix::Transformation,
-    raytracer::{
-        bounds::{Bounded, Bounds},
-        intersection::Intersections,
-        ray::Ray,
-    },
+    raytracer::{bounds::Bounds, intersection::Intersections, ray::Ray},
 };
 
 use super::{HasProperties, Intersect, Primitive, Properties, Shape};
@@ -20,8 +16,36 @@ pub struct Compound {
 impl Compound {
     fn new(kind: Kind) -> Self {
         Self {
-            properties: Properties::default(),
+            properties: Properties {
+                bounds: Self::compute_bounds(&kind),
+                ..Properties::default()
+            },
             kind,
+        }
+    }
+
+    fn compute_bounds(kind: &Kind) -> Bounds {
+        match kind {
+            Kind::Group(children) => {
+                children
+                    .iter()
+                    .fold(Bounds::default(), |mut bounds, child| {
+                        bounds.union(&child.properties().bounds);
+                        bounds.transform(&child.properties().transform);
+                        bounds
+                    })
+            }
+            Kind::Csg { left, right, .. } => {
+                let mut bounds = Bounds::default();
+
+                bounds.union(&left.properties().bounds);
+                bounds.transform(&left.properties().transform);
+
+                bounds.union(&right.properties().bounds);
+                bounds.transform(&right.properties().transform);
+
+                bounds
+            }
         }
     }
 
@@ -66,7 +90,7 @@ impl Intersect for Compound {
 
         match &self.kind {
             Kind::Group(children) => {
-                if self.bounds().intersects(ray) {
+                if self.properties.bounds.intersects(ray) {
                     let intersections = children.iter().fold(BTreeSet::new(), |mut acc, child| {
                         acc.append(&mut child.intersect(ray, &new_trail).0);
                         acc
@@ -86,30 +110,6 @@ impl Intersect for Compound {
                 left_intersections.append(&mut right.intersect(ray, &new_trail).0);
 
                 operation.filter_intersections(left, Intersections(left_intersections))
-            }
-        }
-    }
-}
-
-impl Bounded for Compound {
-    fn bounds(&self) -> Bounds {
-        match &self.kind {
-            // TODO: recursively combine
-            Kind::Group(children) => {
-                children
-                    .iter()
-                    .fold(Bounds::default(), |mut bounds, child| {
-                        bounds.transform(&child.properties().transform);
-                        bounds
-                    })
-            }
-            Kind::Csg { left, right, .. } => {
-                let mut bounds = Bounds::default();
-
-                bounds.transform(&left.properties().transform);
-                bounds.transform(&right.properties().transform);
-
-                bounds
             }
         }
     }

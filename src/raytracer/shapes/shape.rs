@@ -2,7 +2,7 @@ use enum_dispatch::enum_dispatch;
 
 use crate::{
     core::matrix::{Matrix, Transformation},
-    raytracer::{intersection::Intersections, material::Material, ray::Ray},
+    raytracer::{bounds::Bounds, intersection::Intersections, material::Material, ray::Ray},
 };
 
 use super::{Compound, Primitive};
@@ -39,6 +39,7 @@ pub struct Properties {
     pub transform: Transformation,
     pub transform_inversed: Transformation,
     pub material: Material,
+    pub bounds: Bounds,
 }
 
 impl Default for Properties {
@@ -47,6 +48,7 @@ impl Default for Properties {
             transform: Matrix::identity(),
             transform_inversed: Matrix::identity(),
             material: Material::default(),
+            bounds: Bounds::default(),
         }
     }
 }
