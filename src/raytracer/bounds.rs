@@ -21,8 +21,8 @@ impl Bounds {
             self.minimum,
             Point::new(self.minimum.x, self.minimum.y, self.maximum.z),
             Point::new(self.minimum.x, self.maximum.y, self.minimum.z),
-            Point::new(self.maximum.x, self.minimum.y, self.minimum.z),
             Point::new(self.minimum.x, self.maximum.y, self.maximum.z),
+            Point::new(self.maximum.x, self.minimum.y, self.minimum.z),
             Point::new(self.maximum.x, self.minimum.y, self.maximum.z),
             Point::new(self.maximum.x, self.maximum.y, self.minimum.z),
             self.maximum,
@@ -88,5 +88,80 @@ impl Default for Bounds {
 
 #[cfg(test)]
 mod tests {
-    // TODO: tests
+    use std::f64::consts::FRAC_PI_4;
+
+    use crate::core::{matrix::Matrix, vector::Vector};
+
+    use super::*;
+
+    #[test]
+    fn add_point() {
+        let mut bounds = Bounds::default();
+
+        bounds.add_point(&Point::new(-3.0, 2.0, 4.0));
+        bounds.add_point(&Point::new(-5.0, 4.0, 4.0));
+
+        assert_eq!(bounds.minimum, Point::new(-5.0, 2.0, 4.0));
+        assert_eq!(bounds.maximum, Point::new(-3.0, 4.0, 4.0));
+    }
+
+    #[test]
+    fn union() {
+        let mut bounds = Bounds::default();
+
+        bounds.add_point(&Point::new(-3.0, 2.0, 4.0));
+        bounds.add_point(&Point::new(-5.0, 4.0, 4.0));
+
+        let mut other = Bounds::default();
+
+        other.add_point(&Point::new(-10.0, 2.0, -1.0));
+        other.add_point(&Point::new(-4.0, 4.0, 10.0));
+
+        bounds.union(&other);
+
+        assert_eq!(bounds.minimum, Point::new(-10.0, 2.0, -1.0));
+        assert_eq!(bounds.maximum, Point::new(-3.0, 4.0, 10.0));
+    }
+
+    #[test]
+    fn intersects() {
+        let bounds = Bounds::new(Point::new(-3.0, 2.0, 4.0), Point::new(5.0, 4.0, 6.0));
+        let ray = Ray::new(Point::new(0.0, 0.0, 0.0), Vector::new(1.0, 1.0, 1.0));
+
+        assert!(bounds.intersects(&ray));
+    }
+
+    #[test]
+    fn does_not_intersect() {
+        let bounds = Bounds::new(Point::new(-3.0, 2.0, 4.0), Point::new(5.0, 4.0, 6.0));
+        let ray = Ray::new(Point::new(0.0, 0.0, 0.0), Vector::new(0.0, 0.0, 1.0));
+
+        assert!(!bounds.intersects(&ray));
+    }
+
+    #[test]
+    fn transform_translation() {
+        let mut bounds = Bounds::new(Point::new(-1.0, -1.0, -1.0), Point::new(1.0, 1.0, 1.0));
+
+        bounds.transform(&Matrix::translation(1.0, 0.0, 0.0));
+
+        assert_eq!(bounds.minimum, Point::new(-1.0, -1.0, -1.0));
+        assert_eq!(bounds.maximum, Point::new(2.0, 1.0, 1.0));
+    }
+
+    #[test]
+    fn transform_rotation() {
+        let mut bounds = Bounds::new(Point::new(-1.0, -1.0, -1.0), Point::new(1.0, 1.0, 1.0));
+
+        bounds.transform(&Matrix::rotation_x(FRAC_PI_4));
+
+        assert_eq!(
+            bounds.minimum,
+            Point::new(-1.0, -(2.0_f64.sqrt()), -(2.0_f64.sqrt()))
+        );
+        assert_eq!(
+            bounds.maximum,
+            Point::new(1.0, 2.0_f64.sqrt(), 2.0_f64.sqrt())
+        );
+    }
 }
