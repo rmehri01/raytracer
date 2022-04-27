@@ -1,6 +1,6 @@
 use crate::core::{matrix::Transformation, point::Point};
 
-use super::{ray::Ray, shapes::Primitive};
+use super::{ray::Ray, shapes::check_axis};
 
 /// An axis-aligned bounding box that can be used to quickly determine if a ray
 /// might intersect with anything in the box.
@@ -51,19 +51,19 @@ impl Bounds {
     }
 
     pub fn intersects(&self, ray: &Ray) -> bool {
-        let (x_t_min, x_t_max) = Primitive::check_axis(
+        let (x_t_min, x_t_max) = check_axis(
             ray.origin.x,
             ray.direction.x,
             self.minimum.x,
             self.maximum.x,
         );
-        let (y_t_min, y_t_max) = Primitive::check_axis(
+        let (y_t_min, y_t_max) = check_axis(
             ray.origin.y,
             ray.direction.y,
             self.minimum.y,
             self.maximum.y,
         );
-        let (z_t_min, z_t_max) = Primitive::check_axis(
+        let (z_t_min, z_t_max) = check_axis(
             ray.origin.z,
             ray.direction.z,
             self.minimum.z,

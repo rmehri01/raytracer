@@ -59,13 +59,13 @@ impl World {
             .map(|light| {
                 let is_shadowed = self.is_shadowed(&comps.over_point, &light.position);
 
-                comps.shape.properties().material.lighting(
-                    &comps.shape.world_to_object(&comps.over_point, &comps.trail),
+                comps.shape.lighting(
                     &comps.over_point,
                     light,
                     &comps.eye_v,
                     &comps.normal_v,
                     is_shadowed,
+                    &comps.trail,
                 )
             })
             .sum();

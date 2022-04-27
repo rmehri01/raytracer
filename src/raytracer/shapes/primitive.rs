@@ -2,10 +2,12 @@ use approx::AbsDiffEq;
 
 use crate::{
     core::{matrix::Transformation, point::Point, vector::Vector},
+    graphics::color::Color,
     raytracer::{
         bounds::Bounds,
         intersection::{Intersection, Intersections},
         material::Material,
+        point_light::PointLight,
         ray::Ray,
     },
 };
@@ -98,17 +100,60 @@ impl Primitive {
         })
     }
 
+    /// Returns the color of the material using the Phuong Reflection Model.
+    pub fn lighting(
+        &self,
+        position: &Point,
+        light: &PointLight,
+        eye_v: &Vector,
+        normal_v: &Vector,
+        in_shadow: bool,
+        trail: &im_rc::Vector<Transformation>,
+    ) -> Color {
+        let material = self.properties.material;
+        let color = material.pattern.map_or(material.color, |pattern| {
+            pattern.pattern_at_shape(self, position, trail)
+        });
+
+        let effective_color = color * light.intensity;
+        let light_v = (light.position - *position).normalize();
+        let ambient = effective_color * material.ambient;
+
+        let diffuse;
+        let specular;
+
+        let light_dot_normal = light_v.dot(normal_v);
+        if light_dot_normal < 0.0 || in_shadow {
+            diffuse = Color::BLACK;
+            specular = Color::BLACK;
+        } else {
+            diffuse = effective_color * material.diffuse * light_dot_normal;
+
+            let reflect_v = (-light_v).reflect(normal_v);
+            let reflect_dot_eye = reflect_v.dot(eye_v);
+
+            specular = if reflect_dot_eye <= 0.0 {
+                Color::BLACK
+            } else {
+                let factor = reflect_dot_eye.powf(material.shininess);
+                light.intensity * material.specular * factor
+            };
+        }
+
+        ambient + diffuse + specular
+    }
+
     pub fn normal_at(&self, point: &Point, hit: &Intersection) -> Vector {
         let local_point = self.world_to_object(point, &hit.trail);
         let local_normal = match &self.kind {
-            Kind::Sphere => Self::sphere_normal_at(&local_point),
-            Kind::Plane => Self::plane_normal_at(),
-            Kind::Cube => Self::cube_normal_at(&local_point),
-            Kind::Cylinder(conic) => Self::cylinder_normal_at(&local_point, conic),
-            Kind::Cone(conic) => Self::cone_normal_at(&local_point, conic),
+            Kind::Sphere => Kind::sphere_normal_at(&local_point),
+            Kind::Plane => Kind::plane_normal_at(),
+            Kind::Cube => Kind::cube_normal_at(&local_point),
+            Kind::Cylinder(conic) => Kind::cylinder_normal_at(&local_point, conic),
+            Kind::Cone(conic) => Kind::cone_normal_at(&local_point, conic),
             Kind::Triangle { normal, .. } => *normal,
             Kind::SmoothTriangle { n1, n2, n3, .. } => {
-                Self::smooth_triangle_normal_at(n1, n2, n3, hit)
+                Kind::smooth_triangle_normal_at(n1, n2, n3, hit)
             }
         };
 
@@ -139,6 +184,81 @@ impl Primitive {
         })
     }
 
+    pub fn as_shape(self) -> Shape {
+        Shape::Primitive(self)
+    }
+}
+
+impl HasProperties for Primitive {
+    fn properties(&self) -> &Properties {
+        &self.properties
+    }
+
+    fn properties_mut(&mut self) -> &mut Properties {
+        &mut self.properties
+    }
+}
+
+impl Intersect for Primitive {
+    fn local_intersect(&self, ray: &Ray, trail: &im_rc::Vector<Transformation>) -> Intersections {
+        let mut u_v = None;
+        let ts = match &self.kind {
+            Kind::Sphere => Kind::sphere_intersect(ray),
+            Kind::Plane => Kind::plane_intersect(ray),
+            Kind::Cube => Kind::cube_intersect(ray),
+            Kind::Cylinder(conic) => Kind::cylinder_intersect(ray, conic),
+            Kind::Cone(conic) => Kind::cone_intersect(ray, conic),
+            Kind::Triangle { triangular, .. } => triangular.intersect(ray),
+            Kind::SmoothTriangle { triangular, .. } => {
+                let (ts, u, v) = triangular.intersect_uv(ray);
+
+                u_v = Some((u, v));
+                ts
+            }
+        };
+
+        let intersections = ts
+            .iter()
+            .map(|t| Intersection::new_with_uv(*t, self, u_v, trail.clone()))
+            .collect();
+
+        Intersections(intersections)
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
+enum Kind {
+    /// A unit sphere with center at the origin.
+    Sphere,
+    /// A perfectly flat surface that extends infinitely in x and z.
+    Plane,
+    /// An axis-aligned bounding box that is centered at the origin and
+    /// extends from -1 to 1 along each axis.
+    Cube,
+    /// A cylinder that is centered at the origin with radius 1 and extends
+    /// from minimum to maximum exclusive along the y axis.
+    Cylinder(Conic),
+    /// A double-napped cone that is centered at the origin and extends
+    /// from minimum to maximum exclusive along the y axis.
+    Cone(Conic),
+    /// A triangle with vertices at p1, p2, and p3, along with two edge
+    /// vectors and a normal vector to optimize intersection calculations.
+    Triangle {
+        triangular: Triangular,
+        normal: Vector,
+    },
+    /// A triangle with vertices at p1, p2, and p3 and a normal at each of
+    /// the vertices. Uses normal interpolation to calculate the normal at
+    /// any point on the triangle.
+    SmoothTriangle {
+        triangular: Triangular,
+        n1: Vector,
+        n2: Vector,
+        n3: Vector,
+    },
+}
+
+impl Kind {
     fn sphere_intersect(ray: &Ray) -> Vec<f64> {
         let sphere_to_ray = ray.origin - Point::new(0.0, 0.0, 0.0);
 
@@ -170,9 +290,9 @@ impl Primitive {
         let min = -1.0;
         let max = 1.0;
 
-        let (x_t_min, x_t_max) = Self::check_axis(ray.origin.x, ray.direction.x, min, max);
-        let (y_t_min, y_t_max) = Self::check_axis(ray.origin.y, ray.direction.y, min, max);
-        let (z_t_min, z_t_max) = Self::check_axis(ray.origin.z, ray.direction.z, min, max);
+        let (x_t_min, x_t_max) = check_axis(ray.origin.x, ray.direction.x, min, max);
+        let (y_t_min, y_t_max) = check_axis(ray.origin.y, ray.direction.y, min, max);
+        let (z_t_min, z_t_max) = check_axis(ray.origin.z, ray.direction.z, min, max);
 
         let t_min = x_t_min.max(y_t_min).max(z_t_min);
         let t_max = x_t_max.min(y_t_max).min(z_t_max);
@@ -181,20 +301,6 @@ impl Primitive {
             Vec::new()
         } else {
             vec![t_min, t_max]
-        }
-    }
-
-    pub fn check_axis(origin: f64, direction: f64, min: f64, max: f64) -> (f64, f64) {
-        let t_min_numerator = min - origin;
-        let t_max_numerator = max - origin;
-
-        let t_min = t_min_numerator / direction;
-        let t_max = t_max_numerator / direction;
-
-        if t_min > t_max {
-            (t_max, t_min)
-        } else {
-            (t_min, t_max)
         }
     }
 
@@ -260,79 +366,22 @@ impl Primitive {
 
         *n2 * u + *n3 * v + *n1 * (1.0 - u - v)
     }
-
-    pub fn as_shape(self) -> Shape {
-        Shape::Primitive(self)
-    }
 }
 
-impl HasProperties for Primitive {
-    fn properties(&self) -> &Properties {
-        &self.properties
+/// Checks if a ray intersects an axis plane and returns the minimum and
+/// maximum t values.
+pub fn check_axis(origin: f64, direction: f64, min: f64, max: f64) -> (f64, f64) {
+    let t_min_numerator = min - origin;
+    let t_max_numerator = max - origin;
+
+    let t_min = t_min_numerator / direction;
+    let t_max = t_max_numerator / direction;
+
+    if t_min > t_max {
+        (t_max, t_min)
+    } else {
+        (t_min, t_max)
     }
-
-    fn properties_mut(&mut self) -> &mut Properties {
-        &mut self.properties
-    }
-}
-
-impl Intersect for Primitive {
-    fn local_intersect(&self, ray: &Ray, trail: &im_rc::Vector<Transformation>) -> Intersections {
-        let mut u_v = None;
-        let ts = match &self.kind {
-            Kind::Sphere => Self::sphere_intersect(ray),
-            Kind::Plane => Self::plane_intersect(ray),
-            Kind::Cube => Self::cube_intersect(ray),
-            Kind::Cylinder(conic) => Self::cylinder_intersect(ray, conic),
-            Kind::Cone(conic) => Self::cone_intersect(ray, conic),
-            Kind::Triangle { triangular, .. } => triangular.intersect(ray),
-            Kind::SmoothTriangle { triangular, .. } => {
-                let (ts, u, v) = triangular.intersect_uv(ray);
-
-                u_v = Some((u, v));
-                ts
-            }
-        };
-
-        let intersections = ts
-            .iter()
-            .map(|t| Intersection::new_with_uv(*t, self, u_v, trail.clone()))
-            .collect();
-
-        Intersections(intersections)
-    }
-}
-
-#[derive(Debug, PartialEq, Clone)]
-enum Kind {
-    /// A unit sphere with center at the origin.
-    Sphere,
-    /// A perfectly flat surface that extends infinitely in x and z.
-    Plane,
-    /// An axis-aligned bounding box that is centered at the origin and
-    /// extends from -1 to 1 along each axis.
-    Cube,
-    /// A cylinder that is centered at the origin with radius 1 and extends
-    /// from minimum to maximum exclusive along the y axis.
-    Cylinder(Conic),
-    /// A double-napped cone that is centered at the origin and extends
-    /// from minimum to maximum exclusive along the y axis.
-    Cone(Conic),
-    /// A triangle with vertices at p1, p2, and p3, along with two edge
-    /// vectors and a normal vector to optimize intersection calculations.
-    Triangle {
-        triangular: Triangular,
-        normal: Vector,
-    },
-    /// A triangle with vertices at p1, p2, and p3 and a normal at each of
-    /// the vertices. Uses normal interpolation to calculate the normal at
-    /// any point on the triangle.
-    SmoothTriangle {
-        triangular: Triangular,
-        n1: Vector,
-        n2: Vector,
-        n3: Vector,
-    },
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -521,7 +570,7 @@ mod tests {
 
     use approx::assert_abs_diff_eq;
 
-    use crate::{core::matrix::Matrix, raytracer::shapes::Compound};
+    use crate::{core::matrix::Matrix, graphics::pattern::Pattern, raytracer::shapes::Compound};
 
     use super::*;
 
@@ -1110,28 +1159,28 @@ mod tests {
 
     #[test]
     fn sphere_normal_x_axis() {
-        let n = Primitive::sphere_normal_at(&Point::new(1.0, 0.0, 0.0));
+        let n = Kind::sphere_normal_at(&Point::new(1.0, 0.0, 0.0));
 
         assert_abs_diff_eq!(n, Vector::new(1.0, 0.0, 0.0));
     }
 
     #[test]
     fn sphere_normal_y_axis() {
-        let n = Primitive::sphere_normal_at(&Point::new(0.0, 1.0, 0.0));
+        let n = Kind::sphere_normal_at(&Point::new(0.0, 1.0, 0.0));
 
         assert_abs_diff_eq!(n, Vector::new(0.0, 1.0, 0.0));
     }
 
     #[test]
     fn sphere_normal_z_axis() {
-        let n = Primitive::sphere_normal_at(&Point::new(0.0, 0.0, 1.0));
+        let n = Kind::sphere_normal_at(&Point::new(0.0, 0.0, 1.0));
 
         assert_abs_diff_eq!(n, Vector::new(0.0, 0.0, 1.0));
     }
 
     #[test]
     fn sphere_normal_non_axial_point() {
-        let n = Primitive::sphere_normal_at(&Point::new(
+        let n = Kind::sphere_normal_at(&Point::new(
             3.0_f64.sqrt() / 3.0,
             3.0_f64.sqrt() / 3.0,
             3.0_f64.sqrt() / 3.0,
@@ -1149,7 +1198,7 @@ mod tests {
 
     #[test]
     fn normal_is_normalized() {
-        let n = Primitive::sphere_normal_at(&Point::new(
+        let n = Kind::sphere_normal_at(&Point::new(
             3.0_f64.sqrt() / 3.0,
             3.0_f64.sqrt() / 3.0,
             3.0_f64.sqrt() / 3.0,
@@ -1185,7 +1234,7 @@ mod tests {
         ];
 
         for (point, normal) in scenarios {
-            let n = Primitive::cube_normal_at(&point);
+            let n = Kind::cube_normal_at(&point);
 
             assert_abs_diff_eq!(n, normal);
         }
@@ -1201,7 +1250,7 @@ mod tests {
         ];
 
         for (point, normal) in scenarios {
-            let n = Primitive::cylinder_normal_at(&point, &Conic::default());
+            let n = Kind::cylinder_normal_at(&point, &Conic::default());
 
             assert_abs_diff_eq!(n, normal);
         }
@@ -1219,7 +1268,7 @@ mod tests {
         ];
 
         for (point, normal) in scenarios {
-            let n = Primitive::cylinder_normal_at(&point, &Conic::new(1.0, 2.0, true));
+            let n = Kind::cylinder_normal_at(&point, &Conic::new(1.0, 2.0, true));
 
             assert_abs_diff_eq!(n, normal);
         }
@@ -1237,7 +1286,7 @@ mod tests {
         ];
 
         for (point, normal) in scenarios {
-            let n = Primitive::cone_normal_at(&point, &Conic::default());
+            let n = Kind::cone_normal_at(&point, &Conic::default());
 
             assert_abs_diff_eq!(n, normal);
         }
@@ -1346,5 +1395,171 @@ mod tests {
         );
 
         assert_eq!(n, Vector::new(0.2857, 0.4286, -0.8571));
+    }
+
+    #[test]
+    fn lighting_with_eye_between_light_and_surface() {
+        let position = Point::new(0.0, 0.0, 0.0);
+
+        let eye_v = Vector::new(0.0, 0.0, -1.0);
+        let normal_v = Vector::new(0.0, 0.0, -1.0);
+        let light = PointLight::new(Point::new(0.0, 0.0, -10.0), Color::WHITE);
+        let shape = Primitive::new_sphere();
+
+        let result = shape.lighting(
+            &position,
+            &light,
+            &eye_v,
+            &normal_v,
+            false,
+            &im_rc::Vector::new(),
+        );
+
+        assert_abs_diff_eq!(result, Color::new(1.9, 1.9, 1.9));
+    }
+
+    #[test]
+    fn lighting_with_eye_between_light_and_surface_eye_offset_45_degrees() {
+        let position = Point::new(0.0, 0.0, 0.0);
+
+        let eye_v = Vector::new(0.0, 2_f64.sqrt() / 2.0, -(2_f64.sqrt()) / 2.0);
+        let normal_v = Vector::new(0.0, 0.0, -1.0);
+        let light = PointLight::new(Point::new(0.0, 0.0, -10.0), Color::WHITE);
+        let shape = Primitive::new_sphere();
+
+        let result = shape.lighting(
+            &position,
+            &light,
+            &eye_v,
+            &normal_v,
+            false,
+            &im_rc::Vector::new(),
+        );
+
+        assert_abs_diff_eq!(result, Color::WHITE);
+    }
+
+    #[test]
+    fn lighting_with_eye_opposite_surface_light_offset_45_degrees() {
+        let position = Point::new(0.0, 0.0, 0.0);
+
+        let eye_v = Vector::new(0.0, 0.0, -1.0);
+        let normal_v = Vector::new(0.0, 0.0, -1.0);
+        let light = PointLight::new(Point::new(0.0, 10.0, -10.0), Color::WHITE);
+        let shape = Primitive::new_sphere();
+
+        let result = shape.lighting(
+            &position,
+            &light,
+            &eye_v,
+            &normal_v,
+            false,
+            &im_rc::Vector::new(),
+        );
+
+        assert_abs_diff_eq!(result, Color::new(0.7364, 0.7364, 0.7364));
+    }
+
+    #[test]
+    fn lighting_with_eye_in_path_of_reflection_vector() {
+        let position = Point::new(0.0, 0.0, 0.0);
+
+        let eye_v = Vector::new(0.0, -(2_f64.sqrt()) / 2.0, -(2_f64.sqrt()) / 2.0);
+        let normal_v = Vector::new(0.0, 0.0, -1.0);
+        let light = PointLight::new(Point::new(0.0, 10.0, -10.0), Color::WHITE);
+        let shape = Primitive::new_sphere();
+
+        let result = shape.lighting(
+            &position,
+            &light,
+            &eye_v,
+            &normal_v,
+            false,
+            &im_rc::Vector::new(),
+        );
+
+        assert_abs_diff_eq!(result, Color::new(1.6364, 1.6364, 1.6364));
+    }
+
+    #[test]
+    fn lighting_with_light_behind_surface() {
+        let position = Point::new(0.0, 0.0, 0.0);
+
+        let eye_v = Vector::new(0.0, 0.0, -1.0);
+        let normal_v = Vector::new(0.0, 0.0, -1.0);
+        let light = PointLight::new(Point::new(0.0, 0.0, 10.0), Color::WHITE);
+        let shape = Primitive::new_sphere();
+
+        let result = shape.lighting(
+            &position,
+            &light,
+            &eye_v,
+            &normal_v,
+            false,
+            &im_rc::Vector::new(),
+        );
+
+        assert_abs_diff_eq!(result, Color::new(0.1, 0.1, 0.1));
+    }
+
+    #[test]
+    fn lighting_with_surface_in_shadow() {
+        let position = Point::new(0.0, 0.0, 0.0);
+
+        let eye_v = Vector::new(0.0, 0.0, -1.0);
+        let normal_v = Vector::new(0.0, 0.0, -1.0);
+        let light = PointLight::new(Point::new(0.0, 0.0, -10.0), Color::WHITE);
+        let shape = Primitive::new_sphere();
+
+        assert_abs_diff_eq!(
+            shape.lighting(
+                &position,
+                &light,
+                &eye_v,
+                &normal_v,
+                true,
+                &im_rc::Vector::new()
+            ),
+            Color::new(0.1, 0.1, 0.1)
+        );
+    }
+
+    #[test]
+    fn lighting_with_pattern_applied() {
+        let material = Material {
+            ambient: 1.0,
+            diffuse: 0.0,
+            specular: 0.0,
+            pattern: Some(Pattern::new_stripe(Color::WHITE, Color::BLACK)),
+            ..Material::default()
+        };
+
+        let eye_v = Vector::new(0.0, 0.0, -1.0);
+        let normal_v = Vector::new(0.0, 0.0, -1.0);
+        let light = PointLight::new(Point::new(0.0, 0.0, -10.0), Color::WHITE);
+        let shape = Primitive::new_sphere().with_material(material);
+
+        let position = Point::new(0.9, 0.0, 0.0);
+        let c1 = shape.lighting(
+            &position,
+            &light,
+            &eye_v,
+            &normal_v,
+            false,
+            &im_rc::Vector::new(),
+        );
+
+        let position = Point::new(1.1, 0.0, 0.0);
+        let c2 = shape.lighting(
+            &position,
+            &light,
+            &eye_v,
+            &normal_v,
+            false,
+            &im_rc::Vector::new(),
+        );
+
+        assert_abs_diff_eq!(c1, Color::WHITE);
+        assert_abs_diff_eq!(c2, Color::BLACK);
     }
 }

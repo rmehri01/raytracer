@@ -1,6 +1,9 @@
-use crate::core::{
-    matrix::{Matrix, Transformation},
-    point::Point,
+use crate::{
+    core::{
+        matrix::{Matrix, Transformation},
+        point::Point,
+    },
+    raytracer::shapes::Primitive,
 };
 
 use super::color::Color;
@@ -48,8 +51,14 @@ impl Pattern {
         self
     }
 
-    pub fn pattern_at_object_point(&self, object_point: &Point) -> Color {
-        let pattern_point = self.transform_inversed * *object_point;
+    pub fn pattern_at_shape(
+        &self,
+        shape: &Primitive,
+        world_point: &Point,
+        trail: &im_rc::Vector<Transformation>,
+    ) -> Color {
+        let object_point = shape.world_to_object(world_point, trail);
+        let pattern_point = self.transform_inversed * object_point;
 
         self.kind.pattern_at(&pattern_point)
     }
@@ -138,10 +147,8 @@ mod tests {
         let shape = Primitive::new_sphere().with_transform(Matrix::scaling(2.0, 2.0, 2.0));
         let pattern = Pattern::new_test();
 
-        let object_point = shape.world_to_object(&Point::new(2.0, 3.0, 4.0), &im_rc::Vector::new());
-
         assert_abs_diff_eq!(
-            pattern.pattern_at_object_point(&object_point),
+            pattern.pattern_at_shape(&shape, &Point::new(2.0, 3.0, 4.0), &im_rc::Vector::new()),
             Color::new(1.0, 1.5, 2.0)
         );
     }
@@ -151,10 +158,8 @@ mod tests {
         let shape = Primitive::new_sphere();
         let pattern = Pattern::new(Kind::Test).with_transform(Matrix::scaling(2.0, 2.0, 2.0));
 
-        let object_point = shape.world_to_object(&Point::new(2.0, 3.0, 4.0), &im_rc::Vector::new());
-
         assert_abs_diff_eq!(
-            pattern.pattern_at_object_point(&object_point),
+            pattern.pattern_at_shape(&shape, &Point::new(2.0, 3.0, 4.0), &im_rc::Vector::new()),
             Color::new(1.0, 1.5, 2.0)
         );
     }
@@ -164,10 +169,8 @@ mod tests {
         let shape = Primitive::new_sphere().with_transform(Matrix::scaling(2.0, 2.0, 2.0));
         let pattern = Pattern::new(Kind::Test).with_transform(Matrix::translation(0.5, 1.0, 1.5));
 
-        let object_point = shape.world_to_object(&Point::new(2.5, 3.0, 3.5), &im_rc::Vector::new());
-
         assert_abs_diff_eq!(
-            pattern.pattern_at_object_point(&object_point),
+            pattern.pattern_at_shape(&shape, &Point::new(2.5, 3.0, 3.5), &im_rc::Vector::new()),
             Color::new(0.75, 0.5, 0.25)
         );
     }

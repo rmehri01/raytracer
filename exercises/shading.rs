@@ -6,7 +6,7 @@ use raytracer::{
         material::Material,
         point_light::PointLight,
         ray::Ray,
-        shapes::{HasProperties, Intersect, Primitive, SetProperties},
+        shapes::{Intersect, Primitive, SetProperties},
     },
 };
 
@@ -51,15 +51,9 @@ fn render_shaded_sphere(path: &str) {
                     &Intersection::new(0.0, &sphere, im_rc::Vector::new()),
                 );
                 let eye = -r.direction;
-                let object_point = sphere.world_to_object(&point, &im_rc::Vector::new());
-                let color = hit.shape.properties().material.lighting(
-                    &object_point,
-                    &point,
-                    &light,
-                    &eye,
-                    &normal,
-                    false,
-                );
+                let color =
+                    hit.shape
+                        .lighting(&point, &light, &eye, &normal, false, &im_rc::Vector::new());
                 canvas.write_pixel(x, y, color);
             }
         }
