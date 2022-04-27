@@ -3,7 +3,7 @@ use std::f64::consts::FRAC_PI_3;
 use raytracer::{
     core::{matrix::Matrix, point::Point, vector::Vector},
     graphics::{color::Color, pattern::Pattern},
-    io::obj,
+    io::obj::{self, ParseError},
     raytracer::{
         camera::Camera,
         material::Material,
@@ -13,11 +13,11 @@ use raytracer::{
     },
 };
 
-fn main() {
-    render_teapot("images/teapot.ppm");
+fn main() -> Result<(), ParseError> {
+    render_teapot("images/teapot.ppm")
 }
 
-fn render_teapot(path: &str) {
+fn render_teapot(path: &str) -> Result<(), ParseError> {
     let floor_material = Material {
         color: Color::new(1.0, 0.9, 0.9),
         specular: 0.0,
@@ -28,7 +28,7 @@ fn render_teapot(path: &str) {
     let floor = Primitive::new_plane()
         .with_material(floor_material)
         .as_shape();
-    let teapot = obj::parse_file("exercises/resources/teapot.obj").unwrap();
+    let teapot = obj::parse_file("exercises/resources/teapot.obj")?;
 
     let world = World::new(
         vec![floor, teapot],
@@ -45,4 +45,6 @@ fn render_teapot(path: &str) {
     ));
 
     camera.render(&world).write_ppm(path);
+
+    Ok(())
 }

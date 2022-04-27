@@ -24,6 +24,10 @@ name = "clock"
 path = "exercises/clock.rs"
 
 [[bin]]
+name = "cover"
+path = "exercises/cover.rs"
+
+[[bin]]
 name = "csg"
 path = "exercises/csg.rs"
 
