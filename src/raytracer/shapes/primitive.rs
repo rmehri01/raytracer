@@ -110,8 +110,8 @@ impl Primitive {
         in_shadow: bool,
         trail: &im_rc::Vector<Transformation>,
     ) -> Color {
-        let material = self.properties.material;
-        let color = material.pattern.map_or(material.color, |pattern| {
+        let material = &self.properties.material;
+        let color = material.pattern.as_ref().map_or(material.color, |pattern| {
             pattern.pattern_at_shape(self, position, trail)
         });
 
@@ -1526,11 +1526,15 @@ mod tests {
 
     #[test]
     fn lighting_with_pattern_applied() {
+        let stripe = Pattern::new_stripe(
+            Pattern::new_solid(Color::WHITE),
+            Pattern::new_solid(Color::BLACK),
+        );
         let material = Material {
             ambient: 1.0,
             diffuse: 0.0,
             specular: 0.0,
-            pattern: Some(Pattern::new_stripe(Color::WHITE, Color::BLACK)),
+            pattern: Some(stripe),
             ..Material::default()
         };
 

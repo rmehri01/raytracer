@@ -28,17 +28,17 @@ fn render_cover(path: &str) {
 
     let blue_material = Material {
         color: Color::new(0.537, 0.831, 0.914),
-        ..white_material
+        ..white_material.clone()
     };
 
     let red_material = Material {
         color: Color::new(0.941, 0.322, 0.388),
-        ..white_material
+        ..white_material.clone()
     };
 
     let purple_material = Material {
         color: Color::new(0.373, 0.404, 0.550),
-        ..white_material
+        ..white_material.clone()
     };
 
     let standard_transform = Matrix::scaling(0.5, 0.5, 0.5) * Matrix::translation(1.0, -1.0, 1.0);
@@ -75,52 +75,52 @@ fn render_cover(path: &str) {
 
     let cube_specs = [
         (
-            white_material,
+            white_material.clone(),
             Matrix::translation(4.0, 0.0, 0.0),
             medium_object,
         ),
         (
-            blue_material,
+            blue_material.clone(),
             Matrix::translation(8.5, 1.5, -0.5),
             large_object,
         ),
         (
-            red_material,
+            red_material.clone(),
             Matrix::translation(0.0, 0.0, 4.0),
             large_object,
         ),
         (
-            white_material,
+            white_material.clone(),
             Matrix::translation(4.0, 0.0, 4.0),
             small_object,
         ),
         (
-            purple_material,
+            purple_material.clone(),
             Matrix::translation(7.5, 0.5, 4.0),
             medium_object,
         ),
         (
-            white_material,
+            white_material.clone(),
             Matrix::translation(-0.25, 0.25, 8.0),
             medium_object,
         ),
         (
-            blue_material,
+            blue_material.clone(),
             Matrix::translation(4.0, 1.0, 7.5),
             large_object,
         ),
         (
-            red_material,
+            red_material.clone(),
             Matrix::translation(10.0, 2.0, 7.5),
             medium_object,
         ),
         (
-            white_material,
+            white_material.clone(),
             Matrix::translation(8.0, 2.0, 12.0),
             small_object,
         ),
         (
-            white_material,
+            white_material.clone(),
             Matrix::translation(20.0, 1.0, 9.0),
             small_object,
         ),
@@ -135,12 +135,12 @@ fn render_cover(path: &str) {
             large_object,
         ),
         (
-            white_material,
+            white_material.clone(),
             Matrix::translation(8.5, -4.0, 0.0),
             large_object,
         ),
         (
-            white_material,
+            white_material.clone(),
             Matrix::translation(0.0, -4.0, 4.0),
             large_object,
         ),
@@ -150,7 +150,7 @@ fn render_cover(path: &str) {
             large_object,
         ),
         (
-            white_material,
+            white_material.clone(),
             Matrix::translation(0.0, -8.0, 4.0),
             large_object,
         ),

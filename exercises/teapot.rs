@@ -18,10 +18,14 @@ fn main() -> Result<(), ParseError> {
 }
 
 fn render_teapot(path: &str) -> Result<(), ParseError> {
+    let floor_pattern = Pattern::new_checker(
+        Pattern::new_solid(Color::WHITE),
+        Pattern::new_solid(Color::BLACK),
+    );
     let floor_material = Material {
         color: Color::new(1.0, 0.9, 0.9),
         specular: 0.0,
-        pattern: Some(Pattern::new_checker(Color::WHITE, Color::BLACK)),
+        pattern: Some(floor_pattern),
         ..Material::default()
     };
 

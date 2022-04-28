@@ -8,7 +8,7 @@ use crate::{
 
 use super::color::Color;
 
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Pattern {
     transform: Transformation,
     transform_inversed: Transformation,
@@ -24,20 +24,28 @@ impl Pattern {
         }
     }
 
-    pub fn new_stripe(a: Color, b: Color) -> Self {
-        Self::new(Kind::Stripe { a, b })
+    pub fn new_solid(color: Color) -> Self {
+        Self::new(Kind::Solid(color))
     }
 
-    pub fn new_gradient(start: Color, end: Color) -> Self {
-        Self::new(Kind::Gradient { start, end })
+    pub fn new_stripe(a: Self, b: Self) -> Self {
+        Self::new_mixture(Mixture::Stripe, a, b)
     }
 
-    pub fn new_ring(a: Color, b: Color) -> Self {
-        Self::new(Kind::Ring { a, b })
+    pub fn new_gradient(start: Self, end: Self) -> Self {
+        Self::new_mixture(Mixture::Gradient, start, end)
     }
 
-    pub fn new_checker(a: Color, b: Color) -> Self {
-        Self::new(Kind::Checker { a, b })
+    pub fn new_ring(a: Self, b: Self) -> Self {
+        Self::new_mixture(Mixture::Ring, a, b)
+    }
+
+    pub fn new_checker(a: Self, b: Self) -> Self {
+        Self::new_mixture(Mixture::Checker, a, b)
+    }
+
+    fn new_mixture(mixture: Mixture, a: Self, b: Self) -> Self {
+        Self::new(Kind::Mixture(mixture, Box::new(a), Box::new(b)))
     }
 
     #[cfg(test)]
@@ -58,30 +66,21 @@ impl Pattern {
         trail: &im_rc::Vector<Transformation>,
     ) -> Color {
         let object_point = shape.world_to_object(world_point, trail);
-        let pattern_point = self.transform_inversed * object_point;
+
+        self.pattern_at(&object_point)
+    }
+
+    pub fn pattern_at(&self, object_point: &Point) -> Color {
+        let pattern_point = self.transform_inversed * *object_point;
 
         self.kind.pattern_at(&pattern_point)
     }
 }
 
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Clone)]
 enum Kind {
-    Stripe {
-        a: Color,
-        b: Color,
-    },
-    Gradient {
-        start: Color,
-        end: Color,
-    },
-    Ring {
-        a: Color,
-        b: Color,
-    },
-    Checker {
-        a: Color,
-        b: Color,
-    },
+    Solid(Color),
+    Mixture(Mixture, Box<Pattern>, Box<Pattern>),
     #[cfg(test)]
     Test,
 }
@@ -89,12 +88,33 @@ enum Kind {
 impl Kind {
     fn pattern_at(&self, pattern_point: &Point) -> Color {
         match self {
-            Self::Stripe { a, b } => Self::stripe_at(pattern_point, *a, *b),
-            Self::Gradient { start, end } => Self::gradient_at(pattern_point, *start, *end),
-            Self::Ring { a, b } => Self::ring_at(pattern_point, *a, *b),
-            Self::Checker { a, b } => Self::checker_at(pattern_point, *a, *b),
+            Self::Solid(color) => *color,
+            Self::Mixture(mixture, a, b) => mixture.pattern_at(
+                pattern_point,
+                a.pattern_at(pattern_point),
+                b.pattern_at(pattern_point),
+            ),
             #[cfg(test)]
             Self::Test => Color::new(pattern_point.x, pattern_point.y, pattern_point.z),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub enum Mixture {
+    Stripe,
+    Gradient,
+    Ring,
+    Checker,
+}
+
+impl Mixture {
+    fn pattern_at(self, pattern_point: &Point, a: Color, b: Color) -> Color {
+        match self {
+            Self::Stripe => Self::stripe_at(pattern_point, a, b),
+            Self::Gradient => Self::gradient_at(pattern_point, a, b),
+            Self::Ring => Self::ring_at(pattern_point, a, b),
+            Self::Checker => Self::checker_at(pattern_point, a, b),
         }
     }
 
@@ -176,11 +196,20 @@ mod tests {
     }
 
     #[test]
+    fn solid_pattern() {
+        let color = Color::new(1.0, 0.2, 0.1);
+        let pattern = Kind::Solid(color);
+
+        assert_abs_diff_eq!(pattern.pattern_at(&Point::new(0.0, 0.0, 0.0)), color);
+        assert_abs_diff_eq!(pattern.pattern_at(&Point::new(1.0, -1.0, 0.5)), color);
+    }
+
+    #[test]
     fn stripe_constant_in_y() {
-        let stripe = Kind::Stripe {
-            a: Color::WHITE,
-            b: Color::BLACK,
-        };
+        let stripe = Pattern::new_stripe(
+            Pattern::new_solid(Color::WHITE),
+            Pattern::new_solid(Color::BLACK),
+        );
 
         assert_abs_diff_eq!(stripe.pattern_at(&Point::new(0.0, 0.0, 0.0)), Color::WHITE);
         assert_abs_diff_eq!(stripe.pattern_at(&Point::new(0.0, 1.0, 0.0)), Color::WHITE);
@@ -189,10 +218,10 @@ mod tests {
 
     #[test]
     fn stripe_constant_in_z() {
-        let stripe = Kind::Stripe {
-            a: Color::WHITE,
-            b: Color::BLACK,
-        };
+        let stripe = Pattern::new_stripe(
+            Pattern::new_solid(Color::WHITE),
+            Pattern::new_solid(Color::BLACK),
+        );
 
         assert_abs_diff_eq!(stripe.pattern_at(&Point::new(0.0, 0.0, 0.0)), Color::WHITE);
         assert_abs_diff_eq!(stripe.pattern_at(&Point::new(0.0, 0.0, 1.0)), Color::WHITE);
@@ -201,10 +230,10 @@ mod tests {
 
     #[test]
     fn stripe_alternates_in_x() {
-        let stripe = Kind::Stripe {
-            a: Color::WHITE,
-            b: Color::BLACK,
-        };
+        let stripe = Pattern::new_stripe(
+            Pattern::new_solid(Color::WHITE),
+            Pattern::new_solid(Color::BLACK),
+        );
 
         assert_abs_diff_eq!(stripe.pattern_at(&Point::new(0.0, 0.0, 0.0)), Color::WHITE);
         assert_abs_diff_eq!(stripe.pattern_at(&Point::new(0.9, 0.0, 0.0)), Color::WHITE);
@@ -216,10 +245,10 @@ mod tests {
 
     #[test]
     fn linearly_interpolates_between_colors() {
-        let gradient = Kind::Gradient {
-            start: Color::WHITE,
-            end: Color::BLACK,
-        };
+        let gradient = Pattern::new_gradient(
+            Pattern::new_solid(Color::WHITE),
+            Pattern::new_solid(Color::BLACK),
+        );
 
         assert_abs_diff_eq!(
             gradient.pattern_at(&Point::new(0.0, 0.0, 0.0)),
@@ -241,10 +270,10 @@ mod tests {
 
     #[test]
     fn ring_extends_in_x_and_z() {
-        let ring = Kind::Ring {
-            a: Color::WHITE,
-            b: Color::BLACK,
-        };
+        let ring = Pattern::new_ring(
+            Pattern::new_solid(Color::WHITE),
+            Pattern::new_solid(Color::BLACK),
+        );
 
         assert_abs_diff_eq!(ring.pattern_at(&Point::new(0.0, 0.0, 0.0)), Color::WHITE);
         assert_abs_diff_eq!(ring.pattern_at(&Point::new(1.0, 0.0, 0.0)), Color::BLACK);
@@ -257,10 +286,10 @@ mod tests {
 
     #[test]
     fn checkers_repeat_in_x() {
-        let pattern = Kind::Checker {
-            a: Color::WHITE,
-            b: Color::BLACK,
-        };
+        let pattern = Pattern::new_checker(
+            Pattern::new_solid(Color::WHITE),
+            Pattern::new_solid(Color::BLACK),
+        );
 
         assert_abs_diff_eq!(pattern.pattern_at(&Point::new(0.0, 0.0, 0.0)), Color::WHITE);
         assert_abs_diff_eq!(
@@ -272,10 +301,10 @@ mod tests {
 
     #[test]
     fn checkers_repeat_in_y() {
-        let pattern = Kind::Checker {
-            a: Color::WHITE,
-            b: Color::BLACK,
-        };
+        let pattern = Pattern::new_checker(
+            Pattern::new_solid(Color::WHITE),
+            Pattern::new_solid(Color::BLACK),
+        );
 
         assert_abs_diff_eq!(pattern.pattern_at(&Point::new(0.0, 0.0, 0.0)), Color::WHITE);
         assert_abs_diff_eq!(
@@ -290,10 +319,10 @@ mod tests {
 
     #[test]
     fn checkers_repeat_in_z() {
-        let pattern = Kind::Checker {
-            a: Color::WHITE,
-            b: Color::BLACK,
-        };
+        let pattern = Pattern::new_checker(
+            Pattern::new_solid(Color::WHITE),
+            Pattern::new_solid(Color::BLACK),
+        );
 
         assert_abs_diff_eq!(pattern.pattern_at(&Point::new(0.0, 0.0, 0.0)), Color::WHITE);
         assert_abs_diff_eq!(

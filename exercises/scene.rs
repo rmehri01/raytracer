@@ -25,7 +25,7 @@ fn render_scene(path: &str) {
 
     let floor = Primitive::new_sphere()
         .with_transform(Matrix::scaling(10.0, 0.01, 10.0))
-        .with_material(floor_material)
+        .with_material(floor_material.clone())
         .as_shape();
 
     let left_wall = Primitive::new_sphere()
@@ -35,7 +35,7 @@ fn render_scene(path: &str) {
                 * Matrix::rotation_x(FRAC_PI_2)
                 * Matrix::scaling(10.0, 0.01, 10.0),
         )
-        .with_material(floor_material)
+        .with_material(floor_material.clone())
         .as_shape();
 
     let right_wall = Primitive::new_sphere()

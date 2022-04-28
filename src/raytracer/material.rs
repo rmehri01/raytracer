@@ -2,7 +2,7 @@ use approx::AbsDiffEq;
 
 use crate::graphics::{color::Color, pattern::Pattern};
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct Material {
     pub color: Color,
     pub ambient: f64,

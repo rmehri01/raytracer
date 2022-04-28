@@ -36,6 +36,10 @@ name = "hexagon"
 path = "exercises/hexagon.rs"
 
 [[bin]]
+name = "pattern"
+path = "exercises/pattern.rs"
+
+[[bin]]
 name = "plane"
 path = "exercises/plane.rs"
 

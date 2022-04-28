@@ -73,7 +73,7 @@ impl World {
         let reflected = self.reflected_color(comps, remaining_recursions);
         let refracted = self.refracted_color(comps, remaining_recursions);
 
-        let material = comps.shape.properties().material;
+        let material = &comps.shape.properties().material;
         if material.reflective > 0.0 && material.transparency > 0.0 {
             let reflectance = comps.schlick();
             surface + reflected * reflectance + refracted * (1.0 - reflectance)

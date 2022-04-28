@@ -109,7 +109,7 @@ mod tests {
             ..Material::default()
         };
 
-        let shape = Primitive::new_sphere().with_material(material);
+        let shape = Primitive::new_sphere().with_material(material.clone());
 
         assert_eq!(shape.properties().material, material);
     }
