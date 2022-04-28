@@ -28,6 +28,10 @@ impl Pattern {
         Self::new(Kind::Solid(color))
     }
 
+    pub fn new_blend(a: Self, b: Self) -> Self {
+        Self::new_mixture(Mixture::Blend, a, b)
+    }
+
     pub fn new_stripe(a: Self, b: Self) -> Self {
         Self::new_mixture(Mixture::Stripe, a, b)
     }
@@ -106,6 +110,7 @@ impl Kind {
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Mixture {
+    Blend,
     Stripe,
     Gradient,
     RadialGradient,
@@ -116,6 +121,7 @@ pub enum Mixture {
 impl Mixture {
     fn pattern_at(self, pattern_point: &Point, a: Color, b: Color) -> Color {
         match self {
+            Self::Blend => (a + b) * 0.5,
             Self::Stripe => Self::stripe_at(pattern_point, a, b),
             Self::Gradient => Self::gradient_at(pattern_point, a, b),
             Self::RadialGradient => Self::radial_gradient_at(pattern_point, a, b),
