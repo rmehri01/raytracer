@@ -36,6 +36,10 @@ impl Pattern {
         Self::new_mixture(Mixture::Gradient, start, end)
     }
 
+    pub fn new_radial_gradient(start: Self, end: Self) -> Self {
+        Self::new_mixture(Mixture::RadialGradient, start, end)
+    }
+
     pub fn new_ring(a: Self, b: Self) -> Self {
         Self::new_mixture(Mixture::Ring, a, b)
     }
@@ -104,6 +108,7 @@ impl Kind {
 pub enum Mixture {
     Stripe,
     Gradient,
+    RadialGradient,
     Ring,
     Checker,
 }
@@ -113,6 +118,7 @@ impl Mixture {
         match self {
             Self::Stripe => Self::stripe_at(pattern_point, a, b),
             Self::Gradient => Self::gradient_at(pattern_point, a, b),
+            Self::RadialGradient => Self::radial_gradient_at(pattern_point, a, b),
             Self::Ring => Self::ring_at(pattern_point, a, b),
             Self::Checker => Self::checker_at(pattern_point, a, b),
         }
@@ -131,6 +137,13 @@ impl Mixture {
         let fraction = point.x - point.x.floor();
 
         start + distance * fraction
+    }
+
+    fn radial_gradient_at(point: &Point, start: Color, end: Color) -> Color {
+        let distance = (*point - Point::new(0.0, 0.0, 0.0)).magnitude();
+        let fraction = distance - distance.floor();
+
+        start + (end - start) * fraction
     }
 
     fn ring_at(point: &Point, a: Color, b: Color) -> Color {
