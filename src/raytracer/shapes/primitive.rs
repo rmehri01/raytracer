@@ -17,6 +17,7 @@ use super::{HasProperties, Intersect, Properties, SetProperties, Shape};
 #[derive(Debug, PartialEq, Clone)]
 pub struct Primitive {
     properties: Properties,
+    pub(crate) has_shadow: bool,
     kind: Kind,
 }
 
@@ -27,6 +28,7 @@ impl Primitive {
                 bounds: Self::make_bounds(&kind),
                 ..Properties::default()
             },
+            has_shadow: true,
             kind,
         }
     }
@@ -98,6 +100,11 @@ impl Primitive {
             n2,
             n3,
         })
+    }
+
+    pub fn with_shadow(mut self, has_shadow: bool) -> Self {
+        self.has_shadow = has_shadow;
+        self
     }
 
     /// Returns the color of the material using the Phuong Reflection Model.

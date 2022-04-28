@@ -31,7 +31,7 @@ impl World {
 
     pub fn color_at(&self, ray: &Ray, remaining_recursions: u8) -> Color {
         let intersections = self.intersections(ray);
-        let hit = intersections.hit();
+        let hit = intersections.hit(None);
 
         match hit {
             Some(hit) => {
@@ -90,7 +90,9 @@ impl World {
         let r = Ray::new(*point, direction);
         let intersections = self.intersections(&r);
 
-        intersections.hit().map_or(false, |hit| hit.t < distance)
+        intersections
+            .hit(Some(|s| s.has_shadow))
+            .map_or(false, |hit| hit.t < distance)
     }
 
     fn reflected_color(&self, comps: &Computations, remaining_recursions: u8) -> Color {

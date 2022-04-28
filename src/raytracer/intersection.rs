@@ -145,9 +145,11 @@ impl<'shape> Intersections<'shape> {
         Self(BTreeSet::from(xs))
     }
 
-    /// Finds the first visible intersection.
-    pub fn hit(&self) -> Option<&Intersection> {
-        self.0.iter().find(|i| i.t >= 0.0)
+    /// Finds the first visible intersection that satisfies the allow predicate.
+    pub fn hit(&self, allow: Option<fn(&Primitive) -> bool>) -> Option<&Intersection> {
+        self.0
+            .iter()
+            .find(|i| i.t >= 0.0 && allow.map_or(true, |f| f(i.shape)))
     }
 }
 
@@ -219,7 +221,7 @@ mod tests {
         let i2 = Intersection::new(2.0, &shape, im_rc::Vector::new());
 
         let xs = Intersections::new([i1.clone(), i2]);
-        let hit = xs.hit().expect("valid hit");
+        let hit = xs.hit(None).expect("valid hit");
 
         assert_abs_diff_eq!(hit, &i1);
     }
@@ -231,7 +233,7 @@ mod tests {
         let i2 = Intersection::new(1.0, &shape, im_rc::Vector::new());
 
         let xs = Intersections::new([i1, i2.clone()]);
-        let hit = xs.hit().expect("valid hit");
+        let hit = xs.hit(None).expect("valid hit");
 
         assert_abs_diff_eq!(hit, &i2);
     }
@@ -243,7 +245,7 @@ mod tests {
         let i2 = Intersection::new(-1.0, &shape, im_rc::Vector::new());
 
         let xs = Intersections::new([i1, i2]);
-        let hit = xs.hit();
+        let hit = xs.hit(None);
 
         assert_eq!(hit, None);
     }
@@ -257,7 +259,7 @@ mod tests {
         let i4 = Intersection::new(2.0, &shape, im_rc::Vector::new());
 
         let xs = Intersections::new([i1, i2, i3, i4.clone()]);
-        let hit = xs.hit().expect("valid hit");
+        let hit = xs.hit(None).expect("valid hit");
 
         assert_abs_diff_eq!(hit, &i4);
     }

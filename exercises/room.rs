@@ -93,6 +93,7 @@ fn render_room(path: &str) {
                 * Matrix::rotation_y(0.2)
                 * Matrix::scaling(0.25, 0.25, 0.25),
         )
+        .with_shadow(false)
         .as_shape();
 
     let little_cube1 = Primitive::new_cube()

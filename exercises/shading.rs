@@ -44,7 +44,7 @@ fn render_shaded_sphere(path: &str) {
             let r = Ray::new(ray_origin, (position - ray_origin).normalize());
             let xs = sphere.intersect(&r, &im_rc::Vector::new());
 
-            if let Some(hit) = xs.hit() {
+            if let Some(hit) = xs.hit(None) {
                 let point = r.position(hit.t);
                 let normal = sphere.normal_at(
                     &point,
