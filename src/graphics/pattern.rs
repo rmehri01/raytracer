@@ -1,3 +1,5 @@
+use noise::{NoiseFn, SuperSimplex};
+
 use crate::{
     core::{
         matrix::{Matrix, Transformation},
@@ -30,6 +32,10 @@ impl Pattern {
 
     pub fn new_blend(a: Self, b: Self) -> Self {
         Self::new_mixture(Mixture::Blend, a, b)
+    }
+
+    pub fn new_perturb(pat: Self) -> Self {
+        Self::new(Kind::Perturb(Box::new(pat)))
     }
 
     pub fn new_stripe(a: Self, b: Self) -> Self {
@@ -88,6 +94,7 @@ impl Pattern {
 #[derive(Debug, PartialEq, Clone)]
 enum Kind {
     Solid(Color),
+    Perturb(Box<Pattern>),
     Mixture(Mixture, Box<Pattern>, Box<Pattern>),
     #[cfg(test)]
     Test,
@@ -97,6 +104,24 @@ impl Kind {
     fn pattern_at(&self, pattern_point: &Point) -> Color {
         match self {
             Self::Solid(color) => *color,
+            Self::Perturb(pat) => {
+                const PERTURB_AMOUNT: f64 = 0.4;
+
+                let simplex = SuperSimplex::new();
+                let perturbed_point = Point::new(
+                    pattern_point.x
+                        + simplex.get([pattern_point.x, pattern_point.y, pattern_point.z])
+                            * PERTURB_AMOUNT,
+                    pattern_point.y
+                        + simplex.get([pattern_point.x, pattern_point.y, pattern_point.z + 1.0])
+                            * PERTURB_AMOUNT,
+                    pattern_point.z
+                        + simplex.get([pattern_point.x, pattern_point.y, pattern_point.z + 2.0])
+                            * PERTURB_AMOUNT,
+                );
+
+                pat.pattern_at(&perturbed_point)
+            }
             Self::Mixture(mixture, a, b) => mixture.pattern_at(
                 pattern_point,
                 a.pattern_at(pattern_point),

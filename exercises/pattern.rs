@@ -18,13 +18,15 @@ fn main() {
 
 fn render_pattern(path: &str) {
     let sub_pattern = Pattern::new_checker(
-        Pattern::new_solid(Color::new(0.65, 0.2, 0.65)),
-        Pattern::new_solid(Color::new(0.75, 0.25, 0.75)),
+        Pattern::new_solid(Color::new(0.20, 0.20, 0.20)),
+        Pattern::new_solid(Color::new(0.55, 0.55, 0.55)),
     )
     .with_transform(Matrix::scaling(0.25, 0.25, 0.25));
-    let floor_pattern =
-        Pattern::new_checker(sub_pattern, Pattern::new_solid(Color::new(0.9, 0.9, 1.0)))
-            .with_transform(Matrix::scaling(0.5, 0.5, 0.5));
+    let floor_pattern = Pattern::new_stripe(
+        sub_pattern,
+        Pattern::new_solid(Color::new(0.20, 0.20, 0.20)),
+    )
+    .with_transform(Matrix::rotation_y(FRAC_PI_3) * Matrix::scaling(0.5, 0.5, 0.5));
     let floor_material = Material {
         specular: 0.0,
         pattern: Some(floor_pattern),
@@ -52,10 +54,10 @@ fn render_pattern(path: &str) {
         .with_material(floor_material)
         .as_shape();
 
-    let middle_pattern = Pattern::new_ring(
+    let middle_pattern = Pattern::new_perturb(Pattern::new_ring(
         Pattern::new_solid(Color::new(0.0, 0.3, 0.6)),
         Pattern::new_solid(Color::new(0.1, 1.0, 0.8)),
-    )
+    ))
     .with_transform(Matrix::rotation_x(-FRAC_PI_3) * Matrix::scaling(0.2, 0.2, 0.2));
     let middle = Primitive::new_sphere()
         .with_transform(Matrix::translation(-0.5, 1.0, 0.5))
@@ -68,8 +70,8 @@ fn render_pattern(path: &str) {
         .as_shape();
 
     let right_pattern = Pattern::new_stripe(
-        Pattern::new_solid(Color::new(0.0, 0.3, 0.6)),
-        Pattern::new_solid(Color::new(0.1, 1.0, 0.8)),
+        Pattern::new_solid(Color::BLACK),
+        Pattern::new_solid(Color::WHITE),
     )
     .with_transform(Matrix::rotation_z(-FRAC_PI_4) * Matrix::scaling(0.2, 0.2, 0.2));
     let right = Primitive::new_sphere()
