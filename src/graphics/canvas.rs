@@ -5,8 +5,8 @@ use itertools::Itertools;
 use super::color::Color;
 
 pub struct Canvas {
-    pub width: usize,
-    pub height: usize,
+    width: usize,
+    height: usize,
     pixels: Vec<Color>,
 }
 

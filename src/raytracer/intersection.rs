@@ -42,7 +42,11 @@ impl<'shape> Intersection<'shape> {
         }
     }
 
-    pub fn prepare_computations(&self, ray: &Ray, xs: &Intersections<'shape>) -> Computations {
+    pub(crate) fn prepare_computations(
+        &self,
+        ray: &Ray,
+        xs: &Intersections<'shape>,
+    ) -> Computations {
         let mut containers: Vec<&Primitive> = Vec::new();
 
         let mut n1 = None;
@@ -78,15 +82,16 @@ impl<'shape> Intersection<'shape> {
         let normal_v = if inside { -normal_v } else { normal_v };
 
         Computations {
-            t: self.t,
             shape: self.shape,
             trail: self.trail.clone(),
+            #[cfg(test)]
             point,
             over_point: point + normal_v * Point::default_epsilon(),
             under_point: point - normal_v * Point::default_epsilon(),
             eye_v,
             normal_v,
             reflect_v: ray.direction.reflect(&normal_v),
+            #[cfg(test)]
             inside,
             n1: n1.unwrap_or(1.0),
             n2: n2.unwrap_or(1.0),
@@ -154,17 +159,18 @@ impl<'shape> Intersections<'shape> {
 }
 
 /// Encapsulates precomputed information for an intersection.
-pub struct Computations<'shape> {
-    pub t: f64,
+pub(crate) struct Computations<'shape> {
     pub shape: &'shape Primitive,
     pub trail: im_rc::Vector<Transformation>,
-    pub point: Point,
+    #[cfg(test)]
+    point: Point,
     pub over_point: Point,
     pub under_point: Point,
     pub eye_v: Vector,
     pub normal_v: Vector,
     pub reflect_v: Vector,
-    pub inside: bool,
+    #[cfg(test)]
+    inside: bool,
     pub n1: f64,
     pub n2: f64,
 }
@@ -173,7 +179,7 @@ impl Computations<'_> {
     /// The Schlick approximation for the Fresnel reflectance.
     /// Computes the reflectance, which is a number between 0 and 1
     /// representing the fraction of light reflected.
-    pub fn schlick(&self) -> f64 {
+    pub(crate) fn schlick(&self) -> f64 {
         let mut cos = self.eye_v.dot(&self.normal_v);
 
         if self.n1 > self.n2 {
@@ -272,7 +278,6 @@ mod tests {
 
         let comps = i.prepare_computations(&r, &Intersections::new([i.clone()]));
 
-        assert_abs_diff_eq!(comps.t, i.t);
         assert_eq!(comps.shape, i.shape);
         assert_abs_diff_eq!(comps.point, Point::new(0.0, 0.0, -1.0));
         assert_abs_diff_eq!(comps.eye_v, Vector::new(0.0, 0.0, -1.0));

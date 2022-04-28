@@ -134,7 +134,7 @@ impl Kind {
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
-pub enum Mixture {
+enum Mixture {
     Blend,
     Stripe,
     Gradient,

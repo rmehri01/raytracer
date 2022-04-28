@@ -167,7 +167,7 @@ impl Primitive {
         self.normal_to_world(&local_normal, &hit.trail)
     }
 
-    pub fn world_to_object(
+    pub(crate) fn world_to_object(
         &self,
         world_point: &Point,
         trail: &im_rc::Vector<Transformation>,
@@ -177,7 +177,7 @@ impl Primitive {
         self.properties.transform_inversed * trail_point
     }
 
-    pub fn normal_to_world(
+    pub(crate) fn normal_to_world(
         &self,
         normal: &Vector,
         trail: &im_rc::Vector<Transformation>,
@@ -377,7 +377,7 @@ impl Kind {
 
 /// Checks if a ray intersects an axis plane and returns the minimum and
 /// maximum t values.
-pub fn check_axis(origin: f64, direction: f64, min: f64, max: f64) -> (f64, f64) {
+pub(crate) fn check_axis(origin: f64, direction: f64, min: f64, max: f64) -> (f64, f64) {
     let t_min_numerator = min - origin;
     let t_max_numerator = max - origin;
 

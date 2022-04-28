@@ -5,18 +5,18 @@ use super::{ray::Ray, shapes::check_axis};
 /// An axis-aligned bounding box that can be used to quickly determine if a ray
 /// might intersect with anything in the box.
 #[derive(Debug, PartialEq, Clone, Copy)]
-pub struct Bounds {
+pub(crate) struct Bounds {
     minimum: Point,
     maximum: Point,
 }
 
 impl Bounds {
-    pub fn new(minimum: Point, maximum: Point) -> Self {
+    pub(crate) fn new(minimum: Point, maximum: Point) -> Self {
         Self { minimum, maximum }
     }
 
     /// Extends the bounding box to include all points in the transformed box.
-    pub fn transform(&mut self, transform: &Transformation) {
+    pub(crate) fn transform(&mut self, transform: &Transformation) {
         let corners = [
             self.minimum,
             Point::new(self.minimum.x, self.minimum.y, self.maximum.z),
@@ -35,13 +35,13 @@ impl Bounds {
     }
 
     /// Combines this bounding box with another bounding box.
-    pub fn union(&mut self, other: &Self) {
+    pub(crate) fn union(&mut self, other: &Self) {
         self.add_point(&other.minimum);
         self.add_point(&other.maximum);
     }
 
     /// Extends the bounding box to include the given point.
-    pub fn add_point(&mut self, point: &Point) {
+    pub(crate) fn add_point(&mut self, point: &Point) {
         self.minimum.x = self.minimum.x.min(point.x);
         self.minimum.y = self.minimum.y.min(point.y);
         self.minimum.z = self.minimum.z.min(point.z);
@@ -50,7 +50,7 @@ impl Bounds {
         self.maximum.z = self.maximum.z.max(point.z);
     }
 
-    pub fn intersects(&self, ray: &Ray) -> bool {
+    pub(crate) fn intersects(&self, ray: &Ray) -> bool {
         let (x_t_min, x_t_max) = check_axis(
             ray.origin.x,
             ray.direction.x,

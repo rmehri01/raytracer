@@ -37,9 +37,9 @@ pub trait Intersect: HasProperties {
 #[derive(Debug, PartialEq, Clone)]
 pub struct Properties {
     pub transform: Transformation,
-    pub transform_inversed: Transformation,
+    pub(crate) transform_inversed: Transformation,
     pub material: Material,
-    pub bounds: Bounds,
+    pub(crate) bounds: Bounds,
 }
 
 impl Default for Properties {
