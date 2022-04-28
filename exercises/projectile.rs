@@ -34,7 +34,7 @@ fn main() {
     let wind = Vector::new(-0.01, 0.0, 0.0);
     let e = Environment::new(gravity, wind);
 
-    plot_trajectory(p, &e, "images/trajectory.ppm");
+    plot_trajectory(p, &e, "images/ppm/trajectory.ppm");
 }
 
 fn plot_trajectory(mut p: Projectile, e: &Environment, path: &str) {

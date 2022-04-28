@@ -13,7 +13,7 @@ use raytracer::{
 };
 
 fn main() {
-    render_room("images/room.ppm");
+    render_room("images/ppm/room.ppm");
 }
 
 fn render_room(path: &str) {

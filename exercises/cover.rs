@@ -13,7 +13,7 @@ use raytracer::{
 };
 
 fn main() {
-    render_cover("images/cover.ppm");
+    render_cover("images/ppm/cover.ppm");
 }
 
 fn render_cover(path: &str) {
@@ -179,9 +179,9 @@ fn render_cover(path: &str) {
         ],
     );
 
-    let camera = Camera::new(2000, 2000, FRAC_PI_4).with_transform(Matrix::view_transform(
+    let camera = Camera::new(2048, 1080, FRAC_PI_4).with_transform(Matrix::view_transform(
         Point::new(-6.0, 6.0, -10.0),
-        Point::new(6.0, 0.0, 6.0),
+        Point::new(6.0, -2.0, 6.0),
         Vector::new(-0.45, 1.0, 0.0),
     ));
 

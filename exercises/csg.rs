@@ -17,7 +17,7 @@ use raytracer::{
 };
 
 fn main() {
-    render_csg("images/csg.ppm");
+    render_csg("images/ppm/csg.ppm");
 }
 
 fn render_csg(path: &str) {

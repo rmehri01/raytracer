@@ -6,7 +6,7 @@ use raytracer::{
 };
 
 fn main() {
-    plot_clock(400, "images/clock.ppm");
+    plot_clock(400, "images/ppm/clock.ppm");
 }
 
 fn plot_clock(side_len: usize, path: &str) {

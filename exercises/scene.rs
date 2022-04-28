@@ -13,7 +13,7 @@ use raytracer::{
 };
 
 fn main() {
-    render_scene("images/scene.ppm");
+    render_scene("images/ppm/scene.ppm");
 }
 
 fn render_scene(path: &str) {
@@ -86,7 +86,7 @@ fn render_scene(path: &str) {
         )],
     );
 
-    let camera = Camera::new(2000, 1000, FRAC_PI_3).with_transform(Matrix::view_transform(
+    let camera = Camera::new(2048, 1080, FRAC_PI_3).with_transform(Matrix::view_transform(
         Point::new(0.0, 1.5, -5.0),
         Point::new(0.0, 1.0, 0.0),
         Vector::new(0.0, 1.0, 0.0),

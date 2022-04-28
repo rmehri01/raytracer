@@ -14,7 +14,7 @@ use raytracer::{
 };
 
 fn main() -> Result<(), ParseError> {
-    render_teapot("images/teapot.ppm")
+    render_teapot("images/ppm/teapot.ppm")
 }
 
 fn render_teapot(path: &str) -> Result<(), ParseError> {
@@ -42,7 +42,7 @@ fn render_teapot(path: &str) -> Result<(), ParseError> {
         )],
     );
 
-    let camera = Camera::new(500, 500, FRAC_PI_3).with_transform(Matrix::view_transform(
+    let camera = Camera::new(2048, 1080, FRAC_PI_3).with_transform(Matrix::view_transform(
         Point::new(0.0, 1.5, -5.0),
         Point::new(0.0, 1.0, 0.0),
         Vector::new(0.0, 1.0, 0.0),

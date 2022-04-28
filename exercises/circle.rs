@@ -8,11 +8,11 @@ use raytracer::{
 };
 
 fn main() {
-    render_circle("images/circle.ppm");
+    render_circle("images/ppm/circle.ppm");
 }
 
 fn render_circle(path: &str) {
-    let side_len = 500;
+    let side_len = 2048;
     let mut canvas = Canvas::empty(side_len, side_len);
 
     let ray_origin = Point::new(0.0, 0.0, -5.0);

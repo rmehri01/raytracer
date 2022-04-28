@@ -13,7 +13,7 @@ use raytracer::{
 };
 
 fn main() {
-    render_glass_bubble("images/glass_bubble.ppm");
+    render_glass_bubble("images/ppm/glass_bubble.ppm");
 }
 
 fn render_glass_bubble(path: &str) {

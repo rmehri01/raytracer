@@ -11,7 +11,7 @@ use raytracer::{
 };
 
 fn main() {
-    render_shaded_sphere("images/shading.ppm");
+    render_shaded_sphere("images/ppm/shading.ppm");
 }
 
 fn render_shaded_sphere(path: &str) {
