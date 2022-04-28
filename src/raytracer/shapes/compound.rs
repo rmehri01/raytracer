@@ -86,7 +86,7 @@ impl HasProperties for Compound {
 impl Intersect for Compound {
     fn local_intersect(&self, ray: &Ray, trail: &im_rc::Vector<Transformation>) -> Intersections {
         let mut new_trail = trail.clone();
-        new_trail.push_front(self.properties.transform);
+        new_trail.push_front(self.properties.transform_inversed);
 
         match &self.kind {
             Kind::Group(children) => {
