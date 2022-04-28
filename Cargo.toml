@@ -33,6 +33,10 @@ name = "csg"
 path = "exercises/csg.rs"
 
 [[bin]]
+name = "glass_bubble"
+path = "exercises/glass_bubble.rs"
+
+[[bin]]
 name = "hexagon"
 path = "exercises/hexagon.rs"
 
