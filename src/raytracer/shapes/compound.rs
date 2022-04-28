@@ -90,7 +90,9 @@ impl Intersect for Compound {
 
         match &self.kind {
             Kind::Group(children) => {
-                if self.properties.bounds.intersects(ray) {
+                let mut bounds = self.properties.bounds;
+                bounds.transform(&self.properties.transform);
+                if bounds.intersects(ray) {
                     let intersections = children.iter().fold(BTreeSet::new(), |mut acc, child| {
                         acc.append(&mut child.intersect(ray, &new_trail).0);
                         acc

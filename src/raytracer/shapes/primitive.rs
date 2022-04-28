@@ -25,7 +25,7 @@ impl Primitive {
     fn new(kind: Kind) -> Self {
         Self {
             properties: Properties {
-                bounds: Self::make_bounds(&kind),
+                bounds: Self::compute_bounds(&kind),
                 ..Properties::default()
             },
             has_shadow: true,
@@ -33,7 +33,7 @@ impl Primitive {
         }
     }
 
-    fn make_bounds(kind: &Kind) -> Bounds {
+    fn compute_bounds(kind: &Kind) -> Bounds {
         match kind {
             Kind::Cube | Kind::Sphere => {
                 Bounds::new(Point::new(-1.0, -1.0, -1.0), Point::new(1.0, 1.0, 1.0))
