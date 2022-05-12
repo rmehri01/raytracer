@@ -44,15 +44,13 @@ impl Canvas {
     }
 
     fn to_ppm(&self) -> String {
-        let mut ppm = String::new();
-
-        ppm.push_str(&format!(
+        let mut ppm = format!(
             "{}\n{} {}\n{}\n",
             Self::PPM_IDENTIFIER,
             self.width,
             self.height,
             Self::PPM_MAX_COLOR_VALUE
-        ));
+        );
 
         for row in self.pixels.chunks(self.width) {
             let mut colors = row
