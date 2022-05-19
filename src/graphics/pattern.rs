@@ -13,7 +13,7 @@ use super::color::Color;
 #[derive(Debug, PartialEq, Clone)]
 pub struct Pattern {
     transform: Transformation,
-    transform_inversed: Transformation,
+    inverse_transform: Transformation,
     kind: Kind,
 }
 
@@ -21,7 +21,7 @@ impl Pattern {
     fn new(kind: Kind) -> Self {
         Self {
             transform: Matrix::identity(),
-            transform_inversed: Matrix::identity(),
+            inverse_transform: Matrix::identity(),
             kind,
         }
     }
@@ -69,7 +69,7 @@ impl Pattern {
 
     pub fn with_transform(mut self, transform: Transformation) -> Self {
         self.transform = transform;
-        self.transform_inversed = transform.inverse();
+        self.inverse_transform = transform.inverse();
         self
     }
 
@@ -85,7 +85,7 @@ impl Pattern {
     }
 
     pub fn pattern_at(&self, object_point: &Point) -> Color {
-        let pattern_point = self.transform_inversed * *object_point;
+        let pattern_point = self.inverse_transform * *object_point;
 
         self.kind.pattern_at(&pattern_point)
     }

@@ -31,7 +31,7 @@ fn render_teapot(path: &str) -> Result<(), ParseError> {
 
     let floor = Primitive::new_plane()
         .with_material(floor_material)
-        .as_shape();
+        .to_shape();
     let teapot = obj::parse_file("exercises/resources/teapot.obj")?;
 
     let world = World::new(

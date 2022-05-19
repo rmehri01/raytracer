@@ -34,7 +34,7 @@ fn render_pattern(path: &str) {
     };
     let floor = Primitive::new_plane()
         .with_material(floor_material.clone())
-        .as_shape();
+        .to_shape();
 
     let left_wall = Primitive::new_plane()
         .with_transform(
@@ -43,7 +43,7 @@ fn render_pattern(path: &str) {
                 * Matrix::rotation_x(FRAC_PI_2),
         )
         .with_material(floor_material.clone())
-        .as_shape();
+        .to_shape();
 
     let right_wall = Primitive::new_plane()
         .with_transform(
@@ -52,7 +52,7 @@ fn render_pattern(path: &str) {
                 * Matrix::rotation_x(FRAC_PI_2),
         )
         .with_material(floor_material)
-        .as_shape();
+        .to_shape();
 
     let middle_pattern = Pattern::new_perturb(Pattern::new_ring(
         Pattern::new_solid(Color::new(0.0, 0.3, 0.6)),
@@ -67,7 +67,7 @@ fn render_pattern(path: &str) {
             pattern: Some(middle_pattern),
             ..Material::default()
         })
-        .as_shape();
+        .to_shape();
 
     let right_pattern = Pattern::new_stripe(
         Pattern::new_solid(Color::BLACK),
@@ -82,7 +82,7 @@ fn render_pattern(path: &str) {
             pattern: Some(right_pattern),
             ..Material::default()
         })
-        .as_shape();
+        .to_shape();
 
     let left_pattern = Pattern::new_gradient(
         Pattern::new_solid(Color::new(1.0, 0.0, 0.0)),
@@ -97,7 +97,7 @@ fn render_pattern(path: &str) {
             pattern: Some(left_pattern),
             ..Material::default()
         })
-        .as_shape();
+        .to_shape();
 
     let world = World::new(
         vec![floor, left_wall, right_wall, middle, left, right],

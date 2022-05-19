@@ -33,7 +33,7 @@ fn render_room(path: &str) {
             ..Material::default()
         })
         .with_transform(Matrix::scaling(20.0, 7.0, 20.0) * Matrix::translation(0.0, 1.0, 0.0))
-        .as_shape();
+        .to_shape();
 
     let walls_pattern = Pattern::new_checker(
         Pattern::new_solid(Color::new(0.4863, 0.3765, 0.2941)),
@@ -51,7 +51,7 @@ fn render_room(path: &str) {
             ..Material::default()
         })
         .with_transform(Matrix::scaling(10.0, 10.0, 10.0))
-        .as_shape();
+        .to_shape();
 
     let table_top_pattern = Pattern::new_stripe(
         Pattern::new_solid(Color::new(0.5529, 0.4235, 0.3255)),
@@ -69,7 +69,7 @@ fn render_room(path: &str) {
             ..Material::default()
         })
         .with_transform(Matrix::translation(0.0, 3.1, 0.0) * Matrix::scaling(3.0, 0.1, 2.0))
-        .as_shape();
+        .to_shape();
 
     let leg1 = make_table_leg(2.7, -1.7);
     let leg2 = make_table_leg(2.7, 1.7);
@@ -94,7 +94,7 @@ fn render_room(path: &str) {
                 * Matrix::scaling(0.25, 0.25, 0.25),
         )
         .with_shadow(false)
-        .as_shape();
+        .to_shape();
 
     let little_cube1 = Primitive::new_cube()
         .with_material(Material {
@@ -108,7 +108,7 @@ fn render_room(path: &str) {
                 * Matrix::rotation_y(-0.4)
                 * Matrix::scaling(0.15, 0.15, 0.15),
         )
-        .as_shape();
+        .to_shape();
 
     let little_cube2 = Primitive::new_cube()
         .with_material(Material {
@@ -120,7 +120,7 @@ fn render_room(path: &str) {
                 * Matrix::rotation_y(0.4)
                 * Matrix::scaling(0.15, 0.17, 0.15),
         )
-        .as_shape();
+        .to_shape();
 
     let little_cube3 = Primitive::new_cube()
         .with_material(Material {
@@ -132,7 +132,7 @@ fn render_room(path: &str) {
                 * Matrix::rotation_y(0.4)
                 * Matrix::scaling(0.2, 0.05, 0.05),
         )
-        .as_shape();
+        .to_shape();
 
     let little_cube4 = Primitive::new_cube()
         .with_material(Material {
@@ -144,7 +144,7 @@ fn render_room(path: &str) {
                 * Matrix::rotation_y(0.8)
                 * Matrix::scaling(0.05, 0.2, 0.05),
         )
-        .as_shape();
+        .to_shape();
 
     let little_cube5 = Primitive::new_cube()
         .with_material(Material {
@@ -156,7 +156,7 @@ fn render_room(path: &str) {
                 * Matrix::rotation_y(0.8)
                 * Matrix::scaling(0.05, 0.2, 0.05),
         )
-        .as_shape();
+        .to_shape();
 
     let frame1 = Primitive::new_cube()
         .with_material(Material {
@@ -165,7 +165,7 @@ fn render_room(path: &str) {
             ..Material::default()
         })
         .with_transform(Matrix::translation(-10.0, 4.0, 1.0) * Matrix::scaling(0.05, 1.0, 1.0))
-        .as_shape();
+        .to_shape();
 
     let frame2 = Primitive::new_cube()
         .with_material(Material {
@@ -174,7 +174,7 @@ fn render_room(path: &str) {
             ..Material::default()
         })
         .with_transform(Matrix::translation(-10.0, 3.4, 2.7) * Matrix::scaling(0.05, 0.4, 0.4))
-        .as_shape();
+        .to_shape();
 
     let frame3 = Primitive::new_cube()
         .with_material(Material {
@@ -183,7 +183,7 @@ fn render_room(path: &str) {
             ..Material::default()
         })
         .with_transform(Matrix::translation(-10.0, 4.6, 2.7) * Matrix::scaling(0.05, 0.4, 0.4))
-        .as_shape();
+        .to_shape();
 
     let mirror_frame = Primitive::new_cube()
         .with_material(Material {
@@ -192,7 +192,7 @@ fn render_room(path: &str) {
             ..Material::default()
         })
         .with_transform(Matrix::translation(-2.0, 3.5, 9.95) * Matrix::scaling(5.0, 1.5, 0.05))
-        .as_shape();
+        .to_shape();
 
     let mirror = Primitive::new_cube()
         .with_material(Material {
@@ -205,7 +205,7 @@ fn render_room(path: &str) {
             ..Material::default()
         })
         .with_transform(Matrix::translation(-2.0, 3.5, 9.95) * Matrix::scaling(4.8, 1.4, 0.06))
-        .as_shape();
+        .to_shape();
 
     let world = World::new(
         vec![
@@ -249,5 +249,5 @@ fn make_table_leg(x: f64, z: f64) -> Shape {
             ..Material::default()
         })
         .with_transform(Matrix::translation(x, 1.5, z) * Matrix::scaling(0.1, 1.5, 0.1))
-        .as_shape()
+        .to_shape()
 }

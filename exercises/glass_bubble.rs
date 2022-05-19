@@ -28,7 +28,7 @@ fn render_glass_bubble(path: &str) {
             ..Material::default()
         })
         .with_transform(Matrix::translation(0.0, -10.0, 0.0))
-        .as_shape();
+        .to_shape();
 
     let glass = Primitive::new_sphere()
         .with_material(Material {
@@ -39,7 +39,7 @@ fn render_glass_bubble(path: &str) {
             refractive_index: 1.52,
             ..Material::default()
         })
-        .as_shape();
+        .to_shape();
 
     let air = Primitive::new_sphere()
         .with_material(Material {
@@ -51,7 +51,7 @@ fn render_glass_bubble(path: &str) {
             ..Material::default()
         })
         .with_transform(Matrix::scaling(0.5, 0.5, 0.5))
-        .as_shape();
+        .to_shape();
 
     let world = World::new(
         vec![floor, glass, air],

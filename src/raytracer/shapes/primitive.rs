@@ -174,7 +174,7 @@ impl Primitive {
     ) -> Point {
         let trail_point = trail.iter().rev().fold(*world_point, |acc, &mat| mat * acc);
 
-        self.properties.transform_inversed * trail_point
+        self.properties.inverse_transform * trail_point
     }
 
     pub(crate) fn normal_to_world(
@@ -182,7 +182,7 @@ impl Primitive {
         normal: &Vector,
         trail: &im_rc::Vector<Transformation>,
     ) -> Vector {
-        let normal = self.properties.transform_inversed.transpose() * *normal;
+        let normal = self.properties.inverse_transform.transpose() * *normal;
         let normal = normal.normalize();
 
         trail.iter().fold(normal, |acc, mat| {
@@ -191,7 +191,7 @@ impl Primitive {
         })
     }
 
-    pub fn as_shape(self) -> Shape {
+    pub fn to_shape(self) -> Shape {
         Shape::Primitive(self)
     }
 }
@@ -1302,9 +1302,9 @@ mod tests {
     #[test]
     fn normal_on_child_object() {
         let s = Primitive::new_sphere().with_transform(Matrix::translation(5.0, 0.0, 0.0));
-        let g2 = Compound::new_group(vec![s.clone().as_shape()])
+        let g2 = Compound::new_group(vec![s.clone().to_shape()])
             .with_transform(Matrix::scaling(1.0, 2.0, 3.0));
-        let g1 = Compound::new_group(vec![g2.clone().as_shape()])
+        let g1 = Compound::new_group(vec![g2.clone().to_shape()])
             .with_transform(Matrix::rotation_y(FRAC_PI_2));
 
         let n = s.normal_at(
@@ -1313,8 +1313,8 @@ mod tests {
                 0.0,
                 &s,
                 im_rc::vector![
-                    g2.properties().transform_inversed,
-                    g1.properties().transform_inversed
+                    g2.properties().inverse_transform,
+                    g1.properties().inverse_transform
                 ],
             ),
         );
@@ -1364,17 +1364,17 @@ mod tests {
     #[test]
     fn convert_point_world_to_object() {
         let s = Primitive::new_sphere().with_transform(Matrix::translation(5.0, 0.0, 0.0));
-        let g2 = Compound::new_group(vec![s.clone().as_shape()])
+        let g2 = Compound::new_group(vec![s.clone().to_shape()])
             .with_transform(Matrix::scaling(2.0, 2.0, 2.0));
-        let g1 = Compound::new_group(vec![g2.clone().as_shape()])
+        let g1 = Compound::new_group(vec![g2.clone().to_shape()])
             .with_transform(Matrix::rotation_y(FRAC_PI_2));
 
         assert_eq!(
             s.world_to_object(
                 &Point::new(-2.0, 0.0, -10.0),
                 &im_rc::vector![
-                    g2.properties().transform_inversed,
-                    g1.properties().transform_inversed
+                    g2.properties().inverse_transform,
+                    g1.properties().inverse_transform
                 ]
             ),
             Point::new(0.0, 0.0, -1.0)
@@ -1384,9 +1384,9 @@ mod tests {
     #[test]
     fn convert_normal_object_to_world() {
         let s = Primitive::new_sphere().with_transform(Matrix::translation(5.0, 0.0, 0.0));
-        let g2 = Compound::new_group(vec![s.clone().as_shape()])
+        let g2 = Compound::new_group(vec![s.clone().to_shape()])
             .with_transform(Matrix::scaling(1.0, 2.0, 3.0));
-        let g1 = Compound::new_group(vec![g2.clone().as_shape()])
+        let g1 = Compound::new_group(vec![g2.clone().to_shape()])
             .with_transform(Matrix::rotation_y(FRAC_PI_2));
 
         let n = s.normal_to_world(
@@ -1396,8 +1396,8 @@ mod tests {
                 3.0_f64.sqrt() / 3.0,
             ),
             &im_rc::vector![
-                g2.properties().transform_inversed,
-                g1.properties().transform_inversed
+                g2.properties().inverse_transform,
+                g1.properties().inverse_transform
             ],
         );
 

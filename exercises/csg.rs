@@ -68,7 +68,7 @@ fn render_csg(path: &str) {
             ..Material::default()
         })
         .with_transform(Matrix::scaling(5.0, 5.0, 5.0) * Matrix::translation(0.0, 1.0, 0.0))
-        .as_shape();
+        .to_shape();
 
     let left = Primitive::new_cylinder(Conic::new(-1.0, 1.0, true))
         .with_material(Material {
@@ -78,7 +78,7 @@ fn render_csg(path: &str) {
             ..red_material.clone()
         })
         .with_transform(Matrix::scaling(0.5, 1.1, 0.5))
-        .as_shape();
+        .to_shape();
     let right = Compound::new_csg(
         Operation::Intersection,
         Primitive::new_cylinder(Conic::new(-1.0, 1.0, true))
@@ -89,7 +89,7 @@ fn render_csg(path: &str) {
                 ..green_material.clone()
             })
             .with_transform(Matrix::rotation_x(FRAC_PI_2) * Matrix::scaling(0.5, 1.1, 0.5))
-            .as_shape(),
+            .to_shape(),
         Primitive::new_cylinder(Conic::new(-1.0, 1.0, true))
             .with_material(Material {
                 ambient: 0.1,
@@ -98,9 +98,9 @@ fn render_csg(path: &str) {
                 ..blue_material.clone()
             })
             .with_transform(Matrix::rotation_z(FRAC_PI_2) * Matrix::scaling(0.5, 1.1, 0.5))
-            .as_shape(),
+            .to_shape(),
     )
-    .as_shape();
+    .to_shape();
     let tricylinder = Compound::new_csg(Operation::Intersection, left, right)
         .with_transform(
             Matrix::translation(-1.5, 0.7, 0.0)
@@ -108,7 +108,7 @@ fn render_csg(path: &str) {
                 * Matrix::rotation_x(-0.1)
                 * Matrix::rotation_y(0.4),
         )
-        .as_shape();
+        .to_shape();
 
     let sphere = Primitive::new_sphere()
         .with_material(Material {
@@ -120,39 +120,39 @@ fn render_csg(path: &str) {
             ..Material::default()
         })
         .with_transform(Matrix::scaling(1.4, 1.4, 1.4))
-        .as_shape();
+        .to_shape();
     let cylinders = Compound::new_group(vec![
         Primitive::new_cylinder(Conic::new(-1.0, 1.0, true))
             .with_material(red_material.clone())
             .with_transform(Matrix::scaling(0.5, 1.1, 0.5))
-            .as_shape(),
+            .to_shape(),
         Primitive::new_cylinder(Conic::new(-1.0, 1.0, true))
             .with_material(green_material)
             .with_transform(Matrix::rotation_x(FRAC_PI_2) * Matrix::scaling(0.5, 1.1, 0.5))
-            .as_shape(),
+            .to_shape(),
         Primitive::new_cylinder(Conic::new(-1.0, 1.0, true))
             .with_material(blue_material)
             .with_transform(Matrix::rotation_z(FRAC_PI_2) * Matrix::scaling(0.5, 1.1, 0.5))
-            .as_shape(),
+            .to_shape(),
     ])
-    .as_shape();
+    .to_shape();
     let cube_minus_cylinders = Compound::new_csg(
         Operation::Difference,
-        Primitive::new_cube().with_material(dark_mirror).as_shape(),
+        Primitive::new_cube().with_material(dark_mirror).to_shape(),
         cylinders,
     )
-    .as_shape();
+    .to_shape();
     let hollowed_box = Compound::new_csg(Operation::Intersection, sphere, cube_minus_cylinders)
         .with_transform(
             Matrix::rotation_y(1.3)
                 * Matrix::scaling(0.5, 0.5, 0.5)
                 * Matrix::translation(0.0, 1.0, 0.0),
         )
-        .as_shape();
+        .to_shape();
 
     let inside = Primitive::new_sphere()
         .with_material(red_material)
-        .as_shape();
+        .to_shape();
     let children = (0..12)
         .map(|i| {
             let angle = (i as f64) * FRAC_PI_6;
@@ -161,7 +161,7 @@ fn render_csg(path: &str) {
         .collect::<Vec<_>>();
     let outside = Compound::new_group(children)
         .with_material(transparent)
-        .as_shape();
+        .to_shape();
     let ball = Compound::new_csg(Operation::Intersection, inside, outside)
         .with_transform(
             Matrix::translation(1.5, 0.25, 0.0)
@@ -171,7 +171,7 @@ fn render_csg(path: &str) {
                 * Matrix::scaling(0.5, 0.5, 0.5)
                 * Matrix::translation(0.0, 1.0, 0.0),
         )
-        .as_shape();
+        .to_shape();
 
     let world = World::new(
         vec![room, tricylinder, hollowed_box, ball],
@@ -196,5 +196,5 @@ fn wedge(transform: Transformation) -> Shape {
                 * Matrix::rotation_y(FRAC_PI_4),
         )
         .with_shadow(false)
-        .as_shape()
+        .to_shape()
 }

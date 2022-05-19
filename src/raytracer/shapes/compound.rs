@@ -68,7 +68,7 @@ impl Compound {
         }
     }
 
-    pub fn as_shape(self) -> Shape {
+    pub fn to_shape(self) -> Shape {
         Shape::Compound(self)
     }
 }
@@ -86,7 +86,7 @@ impl HasProperties for Compound {
 impl Intersect for Compound {
     fn local_intersect(&self, ray: &Ray, trail: &im_rc::Vector<Transformation>) -> Intersections {
         let mut new_trail = trail.clone();
-        new_trail.push_front(self.properties.transform_inversed);
+        new_trail.push_front(self.properties.inverse_transform);
 
         match &self.kind {
             Kind::Group(children) => {
@@ -206,7 +206,7 @@ mod tests {
 
     #[test]
     fn create_group_with_children() {
-        let sphere = Primitive::new_sphere().as_shape();
+        let sphere = Primitive::new_sphere().to_shape();
         let group = Compound::new_group(vec![sphere.clone()]);
 
         assert_eq!(group.properties.transform, Matrix::identity());
@@ -234,9 +234,9 @@ mod tests {
         let s2 = Primitive::new_sphere().with_transform(Matrix::translation(0.0, 0.0, -3.0));
         let s3 = Primitive::new_sphere().with_transform(Matrix::translation(5.0, 0.0, 0.0));
         let group = Compound::new_group(vec![
-            s1.clone().as_shape(),
-            s2.clone().as_shape(),
-            s3.as_shape(),
+            s1.clone().to_shape(),
+            s2.clone().to_shape(),
+            s3.to_shape(),
         ]);
 
         let r = Ray::new(Point::new(0.0, 0.0, -5.0), Vector::new(0.0, 0.0, 1.0));
@@ -258,7 +258,7 @@ mod tests {
     fn intersect_ray_with_transformed_group() {
         let s = Primitive::new_sphere()
             .with_transform(Matrix::translation(5.0, 0.0, 0.0))
-            .as_shape();
+            .to_shape();
         let group = Compound::new_group(vec![s]).with_transform(Matrix::scaling(2.0, 2.0, 2.0));
 
         let r = Ray::new(Point::new(10.0, 0.0, -10.0), Vector::new(0.0, 0.0, 1.0));
@@ -320,7 +320,7 @@ mod tests {
             ]);
 
             let result = operation
-                .filter_intersections(&s1.clone().as_shape(), xs.clone())
+                .filter_intersections(&s1.clone().to_shape(), xs.clone())
                 .0
                 .iter()
                 .map(|i| i.t)
@@ -336,8 +336,8 @@ mod tests {
     fn ray_misses_csg_object() {
         let c = Compound::new_csg(
             Operation::Union,
-            Primitive::new_sphere().as_shape(),
-            Primitive::new_cube().as_shape(),
+            Primitive::new_sphere().to_shape(),
+            Primitive::new_cube().to_shape(),
         );
         let r = Ray::new(Point::new(0.0, 2.0, -5.0), Vector::new(0.0, 0.0, 1.0));
         let xs = c.intersect(&r, &im_rc::Vector::new());
@@ -352,8 +352,8 @@ mod tests {
 
         let c = Compound::new_csg(
             Operation::Union,
-            s1.clone().as_shape(),
-            s2.clone().as_shape(),
+            s1.clone().to_shape(),
+            s2.clone().to_shape(),
         );
         let r = Ray::new(Point::new(0.0, 0.0, -5.0), Vector::new(0.0, 0.0, 1.0));
         let intersections = c.intersect(&r, &im_rc::Vector::new());

@@ -40,14 +40,14 @@ impl Parser<'_> {
     fn make_shape(mut self) -> Result<Shape> {
         for (_, group) in self.groups {
             self.shapes.push(
-                Compound::new_group(group.into_iter().map(|t| t.as_shape()).collect()).as_shape(),
+                Compound::new_group(group.into_iter().map(|t| t.to_shape()).collect()).to_shape(),
             );
         }
 
         match self.shapes.len() {
             0 => Err(ParseError::Logic("no shapes found".to_string())),
             1 => Ok(self.shapes.pop().unwrap()),
-            _ => Ok(Compound::new_group(self.shapes).as_shape()),
+            _ => Ok(Compound::new_group(self.shapes).to_shape()),
         }
     }
 }
@@ -94,7 +94,7 @@ fn parse_string(obj_string: &str) -> Result<Parser> {
                             .append(&mut ts);
                     }
                     None => {
-                        let mut triangle_shapes = ts.into_iter().map(|t| t.as_shape()).collect();
+                        let mut triangle_shapes = ts.into_iter().map(|t| t.to_shape()).collect();
                         parser.shapes.append(&mut triangle_shapes);
                     }
                 };
@@ -231,15 +231,15 @@ mod tests {
                     Point::new(-1.0, 0.0, 0.0),
                     Point::new(1.0, 0.0, 0.0),
                 )
-                .as_shape(),
+                .to_shape(),
                 Primitive::new_triangle(
                     Point::new(-1.0, 1.0, 0.0),
                     Point::new(1.0, 0.0, 0.0),
                     Point::new(1.0, 1.0, 0.0),
                 )
-                .as_shape()
+                .to_shape()
             ])
-            .as_shape()
+            .to_shape()
         );
     }
 
@@ -265,21 +265,21 @@ mod tests {
                     Point::new(-1.0, 0.0, 0.0),
                     Point::new(1.0, 0.0, 0.0),
                 )
-                .as_shape(),
+                .to_shape(),
                 Primitive::new_triangle(
                     Point::new(-1.0, 1.0, 0.0),
                     Point::new(1.0, 0.0, 0.0),
                     Point::new(1.0, 1.0, 0.0),
                 )
-                .as_shape(),
+                .to_shape(),
                 Primitive::new_triangle(
                     Point::new(-1.0, 1.0, 0.0),
                     Point::new(1.0, 1.0, 0.0),
                     Point::new(0.0, 2.0, 0.0),
                 )
-                .as_shape()
+                .to_shape()
             ])
-            .as_shape()
+            .to_shape()
         );
     }
 
@@ -304,20 +304,20 @@ mod tests {
             Point::new(-1.0, 0.0, 0.0),
             Point::new(1.0, 0.0, 0.0),
         )
-        .as_shape();
-        let g1 = Compound::new_group(vec![t1]).as_shape();
+        .to_shape();
+        let g1 = Compound::new_group(vec![t1]).to_shape();
 
         let t2 = Primitive::new_triangle(
             Point::new(-1.0, 1.0, 0.0),
             Point::new(1.0, 0.0, 0.0),
             Point::new(1.0, 1.0, 0.0),
         )
-        .as_shape();
-        let g2 = Compound::new_group(vec![t2]).as_shape();
+        .to_shape();
+        let g2 = Compound::new_group(vec![t2]).to_shape();
 
         assert!(
-            shape == Compound::new_group(vec![g1.clone(), g2.clone()]).as_shape()
-                || shape == Compound::new_group(vec![g2, g1]).as_shape()
+            shape == Compound::new_group(vec![g1.clone(), g2.clone()]).to_shape()
+                || shape == Compound::new_group(vec![g2, g1]).to_shape()
         );
     }
 
@@ -345,7 +345,7 @@ mod tests {
             Vector::new(-1.0, 0.0, 0.0),
             Vector::new(1.0, 0.0, 0.0),
         )
-        .as_shape();
-        assert_eq!(shape, Compound::new_group(vec![t1.clone(), t1]).as_shape());
+        .to_shape();
+        assert_eq!(shape, Compound::new_group(vec![t1.clone(), t1]).to_shape());
     }
 }

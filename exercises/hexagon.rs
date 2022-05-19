@@ -30,14 +30,14 @@ fn render_hexagon(path: &str) {
 
     let floor = Primitive::new_plane()
         .with_material(floor_material)
-        .as_shape();
+        .to_shape();
     let hexagon = hexagon()
         .with_transform(
             Matrix::translation(0.0, 1.0, 0.0)
                 * Matrix::rotation_x(-FRAC_PI_2)
                 * Matrix::scaling(0.75, 0.75, 0.75),
         )
-        .as_shape();
+        .to_shape();
 
     let world = World::new(
         vec![floor, hexagon],
@@ -62,7 +62,7 @@ fn hexagon() -> Compound {
     for n in 0..6 {
         let side = hexagon_side()
             .with_transform(Matrix::rotation_y(n as f64 * FRAC_PI_3))
-            .as_shape();
+            .to_shape();
         hex.push(side);
     }
 
@@ -70,7 +70,7 @@ fn hexagon() -> Compound {
 }
 
 fn hexagon_side() -> Compound {
-    Compound::new_group(vec![hexagon_corner().as_shape(), hexagon_edge().as_shape()])
+    Compound::new_group(vec![hexagon_corner().to_shape(), hexagon_edge().to_shape()])
 }
 
 fn hexagon_corner() -> Primitive {

@@ -26,7 +26,7 @@ fn render_scene(path: &str) {
     let floor = Primitive::new_sphere()
         .with_transform(Matrix::scaling(10.0, 0.01, 10.0))
         .with_material(floor_material.clone())
-        .as_shape();
+        .to_shape();
 
     let left_wall = Primitive::new_sphere()
         .with_transform(
@@ -36,7 +36,7 @@ fn render_scene(path: &str) {
                 * Matrix::scaling(10.0, 0.01, 10.0),
         )
         .with_material(floor_material.clone())
-        .as_shape();
+        .to_shape();
 
     let right_wall = Primitive::new_sphere()
         .with_transform(
@@ -46,7 +46,7 @@ fn render_scene(path: &str) {
                 * Matrix::scaling(10.0, 0.01, 10.0),
         )
         .with_material(floor_material)
-        .as_shape();
+        .to_shape();
 
     let middle = Primitive::new_sphere()
         .with_transform(Matrix::translation(-0.5, 1.0, 0.5))
@@ -56,7 +56,7 @@ fn render_scene(path: &str) {
             specular: 0.3,
             ..Material::default()
         })
-        .as_shape();
+        .to_shape();
 
     let right = Primitive::new_sphere()
         .with_transform(Matrix::translation(1.5, 0.5, -0.5) * Matrix::scaling(0.5, 0.5, 0.5))
@@ -66,7 +66,7 @@ fn render_scene(path: &str) {
             specular: 0.3,
             ..Material::default()
         })
-        .as_shape();
+        .to_shape();
 
     let left = Primitive::new_sphere()
         .with_transform(Matrix::translation(-1.5, 0.33, -0.75) * Matrix::scaling(0.33, 0.33, 0.33))
@@ -76,7 +76,7 @@ fn render_scene(path: &str) {
             specular: 0.3,
             ..Material::default()
         })
-        .as_shape();
+        .to_shape();
 
     let world = World::new(
         vec![floor, left_wall, right_wall, middle, right, left],

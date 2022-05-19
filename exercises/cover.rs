@@ -56,7 +56,7 @@ fn render_cover(path: &str) {
             ..Material::default()
         })
         .with_transform(Matrix::translation(0.0, 0.0, 500.0) * Matrix::rotation_x(FRAC_PI_2))
-        .as_shape();
+        .to_shape();
 
     let main_sphere = Primitive::new_sphere()
         .with_material(Material {
@@ -71,7 +71,7 @@ fn render_cover(path: &str) {
             ..Material::default()
         })
         .with_transform(large_object)
-        .as_shape();
+        .to_shape();
 
     let cube_specs = [
         (
@@ -167,7 +167,7 @@ fn render_cover(path: &str) {
             Primitive::new_cube()
                 .with_material(material)
                 .with_transform(transform * base_transform)
-                .as_shape(),
+                .to_shape(),
         );
     }
 

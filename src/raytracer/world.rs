@@ -140,7 +140,7 @@ impl Default for World {
 
         let s2 = Primitive::new_sphere().with_transform(Matrix::scaling(0.5, 0.5, 0.5));
 
-        Self::new(vec![s1.as_shape(), s2.as_shape()], vec![light])
+        Self::new(vec![s1.to_shape(), s2.to_shape()], vec![light])
     }
 }
 
@@ -303,7 +303,7 @@ mod tests {
         let s2 = Primitive::new_sphere().with_transform(Matrix::translation(0.0, 0.0, 10.0));
 
         let w = World::new(
-            vec![s1.as_shape(), s2.clone().as_shape()],
+            vec![s1.to_shape(), s2.clone().to_shape()],
             vec![PointLight::new(Point::new(0.0, 0.0, -10.0), Color::WHITE)],
         );
 
@@ -323,7 +323,7 @@ mod tests {
                 ..Material::default()
             });
         let mut w = World::default();
-        w.shapes[1] = s.clone().as_shape();
+        w.shapes[1] = s.clone().to_shape();
 
         let r = Ray::new(Point::new(0.0, 0.0, 0.0), Vector::new(0.0, 0.0, 1.0));
         let i = Intersection::new(1.0, &s, im_rc::Vector::new());
@@ -343,7 +343,7 @@ mod tests {
             });
 
         let mut w = World::default();
-        w.shapes.push(shape.clone().as_shape());
+        w.shapes.push(shape.clone().to_shape());
 
         let r = Ray::new(
             Point::new(0.0, 0.0, -3.0),
@@ -369,7 +369,7 @@ mod tests {
             });
 
         let mut w = World::default();
-        w.shapes.push(shape.clone().as_shape());
+        w.shapes.push(shape.clone().to_shape());
 
         let r = Ray::new(
             Point::new(0.0, 0.0, -3.0),
@@ -402,8 +402,8 @@ mod tests {
             });
 
         let mut w = World::default();
-        w.shapes.push(lower.as_shape());
-        w.shapes.push(upper.as_shape());
+        w.shapes.push(lower.to_shape());
+        w.shapes.push(upper.to_shape());
 
         let r = Ray::new(Point::new(0.0, 0.0, 0.0), Vector::new(0.0, 1.0, 0.0));
 
@@ -420,7 +420,7 @@ mod tests {
             });
 
         let mut w = World::default();
-        w.shapes.push(shape.clone().as_shape());
+        w.shapes.push(shape.clone().to_shape());
 
         let r = Ray::new(
             Point::new(0.0, 0.0, -3.0),
@@ -466,7 +466,7 @@ mod tests {
         });
 
         let mut w = World::default();
-        w.shapes[0] = shape.clone().as_shape();
+        w.shapes[0] = shape.clone().to_shape();
 
         let r = Ray::new(Point::new(0.0, 0.0, -5.0), Vector::new(0.0, 0.0, 1.0));
         let xs = Intersections::new([
@@ -491,7 +491,7 @@ mod tests {
         });
 
         let mut w = World::default();
-        w.shapes[0] = shape.clone().as_shape();
+        w.shapes[0] = shape.clone().to_shape();
 
         let r = Ray::new(
             Point::new(0.0, 0.0, 2.0_f64.sqrt() / 2.0),
@@ -527,8 +527,8 @@ mod tests {
             });
 
         let mut w = World::default();
-        w.shapes[0] = s1.clone().as_shape();
-        w.shapes[1] = s2.clone().as_shape();
+        w.shapes[0] = s1.clone().to_shape();
+        w.shapes[1] = s2.clone().to_shape();
 
         let r = Ray::new(Point::new(0.0, 0.0, 0.1), Vector::new(0.0, 1.0, 0.0));
         let xs = Intersections::new([
@@ -565,8 +565,8 @@ mod tests {
             });
 
         let mut w = World::default();
-        w.shapes.push(floor.clone().as_shape());
-        w.shapes.push(ball.as_shape());
+        w.shapes.push(floor.clone().to_shape());
+        w.shapes.push(ball.to_shape());
 
         let r = Ray::new(
             Point::new(0.0, 0.0, -3.0),
@@ -603,8 +603,8 @@ mod tests {
             });
 
         let mut w = World::default();
-        w.shapes.push(floor.clone().as_shape());
-        w.shapes.push(ball.as_shape());
+        w.shapes.push(floor.clone().to_shape());
+        w.shapes.push(ball.to_shape());
 
         let r = Ray::new(
             Point::new(0.0, 0.0, -3.0),

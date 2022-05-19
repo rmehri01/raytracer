@@ -26,7 +26,7 @@ impl Shape {
 #[enum_dispatch(Shape)]
 pub trait Intersect: HasProperties {
     fn intersect(&self, ray: &Ray, trail: &im_rc::Vector<Transformation>) -> Intersections {
-        let local_ray = ray.transform(&self.properties().transform_inversed);
+        let local_ray = ray.transform(&self.properties().inverse_transform);
 
         self.local_intersect(&local_ray, trail)
     }
@@ -37,7 +37,7 @@ pub trait Intersect: HasProperties {
 #[derive(Debug, PartialEq, Clone)]
 pub struct Properties {
     pub transform: Transformation,
-    pub(crate) transform_inversed: Transformation,
+    pub(crate) inverse_transform: Transformation,
     pub material: Material,
     pub(crate) bounds: Bounds,
 }
@@ -46,7 +46,7 @@ impl Default for Properties {
     fn default() -> Self {
         Self {
             transform: Matrix::identity(),
-            transform_inversed: Matrix::identity(),
+            inverse_transform: Matrix::identity(),
             material: Material::default(),
             bounds: Bounds::default(),
         }
@@ -62,7 +62,7 @@ pub trait HasProperties: Sized {
 pub trait SetProperties: HasProperties {
     fn with_transform(mut self, transform: Transformation) -> Self {
         self.properties_mut().transform = transform;
-        self.properties_mut().transform_inversed = transform.inverse();
+        self.properties_mut().inverse_transform = transform.inverse();
         self
     }
 

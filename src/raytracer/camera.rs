@@ -14,7 +14,7 @@ pub struct Camera {
     h_size: usize,
     v_size: usize,
     transform: Transformation,
-    transform_inversed: Transformation,
+    inverse_transform: Transformation,
     half_width: f64,
     half_height: f64,
     pixel_size: f64,
@@ -35,7 +35,7 @@ impl Camera {
             h_size,
             v_size,
             transform: Matrix::identity(),
-            transform_inversed: Matrix::identity(),
+            inverse_transform: Matrix::identity(),
             half_width,
             half_height,
             pixel_size: (half_width * 2.0) / h_size as f64,
@@ -44,7 +44,7 @@ impl Camera {
 
     pub fn with_transform(mut self, transform: Transformation) -> Self {
         self.transform = transform;
-        self.transform_inversed = transform.inverse();
+        self.inverse_transform = transform.inverse();
         self
     }
 
@@ -72,8 +72,8 @@ impl Camera {
         let world_x = self.half_width - x_offset;
         let world_y = self.half_height - y_offset;
 
-        let pixel = self.transform_inversed * Point::new(world_x, world_y, -1.0);
-        let origin = self.transform_inversed * Point::new(0.0, 0.0, 0.0);
+        let pixel = self.inverse_transform * Point::new(world_x, world_y, -1.0);
+        let origin = self.inverse_transform * Point::new(0.0, 0.0, 0.0);
         let direction = (pixel - origin).normalize();
 
         Ray::new(origin, direction)
