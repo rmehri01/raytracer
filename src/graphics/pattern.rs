@@ -133,7 +133,7 @@ impl Kind {
     }
 }
 
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 enum Mixture {
     Blend,
     Stripe,

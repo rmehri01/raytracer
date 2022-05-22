@@ -131,7 +131,7 @@ enum Kind {
 }
 
 /// The possible CSG operations.
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum Operation {
     Union,
     Intersection,
