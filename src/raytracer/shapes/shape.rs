@@ -17,8 +17,8 @@ pub enum Shape {
 impl Shape {
     pub fn includes(&self, other: &Primitive) -> bool {
         match self {
-            Shape::Primitive(p) => p == other,
-            Shape::Compound(c) => c.includes(other),
+            Self::Primitive(p) => p == other,
+            Self::Compound(c) => c.includes(other),
         }
     }
 }

@@ -425,8 +425,7 @@ impl Triangular {
         let v = f * ray.direction.dot(&origin_cross_e1);
 
         let ts = if det.abs().abs_diff_eq(&0.0, Point::default_epsilon())
-            || u < 0.0
-            || u > 1.0
+            || !(0.0..=1.0).contains(&u)
             || v < 0.0
             || (u + v) > 1.0
         {

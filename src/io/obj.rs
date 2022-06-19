@@ -16,9 +16,9 @@ pub enum ParseError {
 impl fmt::Display for ParseError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            ParseError::Logic(s) => write!(f, "Logic error, {}", s),
-            ParseError::Syntax(s) => write!(f, "Syntax error, {}", s),
-            ParseError::Io(e) => write!(f, "IO error, {}", e),
+            Self::Logic(s) => write!(f, "Logic error, {}", s),
+            Self::Syntax(s) => write!(f, "Syntax error, {}", s),
+            Self::Io(e) => write!(f, "IO error, {}", e),
         }
     }
 }
