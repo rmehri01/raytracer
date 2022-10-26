@@ -16,9 +16,9 @@ pub enum ParseError {
 impl fmt::Display for ParseError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Self::Logic(s) => write!(f, "Logic error, {}", s),
-            Self::Syntax(s) => write!(f, "Syntax error, {}", s),
-            Self::Io(e) => write!(f, "IO error, {}", e),
+            Self::Logic(s) => write!(f, "Logic error, {s}"),
+            Self::Syntax(s) => write!(f, "Syntax error, {s}"),
+            Self::Io(e) => write!(f, "IO error, {e}"),
         }
     }
 }
@@ -112,7 +112,7 @@ fn parse_string(obj_string: &str) -> Result<Parser> {
 }
 
 fn parse_vertex(x: &str, y: &str, z: &str) -> Result<Point> {
-    let err_fn = |_| ParseError::Syntax(format!("invalid vertex: {} {} {}", x, y, z));
+    let err_fn = |_| ParseError::Syntax(format!("invalid vertex: {x} {y} {z}"));
     let x = x.parse().map_err(err_fn)?;
     let y = y.parse().map_err(err_fn)?;
     let z = z.parse().map_err(err_fn)?;
@@ -121,7 +121,7 @@ fn parse_vertex(x: &str, y: &str, z: &str) -> Result<Point> {
 }
 
 fn parse_normal(x: &str, y: &str, z: &str) -> Result<Vector> {
-    let err_fn = |_| ParseError::Syntax(format!("invalid normal: {} {} {}", x, y, z));
+    let err_fn = |_| ParseError::Syntax(format!("invalid normal: {x} {y} {z}"));
     let x = x.parse().map_err(err_fn)?;
     let y = y.parse().map_err(err_fn)?;
     let z = z.parse().map_err(err_fn)?;
@@ -167,7 +167,7 @@ fn parse_vertex_ref(
     vertices: &[Point],
     normals: &[Vector],
 ) -> Result<(Point, Option<Vector>)> {
-    let err_fn = |_| ParseError::Syntax(format!("indices must be natural numbers, given: {}", v));
+    let err_fn = |_| ParseError::Syntax(format!("indices must be natural numbers, given: {v}"));
 
     match v.split('/').collect::<Vec<_>>()[..] {
         [v, _, n] => {
@@ -181,7 +181,7 @@ fn parse_vertex_ref(
 
             Ok((vertices[v - 1], None))
         }
-        _ => Err(ParseError::Syntax(format!("invalid vertex ref: {}", v))),
+        _ => Err(ParseError::Syntax(format!("invalid vertex ref: {v}"))),
     }
 }
 
