@@ -156,8 +156,7 @@ fn parse_triangle(
         }
         (None, None, None) => Ok(Primitive::new_triangle(p1, p2, p3)),
         _ => Err(ParseError::Syntax(format!(
-            "invalid triangle: {} {} {}",
-            v1, v2, v3
+            "invalid triangle: {v1} {v2} {v3}"
         ))),
     }
 }
