@@ -110,7 +110,7 @@ impl Eq for Intersection<'_> {}
 
 impl PartialOrd for Intersection<'_> {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        self.t.partial_cmp(&other.t)
+        Some(self.cmp(other))
     }
 }
 
